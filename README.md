@@ -79,6 +79,12 @@ GitHub Pages serves the `docs/` directory on `main`:
 2. Settings → Pages → Source: `Deploy from a branch`, branch `main`, folder `/docs`.
 3. `docs/.nojekyll` is committed, so files starting with `_` are served as-is.
 
+### Comments and errata
+
+Every page ends with a feedback panel that opens a pre-filled GitHub Discussion (`[勘误/留言] <chapter>`) in this repository — title, chapter URL and a report template are filled in for you. Posting requires a GitHub account; the site loads no third-party comment widget or tracking script.
+
+If you prefer an embedded comment box, the repository is ready for giscus: install the giscus app, then swap the panel in `build.py` (`build_feedback`) for the giscus `<script>` tag using your `repo`, `repoId` and `category`.
+
 ### Disclaimer
 
 Notes for study and discussion only, not an official translation. Quoted passages remain copyright of their authors and publisher and are reproduced briefly for commentary. For authoritative behaviour, always check the relevant RFCs and the original book.
@@ -155,6 +161,12 @@ GitHub Pages 直接发布 `docs/` 目录：
 1. 推送到 `main`。
 2. Settings → Pages → Source 选 `Deploy from a branch`，分支 `main`，目录 `/docs`。
 3. 仓库已提交 `docs/.nojekyll`，下划线开头的文件也能正常访问。
+
+### 留言与勘误
+
+每页页脚都有「留言与勘误」面板，点一下就跳到本仓库 Discussions 并新建一条**预填好**的讨论：标题为 `[勘误/留言] 章节号 章节名`，正文已包含章节链接、位置、问题类型和参考依据的填写模板。发帖需要 GitHub 账号；站点不加载任何第三方评论组件或追踪脚本。
+
+想要页面内嵌评论区也很容易：仓库已适配 giscus。装上 giscus App 后，把 `build.py` 里的 `build_feedback` 换成 giscus 的 `<script>` 片段，填入 `repo`、`repoId`、`category` 即可，其余样式与深色模式会自动跟随。
 
 ### 声明
 

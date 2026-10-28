@@ -3,11 +3,18 @@
 import os
 import re
 import shutil
+from urllib.parse import quote
+
 import markdown
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CONTENT = os.path.join(ROOT, "content")
 OUT = os.path.join(ROOT, "docs")
+
+# 留言与勘误走 GitHub Discussions
+REPO_SLUG = "huyushao521/srv6-notes"
+SITE_URL = "https://huyushao521.github.io/srv6-notes/"
+DISCUSS_CATEGORY = "general"
 
 PAGES = [
     ("index", "导读", "如何读这本书", "start"),
@@ -64,6 +71,7 @@ TEMPLATE = """<!DOCTYPE html>
     </article>
     <nav class="pager">{pager}</nav>
     <footer class="foot">
+      {feedback}
       <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
     </footer>
   </main>
@@ -101,6 +109,39 @@ def build_nav(active):
     return "\n".join(out)
 
 
+def build_feedback(slug, num, title):
+    """页脚留言/勘误区：一键跳到 GitHub Discussions 并预填标题与模板。"""
+    label = title if num == "start" else "%s %s" % (num, title)
+    page_url = "%s%s.html" % (SITE_URL, slug)
+    body = (
+        "**章节**：%s\n\n"
+        "**位置**：（小节标题 / 段落首句 / 原文引用）\n\n"
+        "**问题类型**：错别字 · 术语译法 · 技术表述 · 补充建议\n\n"
+        "**说明**：\n\n"
+        "**参考依据**：（RFC 编号、原书章节、设备输出）\n" % page_url
+    )
+    new_url = "https://github.com/%s/discussions/new?category=%s&title=%s&body=%s" % (
+        REPO_SLUG,
+        DISCUSS_CATEGORY,
+        quote("[勘误/留言] " + label),
+        quote(body),
+    )
+    list_url = "https://github.com/%s/discussions" % REPO_SLUG
+    return (
+        '<div class="feedback">\n'
+        '  <div class="fb-head"><span class="fb-title">留言与勘误</span>'
+        '<span class="fb-sub">留言与勘误功能由 GitHub Discussions 提供</span></div>\n'
+        "  <p>发现错别字、术语译法或技术表述有问题，或者想补充案例与配置，"
+        "都可以在这里开一条讨论；需要 GitHub 账号。</p>\n"
+        '  <div class="fb-actions">\n'
+        '    <a class="fb-btn primary" href="%s" target="_blank" rel="noopener">'
+        "报告勘误 / 留言</a>\n"
+        '    <a class="fb-btn" href="%s" target="_blank" rel="noopener">浏览全部讨论</a>\n'
+        "  </div>\n"
+        "</div>\n" % (new_url, list_url)
+    )
+
+
 def render(active, prev_page, next_page):
     src = os.path.join(CONTENT, active + ".md")
     with open(src, encoding="utf-8") as f:
@@ -124,6 +165,7 @@ def render(active, prev_page, next_page):
         pager.append('<a class="next" href="%s.html">%s →</a>' % (next_page[0], next_page[2]))
 
     title = next(p[2] for p in PAGES if p[0] == active)
+    num = next(p[1] for p in PAGES if p[0] == active)
     desc = "%s · SRv6 分章精读（基于 Segment Routing Part III）" % title
 
     html = TEMPLATE.format(
@@ -134,6 +176,7 @@ def render(active, prev_page, next_page):
         body=body,
         toc=toc,
         pager="".join(p for p in pager if isinstance(p, str)),
+        feedback=build_feedback(active, num, title),
     )
     with open(os.path.join(OUT, active + ".html"), "w", encoding="utf-8") as f:
         f.write(html)
