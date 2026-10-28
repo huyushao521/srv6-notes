@@ -48,15 +48,89 @@
   </aside>
   <main class="content">
     <article class="md">
-<h1 id="17-ipv6">17 · IPv6 必备知识</h1>
+<h1 id="17-ipv6-srv6">17 · IPv6 必备知识：SRv6 的地基</h1>
 <blockquote>
-<p>对应原书第 17 章 <em>IPv6 Essentials</em>。SRv6 的所有"魔法"都建立在 IPv6 的这几条规则上，读不懂这一章，前面 16 章都只能背结论。</p>
+<p><strong>本章定位</strong>：原书第 17 章《IPv6 Essentials》。前面 16 章的所有"魔法"都压在 IPv6 的五六条规则上；<strong>读不懂这一章，前面只能背结论</strong>。英文块为原文摘录，中文为完整翻译，Figure 17.1–17.4 重绘。</p>
 </blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么 P 路由器不支持 SRv6 也能转发</td>
+<td>17.3</td>
+</tr>
+<tr>
+<td>为什么"P 上误配 SID"会让路径莫名中断</td>
+<td>17.3.1</td>
+</tr>
+<tr>
+<td>扩展头链是什么形状，NH=43 是什么意思</td>
+<td>17.2</td>
+</tr>
+<tr>
+<td>为什么 SR 域几乎都用 ULA</td>
+<td>17.4</td>
+</tr>
+<tr>
+<td>1280 与 1500 之间那 220 字节为什么是雷区</td>
+<td>17.5</td>
+</tr>
+<tr>
+<td>Flow Label 写 0 会发生什么</td>
+<td>17.6</td>
+</tr>
+</tbody>
+</table>
+<p>一句话概括：<strong>这一章不用背，只需要理解四条"约束"</strong>——<strong>头是固定的、扩展是链式的、路由头只有目的节点处理、中间不许分片</strong>。SRv6 的所有设计（无状态、P 节点零改造、必须提 MTU）都是这四条的直接推论。</p>
+<h2 id="170-srv6">17.0 四条规则如何决定 SRv6 的设计</h2>
+<table>
+<thead>
+<tr>
+<th>IPv6 规则</th>
+<th>直接推出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基本头固定 40 字节，其余进扩展头</td>
+<td>SRv6 可以"只加一个路由头"，不必改基本头</td>
+</tr>
+<tr>
+<td>路由头<strong>只由 DA 所指节点处理</strong></td>
+<td><strong>P 节点无需支持 SRv6</strong>（这正是全书的前提）</td>
+</tr>
+<tr>
+<td>中间节点<strong>禁止分片</strong></td>
+<td><strong>MTU 必须规划</strong>，PMTUD 只能兜底</td>
+</tr>
+<tr>
+<td>哈希用 (SA, DA, Flow Label)</td>
+<td>入口必须写入<strong>稳定的 Flow Label</strong></td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-text">图 17-1：四条规则的因果（原书 Figure 17.1 重绘）
+
+  40B 固定头 ──► 扩展头链 ──► SRH(NH=43) ──► uSID 塞进 DA
+                                     │
+  只有 DA 节点处理路由头 ─────────────┘
+        │
+        └──► P 节点只按 DA 转发（零 SRv6 状态）★ 全书基石
+
+  禁止中间分片 ──► MTU 必须 ≥ 客户 MTU + 40（第 10 章）
+  Flow Label 参与哈希 ──► 入口写稳定熵（17.6）
+</code></pre>
 <h2 id="171-40">17.1 固定 40 字节的基本头</h2>
 <div class="en">
 <p>The IPv6 header is fixed at 40 bytes and contains only what is needed for forwarding: version, traffic class, flow label, payload length, next header, hop limit, source and destination addresses. Everything else — fragmentation, routing, options — has been moved into extension headers, which is what makes IPv6 extensible without changing the base header.</p>
 </div>
-<p>IPv6 基本头固定 <strong>40 字节</strong>，只放转发必需的信息：版本、流量类别、流标签、净荷长度、下一头部、跳数限制、源与目的地址。其余一切（分片、路由、选项）全部移到<strong>扩展头</strong>——这正是 IPv6 无需改基本头就能扩展的原因，也是 SRv6 能"只加一个路由头"的前提。</p>
+<p>IPv6 基本头固定 <strong>40 字节</strong>，只放转发必需的信息：版本、流量类别、流标签、净荷长度、下一头部、跳数限制、源与目的地址。其余一切（分片、路由、选项）全部移到<strong>扩展头</strong>——<strong>这正是 IPv6 无需改基本头就能扩展的原因，也是 SRv6 能"只加一个路由头"的前提</strong>。</p>
 <table>
 <thead>
 <tr>
@@ -68,38 +142,38 @@
 <tbody>
 <tr>
 <td>Version</td>
-<td>4b</td>
+<td>4 b</td>
 <td>固定 6</td>
 </tr>
 <tr>
 <td>Traffic Class</td>
-<td>8b</td>
-<td>可用于 DSCP 映射</td>
+<td>8 b</td>
+<td>DSCP 映射（第 12 章元数据的替代承载处）</td>
 </tr>
 <tr>
 <td><strong>Flow Label</strong></td>
-<td><strong>20b</strong></td>
-<td><strong>SRv6 的熵来源（第 2.8 节）</strong></td>
+<td><strong>20 b</strong></td>
+<td><strong>熵来源，决定 ECMP 分担（17.6）</strong></td>
 </tr>
 <tr>
 <td>Payload Length</td>
-<td>16b</td>
-<td>含扩展头</td>
+<td>16 b</td>
+<td><strong>含扩展头</strong>，不含基本头</td>
 </tr>
 <tr>
 <td><strong>Next Header</strong></td>
-<td><strong>8b</strong></td>
-<td><strong>43 = 路由头（SRH）</strong></td>
+<td><strong>8 b</strong></td>
+<td><strong>43 = 路由头（SRH）</strong>；4 = IPv4；6 = TCP；17 = UDP；58 = ICMPv6</td>
 </tr>
 <tr>
 <td>Hop Limit</td>
-<td>8b</td>
+<td>8 b</td>
 <td>TTL 语义</td>
 </tr>
 <tr>
 <td>SA / DA</td>
-<td>128b×2</td>
-<td><strong>DA 承载 uSID 容器</strong></td>
+<td>128 b × 2</td>
+<td><strong>DA 承载 uSID 容器</strong>（第 15 章 WLIB）</td>
 </tr>
 </tbody>
 </table>
@@ -107,23 +181,105 @@
 <div class="en">
 <p>Extension headers are chained: each header carries a Next Header field pointing to the next one, and the chain ends with a value that identifies the upper layer protocol, such as 4 for IPv4 or 6 for TCP. SRv6 uses a routing header of type 4, which means a packet with SRv6 encapsulation has Next Header 43 and, inside the SRH, another Next Header for the payload.</p>
 </div>
-<p>扩展头是<strong>链式</strong>的：每个头带一个 <code>Next Header</code> 指向下一个，链尾的值标识上层协议（4 = IPv4、6 = TCP、17 = UDP、58 = ICMPv6）。SRv6 用的是 <strong>Routing Header Type 4</strong>，所以一个 SRv6 封装包的外层是 <code>Next Header = 43</code>，SRH 内部又有一个 <code>Next Header</code> 指向净荷。</p>
-<pre><code class="language-text">[IPv6 NH=43][SRH NH=4][IPv4 净荷]
-              │        └─ 内层版本
-              └─ 路由头类型 4
+<p>扩展头是<strong>链式</strong>的：每个头带一个 <code>Next Header</code> 指向下一个，链尾的值标识上层协议（<strong>4 = IPv4、6 = TCP、17 = UDP、58 = ICMPv6</strong>）。SRv6 用的是 <strong>Routing Header Type 4</strong>，所以 SRv6 封装包的外层是 <code>Next Header = 43</code>，<strong>SRH 内部又有一个 <code>Next Header</code> 指向净荷</strong>。</p>
+<pre><code class="language-text">图 17-2：两种封装的头部链（原书 Figure 17.2 重绘）
+
+  ① uSID 业务转发（无 SRH，最常见）
+     [IPv6 NH=4 ] [内层 IPv4] [TCP]
+                 └─ 直接指向内层协议，只有 40 B 外层
+
+  ② 带 SRH（段列表需要显式表达时）
+     [IPv6 NH=43] [SRH NH=4] [内层 IPv4] [TCP]
+                    │     └─ 内层版本
+                    └─ 路由头类型 4（SRH = Segment Routing Header）
+
+  ③ 分层封装（VPN 承载）
+     [IPv6 NH=4] [IPv4 内层] [UDP] [GTP-U] [用户 IP]
 </code></pre>
 <div class="en">
 <p>This chaining explains a very common deployment issue: devices and firewalls that only parse the base header, or that reject unknown extension headers, will drop SRv6 packets even though the payload is perfectly valid. Rule sets must be updated to allow protocol 43 within the SR domain.</p>
 </div>
-<p>链式结构解释了一个非常常见的部署问题：<strong>只解析基本头、或"遇到未知扩展头就丢"的设备与防火墙，会把完全合法的 SRv6 报文丢掉</strong>。域内规则必须显式放行协议号 43。</p>
+<p>链式结构解释了一个<strong>非常常见的部署问题</strong>：<strong>只解析基本头、或"遇到未知扩展头就丢"的设备与防火墙，会把完全合法的 SRv6 报文丢掉</strong>。<strong>域内规则必须显式放行协议号 43。</strong></p>
+<table>
+<thead>
+<tr>
+<th>设备行为</th>
+<th>后果</th>
+<th>现象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>见 NH=43 就丢</td>
+<td>报文在设备处消失</td>
+<td><strong>无日志</strong>，只有丢包计数</td>
+</tr>
+<tr>
+<td>只解析到 IPv4/IPv6 就停</td>
+<td>看不到更内层</td>
+<td>策略不匹配（第 12 章）</td>
+</tr>
+<tr>
+<td>重写扩展头</td>
+<td>SRH 被改/被删</td>
+<td>后续段失效、元数据丢失</td>
+</tr>
+<tr>
+<td>正常放行</td>
+<td>无影响</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
 <h2 id="173">17.3 关键规则：谁能处理路由头</h2>
 <div class="en">
 <p>RFC 8200 states that a routing header is processed only by the node identified in the destination address of the packet. Intermediate nodes must not examine or process it. This single rule is what allows transit routers to remain SRv6-unaware: they forward on the destination address, and the routing header is invisible to them until the packet reaches the node it names.</p>
 </div>
-<p>RFC 8200 规定：<strong>路由头只由目的地址所指的节点处理</strong>，中间节点不得检查或处理它。就这一条规则，让转发节点可以完全不支持 SRv6——它们只按目的地址转发，路由头在到达被寻址节点前对它们"不可见"。</p>
-<blockquote>
-<p>反过来也要记住：<strong>如果一台 P 路由器上配了与报文 DA 匹配的 SID，它就会"越权"处理</strong>。这类误配在现网表现为"路径莫名中断"或"SL 被意外修改"。</p>
-</blockquote>
+<p>RFC 8200 规定：<strong>路由头只由目的地址所指的节点处理，中间节点不得检查或处理它</strong>。<strong>就这一条规则，让转发节点可以完全不支持 SRv6</strong>——它们<strong>只按目的地址转发</strong>，路由头在<strong>到达被寻址节点前对它们"不可见"</strong>。</p>
+<pre><code class="language-text">图 17-3：中间节点对 SRH &quot;不可见&quot;（原书 Figure 17.3 重绘）
+
+  PE-1 ──► P-1 ──► P-2 ──► PE-2
+           │       │
+           │       └─ 只看 DA 的 locator，转发
+           └─ 完全不解析 SRH（也无需实现 SRv6）
+                    │
+                    └──► PE-2：DA 命中本地 SID → 才处理 SRH
+
+  如果 P-1 上误配了与 DA 匹配的 SID：
+  → P-1 认为自己就是&quot;目的节点&quot; → 越权处理 SRH → 路径中断
+</code></pre>
+<h3 id="1731">17.3.1 反过来也要记住：越权处理的风险</h3>
+<div class="en">
+<p>The same rule has a sharp edge: a transit router that happens to have a local SID matching the destination address will consider itself the addressed node and will process the routing header. This is how a misconfigured SID on a core router silently breaks a path that is otherwise correct.</p>
+</div>
+<p>这条规则有锋利的一面：<strong>一台核心路由器如果恰好配了与 DA 匹配的本地 SID</strong>，它就会<strong>认为自己是"被寻址节点"</strong>，从而<strong>处理路由头</strong>。<strong>这就是"核心路由器上误配 SID 会静默中断路径"的原因。</strong></p>
+<table>
+<thead>
+<tr>
+<th>误配场景</th>
+<th>现象</th>
+<th>排查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P 上配了与某 locator 重叠的 SID</td>
+<td>路径在 P 处中断，业务不通</td>
+<td><code>show segment-routing srv6 sid all</code> 在 P 上查</td>
+</tr>
+<tr>
+<td>P 上配了 anycast SID</td>
+<td>流量被"吸"到 P</td>
+<td>对比各节点 SID 表</td>
+</tr>
+<tr>
+<td>服务设备配了同名 SID</td>
+<td>包被设备消费</td>
+<td>设备侧抓包</td>
+</tr>
+</tbody>
+</table>
+<p><strong>这条规则也解释了为什么 locator 规划必须"全网唯一"</strong>（第 10 章）：只有唯一，才不会有第二台设备认为自己该处理这个 DA。</p>
 <h2 id="174">17.4 地址类型与前缀</h2>
 <div class="en">
 <p>Three address types matter: global unicast addresses, unique local addresses in FC00::/7, and link-local addresses in FE80::/10. SRv6 deployments typically use ULA space for the SR domain, because ULA is not routable outside the domain and therefore provides both opacity and a guarantee that SIDs cannot leak to the Internet.</p>
@@ -135,55 +291,287 @@
 <th>类型</th>
 <th>前缀</th>
 <th>用途</th>
+<th>在 SRv6 里的角色</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>全球单播（GUA）</td>
-<td>2000::/3</td>
+<td><code>2000::/3</code></td>
 <td>公网可达</td>
+<td>不建议用于 SID（会泄露到 Internet）</td>
 </tr>
 <tr>
-<td>唯一本地（ULA）</td>
-<td>FC00::/7</td>
-<td><strong>SRv6 域内首选</strong>：不可在域外路由，天然不透明</td>
+<td><strong>唯一本地（ULA）</strong></td>
+<td><code>FC00::/7</code></td>
+<td><strong>域内私有</strong></td>
+<td><strong>SR 域首选</strong>：不可域外路由，天然不透明</td>
 </tr>
 <tr>
 <td>链路本地</td>
-<td>FE80::/10</td>
+<td><code>FE80::/10</code></td>
 <td>邻居发现、单跳协议</td>
+<td>不用于 SID</td>
 </tr>
 </tbody>
 </table>
-<p>用 ULA 做 SR 域是 Bell、阿里共同的选择：既是规模（<code>FC00::/7</code> 巨大），也是安全（SID 不会泄露到 Internet）。</p>
+<div class="en">
+<p>Using ULA for the SR domain is the common choice of both Bell and Alibaba: it provides scale, because FC00::/7 is enormous, and it provides security, because SIDs cannot leak to the Internet.</p>
+</div>
+<p>用 ULA 做 SR 域是 <strong>Bell 与阿里的共同选择</strong>：<strong>既是规模</strong>（<code>FC00::/7</code> 巨大，Bell 只用了 0.0015%），<strong>也是安全</strong>（<strong>SID 不会泄露到 Internet</strong>）。</p>
+<table>
+<thead>
+<tr>
+<th>选择</th>
+<th>规模</th>
+<th>风险</th>
+<th>谁的用法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ULA <code>fd00::/8</code> 的子段</td>
+<td>2^120</td>
+<td>需自管唯一性</td>
+<td>Bell <code>fdbb:bb00::/24</code></td>
+</tr>
+<tr>
+<td>ULA <code>fd00:cc::/24</code></td>
+<td>充裕</td>
+<td>同上</td>
+<td>阿里 <code>fd00:cc::</code></td>
+</tr>
+<tr>
+<td>GUA</td>
+<td>大</td>
+<td><strong>SID 暴露在公网</strong>，可被探测</td>
+<td>不推荐</td>
+</tr>
+<tr>
+<td>2001:db8::/32</td>
+<td>文档专用</td>
+<td>不可用于生产</td>
+<td>仅示例</td>
+</tr>
+</tbody>
+</table>
 <h2 id="175-mtu-pmtud">17.5 MTU 与 PMTUD</h2>
 <div class="en">
 <p>IPv6 requires a minimum link MTU of 1280 bytes and forbids routers from fragmenting packets. Fragmentation is left to the source, which discovers the path MTU using ICMPv6 Packet Too Big messages. In an SRv6 domain this makes MTU planning mandatory: the encapsulation adds 40 bytes and possibly an SRH, so the underlay MTU must be raised above the customer MTU plus the encapsulation overhead.</p>
 </div>
-<p>IPv6 规定链路最小 MTU 为 <strong>1280 字节</strong>，且<strong>禁止路由器分片</strong>；分片只能由源端做，源端靠 ICMPv6 的 <strong>Packet Too Big</strong> 消息发现路径 MTU。于是 SRv6 域里 MTU 规划是硬要求：封装 +40 字节（含 SRH 更多），Underlay MTU 必须大于"客户 MTU + 封装开销"。</p>
+<p>IPv6 规定<strong>链路最小 MTU 为 1280 字节</strong>，且<strong>禁止路由器分片</strong>；分片只能由源端做，源端靠 <strong>ICMPv6 Packet Too Big</strong> 发现路径 MTU。于是 SRv6 域里 <strong>MTU 规划是硬要求</strong>：<strong>封装 +40 字节（含 SRH 更多）</strong>，<strong>Underlay MTU 必须大于"客户 MTU + 封装开销"</strong>。</p>
+<pre><code class="language-text">图 17-4：MTU 的三个数字（原书 Figure 17.4 重绘）
+
+  1280 ──────────── IPv6 强制最小链路 MTU
+                      低于此值无法运行 IPv6（不是&quot;性能差&quot;，是&quot;不通&quot;）
+  1500 ──────────── 以太网标准 MTU（客户侧通常按此规划）
+  1540 ──────────── 1500 + 40（SRv6 无 SRH）
+  1564 ──────────── 1500 + 64（SRv6 带 1 个容器 SID 的 SRH）
+  1600 ──────────── 生产网推荐值（留余量给 SRH/未来扩展头）
+
+  1500 → 1540 之间那 40 字节，就是最经典的雷区：
+  客户侧一切正常，加上封装就超了，且中间不报错，只静默丢
+</code></pre>
 <div class="en">
 <p>Relying on PMTUD is fragile: ICMPv6 is often filtered by security policies, and a lost Packet Too Big message turns into a black hole that affects only large packets. This is exactly the failure mode that is hardest to diagnose, because pings and small transactions keep working.</p>
 </div>
-<p>依赖 PMTUD 很脆弱：ICMPv6 常被安全策略过滤，一条 Packet Too Big 丢了就形成<strong>只影响大包的黑洞</strong>——ping 和小事务全正常，最难查。所以生产网直接抬高 MTU（常见 1600/9000），把 PMTUD 当兜底。</p>
-<h2 id="176-ecmp">17.6 邻居发现与 ECMP</h2>
-<div class="en">
-<p>Neighbor Discovery replaces ARP, and Router Advertisement provides prefixes and the default router. For SRv6, the relevant part is that flow hashing in the fabric uses the source address, destination address and flow label — which is why the ingress node must write a stable, well-distributed value into the flow label.</p>
-</div>
-<p>ND 取代 ARP，RA 提供前缀与默认路由。对 SRv6 而言相关的点是：<strong>转发面哈希用 (SA, DA, FlowLabel)</strong>，所以入口节点必须写入稳定且分布良好的 Flow Label 值——写 0 或随机每包变化，都会破坏负载分担（前者导致全走一条，后者导致乱序）。</p>
-<h2 id="_1">实战案例：一次"只有大包不通"的定位</h2>
-<p><strong>现象</strong>：SRv6 改造后，同一业务 <code>ping -s 64</code> 通、<code>ping -s 1400</code> 不通；TCP 建连成功但传输卡死。</p>
-<p><strong>排查路径</strong>：</p>
-<ol>
-<li>先用不同包长二分：确认 1452 字节附近开始失败 → 典型 MTU 问题。</li>
-<li>在两端抓包：大包发出后无回应，中间链路无 ICMPv6 Too Big（被过滤）。</li>
-<li>计算：客户 1500 + 外层 40 = 1540 &gt; 链路 MTU 1500 → 必须丢。</li>
-<li>处理：把核心链路 MTU 提到 1600；同时放行 ICMPv6 type 2（Packet Too Big），让 PMTUD 至少有兜底。</li>
-</ol>
-<p><strong>预防措施</strong>：</p>
+<p><strong>依赖 PMTUD 很脆弱</strong>：ICMPv6 常被安全策略过滤，<strong>一条 Packet Too Big 丢了就形成"只影响大包的黑洞"</strong>——ping 与小事务全正常，最难查。所以<strong>生产网直接抬高 MTU（常见 1600 / 9000），把 PMTUD 当兜底</strong>。</p>
 <table>
 <thead>
 <tr>
 <th>措施</th>
+<th>说明</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Underlay MTU ≥ 1600</td>
+<td>预留 SRH 与 TI-LFA 余量</td>
+<td><strong>必做</strong></td>
+</tr>
+<tr>
+<td>放行 ICMPv6 type 2</td>
+<td>不要一刀切过滤 ICMPv6</td>
+<td>必做</td>
+</tr>
+<tr>
+<td>业务侧 MSS clamp</td>
+<td>TCP 场景兜底</td>
+<td>建议</td>
+</tr>
+<tr>
+<td>监控大包丢包率</td>
+<td>单独统计 &gt; 1400 字节</td>
+<td>建议</td>
+</tr>
+</tbody>
+</table>
+<h2 id="176-flow-label-ecmp">17.6 邻居发现、Flow Label 与 ECMP</h2>
+<div class="en">
+<p>Neighbor Discovery replaces ARP, and Router Advertisement provides prefixes and the default router. For SRv6, the relevant part is that flow hashing in the fabric uses the source address, destination address and flow label — which is why the ingress node must write a stable, well-distributed value into the flow label.</p>
+</div>
+<p><strong>ND 取代 ARP，RA 提供前缀与默认路由</strong>。对 SRv6 而言相关的点是：<strong>转发面哈希用 (SA, DA, Flow Label)</strong>，所以<strong>入口节点必须写入稳定且分布良好的 Flow Label</strong>：</p>
+<ul>
+<li><strong>写 0</strong> → 所有流在同一位置哈希 → <strong>全走一条链路</strong>，带宽浪费；</li>
+<li><strong>每包随机</strong> → 同一条流的不同包走不同路径 → <strong>乱序</strong>，TCP 性能骤降。</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Flow Label 取值</th>
+<th>结果</th>
+<th>推荐度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全 0</td>
+<td>单路径，ECMP 失效</td>
+<td>✘</td>
+</tr>
+<tr>
+<td>每包随机</td>
+<td>乱序，TCP 重排</td>
+<td>✘</td>
+</tr>
+<tr>
+<td><strong>按流的五元组哈希</strong></td>
+<td><strong>同流同路径，异流分担</strong></td>
+<td><strong>✔</strong></td>
+</tr>
+<tr>
+<td>继承内层 Flow Label</td>
+<td>透传端到端语义</td>
+<td>视实现</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The rule of thumb is that entropy must be computed once, at the ingress, from the inner flow, and must remain constant for the lifetime of that flow. Recomputing it at every hop, or deriving it from the outer header alone, defeats the purpose.</p>
+</div>
+<p>经验法则：<strong>熵只能在入口算一次，从内层流算出来，且在该流的生命周期内保持不变</strong>。<strong>逐跳重算</strong>、或<strong>只从外层头推导</strong>，都会让哈希失去意义。</p>
+<h2 id="177-srv6">17.7 SRv6 相关字段速查</h2>
+<table>
+<thead>
+<tr>
+<th>需要知道的</th>
+<th>值/规则</th>
+<th>出现在哪一章</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SRH 的 NH 值</td>
+<td>43</td>
+<td>17.2</td>
+</tr>
+<tr>
+<td>SRH 类型</td>
+<td>Routing Header Type 4</td>
+<td>17.2</td>
+</tr>
+<tr>
+<td>内层 IPv4 / TCP / UDP / ICMPv6</td>
+<td>4 / 6 / 17 / 58</td>
+<td>17.2</td>
+</tr>
+<tr>
+<td>路由头处理者</td>
+<td><strong>DA 所指节点</strong></td>
+<td>17.3</td>
+</tr>
+<tr>
+<td>最小链路 MTU</td>
+<td>1280</td>
+<td>17.5</td>
+</tr>
+<tr>
+<td>推荐 Underlay MTU</td>
+<td>1600</td>
+<td>10.4 / 17.5</td>
+</tr>
+<tr>
+<td>ULA 前缀</td>
+<td><code>FC00::/7</code>（常用 <code>fd00::/8</code>）</td>
+<td>14.3 / 15.4</td>
+</tr>
+<tr>
+<td>链路本地</td>
+<td><code>FE80::/10</code></td>
+<td>17.4</td>
+</tr>
+<tr>
+<td>哈希输入</td>
+<td>SA + DA + Flow Label</td>
+<td>17.6</td>
+</tr>
+<tr>
+<td>ICMPv6 Packet Too Big</td>
+<td>type 2</td>
+<td>17.5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="178">17.8 本章小结</h2>
+<div class="en">
+<p>IPv6 is not a detail of SRv6; it is the reason SRv6 works the way it does. The fixed header and the extension chain make a routing header possible without touching the base header, the routing header processing rule keeps transit routers stateless, the no-fragmentation rule makes MTU planning mandatory, and the flow label rule makes load balancing the ingress node's responsibility.</p>
+</div>
+<p>IPv6 <strong>不是 SRv6 的细节，而是 SRv6 之所以长成这样</strong>：<strong>固定头 + 扩展链</strong>让"加一个路由头"成为可能；<strong>路由头处理规则</strong>让<strong>转发节点保持无状态</strong>；<strong>禁止中间分片</strong>把 <strong>MTU 规划变成硬要求</strong>；<strong>Flow Label 参与哈希</strong>把<strong>负载分担的责任交给入口</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>规则</th>
+<th>正面推论</th>
+<th>反面风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>40 B 固定头</td>
+<td>扩展不需改基本头</td>
+<td>扩展头被老设备丢弃</td>
+</tr>
+<tr>
+<td>只有 DA 节点处理路由头</td>
+<td><strong>P 节点零改造</strong></td>
+<td><strong>P 上误配 SID 即越权</strong></td>
+</tr>
+<tr>
+<td>禁止中间分片</td>
+<td>转发简单、时延可预测</td>
+<td><strong>MTU 不规划就静默丢大包</strong></td>
+</tr>
+<tr>
+<td>Flow Label 参与哈希</td>
+<td>ECMP 有效</td>
+<td>写 0 / 随机 → 单路径或乱序</td>
+</tr>
+<tr>
+<td>ULA 私有空间</td>
+<td>规模 + 不泄露</td>
+<td>需自管唯一性、跨域需转换</td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>SRv6 没有发明任何东西，它只是把 IPv6 已有的四条规则用到了极致</strong>——理解了这四条，前面 16 章的每个"为什么"都有了答案。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="a">案例 A：一次"只有大包不通"的定位</h3>
+<p><strong>现象</strong>：SRv6 改造后，同一业务 <code>ping -s 64</code> 通、<code>ping -s 1400</code> 不通；TCP 建连成功但传输卡死。</p>
+<p><strong>排查路径</strong>：</p>
+<pre><code class="language-text">① 二分包长：1400 通、1452 开始失败 → 典型 MTU
+② 两端抓包：大包发出后无回应，中间没有 ICMPv6 Too Big
+   （说明 PTB 被过滤了，源端永远不知道）
+③ 计算：客户 1500 + 外层 40 = 1540 &gt; 链路 MTU 1500 → 必丢
+④ 处理：
+   a. 核心链路 MTU 提到 1600（根治）
+   b. 放行 ICMPv6 type 2（兜底，让 PMTUD 至少能工作）
+   c. TCP 业务加 MSS clamp（过渡期）
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>预防措施</th>
 <th>说明</th>
 </tr>
 </thead>
@@ -198,22 +586,45 @@
 </tr>
 <tr>
 <td>业务侧 MSS 调整</td>
-<td>TCP 场景用 MSS clamp 兜底</td>
+<td>TCP 场景兜底</td>
 </tr>
 <tr>
 <td>监控大包丢包率</td>
-<td>单独统计 &gt;1400 字节的丢包</td>
+<td>单独统计 &gt; 1400 字节的丢包</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_2">本章小结</h2>
-<ol>
-<li>40 字节固定头 + 扩展头链，NH=43 即 SRH。</li>
-<li>路由头只由 DA 所指节点处理——这既是"P 节点无需支持 SRv6"的依据，也是"SID 误配即越权"的风险源。</li>
-<li>ULA（FC00::/7）是 SR 域的首选空间。</li>
-<li>IPv6 禁止中间分片，MTU 必须规划，PMTUD 只能兜底。</li>
-<li>Flow Label 是负载分担的熵，必须由入口节点正确写入。</li>
-</ol>
+<h3 id="bflow-label-0-1n">案例 B：Flow Label 写 0，链路利用率只有 1/N</h3>
+<p><strong>现象</strong>：两条 100G 链路做 ECMP，割接后<strong>一条 95%、一条 12%</strong>，业务本身正常。</p>
+<pre><code class="language-text">① 抓包看外层 Flow Label：全部为 0
+② 入口 PE 的封装实现把 Flow Label 固定填 0
+   → 哈希输入只剩 (SA, DA)，而 SA/DA 对同一业务是固定的
+   → 所有流落到同一条成员链路
+③ 修复：入口改为&quot;按内层五元组哈希写 Flow Label&quot;
+④ 复测：两条链路接近 50:50
+</code></pre>
+<p><strong>教训</strong>：<strong>ECMP 不是"配了就生效"</strong>，它依赖<strong>入口写入足够熵</strong>。这条在 uSID 场景尤其容易踩——因为外层头很短，<strong>除了 Flow Label 几乎没有可变字段</strong>（DA 是 SID，SA 是本机 locator）。</p>
+<h3 id="c-nh43">案例 C：防火墙丢弃 NH=43，业务"无日志中断"</h3>
+<p><strong>现象</strong>：服务链上线后业务全断，<strong>防火墙没有任何日志</strong>，接口计数显示"收到并丢弃"。</p>
+<pre><code class="language-text">① 防火墙侧抓包：报文为 [IPv6 NH=43][SRH][内层 IPv4]
+② 设备策略：&quot;未识别的 IPv6 扩展头一律丢弃&quot;（默认安全加固）
+③ 结果：报文在防火墙处被静默丢弃，无应用层日志
+④ 修复方案（择一）：
+   a. 防火墙放行 NH=43（仅限 SR 域内接口）
+   b. 用 SR Proxy / SERA 让设备只看到裸报文（第 13 章）
+⑤ 复测：策略计数正常增长，业务恢复
+</code></pre>
+<p><strong>教训</strong>：<strong>"安全加固"与"SRv6 可用性"经常直接冲突</strong>。上线前的检查单必须包含一条：<strong>域内所有中间设备是否放行 NH=43</strong>。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 8200</strong>：IPv6 协议规范，40 字节头、扩展头链、"只有 DA 节点处理路由头"、禁止中间分片的原始条文。</li>
+<li><strong>RFC 8201</strong>：PMTUD for IPv6，1280 最小 MTU 与 Packet Too Big 机制。</li>
+<li><strong>RFC 8754</strong>：SRH，Routing Header Type 4 的格式与处理。</li>
+<li><strong>RFC 4193</strong>：ULA（<code>FC00::/7</code>），17.4 的规范依据。</li>
+<li><strong>RFC 6437 / RFC 6438</strong>：Flow Label 规范与隧道中的使用，17.6 的依据。</li>
+<li><strong>RFC 4861</strong>：邻居发现（ND/RA），17.6 的前半部分。</li>
+<li>交叉参考：第 2 章（封装与熵）、第 10 章（MTU 预算）、第 12/13 章（扩展头导致的服务失明）、第 14/15 章（ULA 的实际用法）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="16-case-bell-sp.html">← 案例：Bell Canada 服务编程落地</a></nav>
     <footer class="foot">
@@ -231,14 +642,25 @@
   </main>
   <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
 <ul>
+<li><a href="#170-srv6">17.0 四条规则如何决定 SRv6 的设计</a></li>
 <li><a href="#171-40">17.1 固定 40 字节的基本头</a></li>
 <li><a href="#172">17.2 扩展头链</a></li>
-<li><a href="#173">17.3 关键规则：谁能处理路由头</a></li>
+<li><a href="#173">17.3 关键规则：谁能处理路由头</a><ul>
+<li><a href="#1731">17.3.1 反过来也要记住：越权处理的风险</a></li>
+</ul>
+</li>
 <li><a href="#174">17.4 地址类型与前缀</a></li>
 <li><a href="#175-mtu-pmtud">17.5 MTU 与 PMTUD</a></li>
-<li><a href="#176-ecmp">17.6 邻居发现与 ECMP</a></li>
-<li><a href="#_1">实战案例：一次"只有大包不通"的定位</a></li>
-<li><a href="#_2">本章小结</a></li>
+<li><a href="#176-flow-label-ecmp">17.6 邻居发现、Flow Label 与 ECMP</a></li>
+<li><a href="#177-srv6">17.7 SRv6 相关字段速查</a></li>
+<li><a href="#178">17.8 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a">案例 A：一次"只有大包不通"的定位</a></li>
+<li><a href="#bflow-label-0-1n">案例 B：Flow Label 写 0，链路利用率只有 1/N</a></li>
+<li><a href="#c-nh43">案例 C：防火墙丢弃 NH=43，业务"无日志中断"</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>

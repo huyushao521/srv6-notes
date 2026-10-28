@@ -50,22 +50,112 @@
     <article class="md">
 <h1 id="14-bell-canada-srv6">14 · 案例：Bell Canada 的 SRv6 地址规划</h1>
 <blockquote>
-<p>对应原书第 14 章，与 Bell Canada 技术总监 Daniel Voyer 合作撰写。<strong>这是全书唯一给出完整生产级地址算账的章节</strong>，可以直接当成模板复用到你自己的规划里。</p>
+<p><strong>本章定位</strong>：原书第 14 章，与 Bell Canada 技术总监 <strong>Daniel Voyer</strong> 合作撰写。<strong>这是全书唯一给出完整生产级地址算账的章节</strong>，可以直接当模板复用到自己的规划里。英文块为原文摘录，中文为完整翻译，Figure 14.1–14.4 重绘。</p>
 </blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bell 为什么从 SR-MPLS 转向 SRv6</td>
+<td>14.1</td>
+</tr>
+<tr>
+<td>19,720 个节点、81 个区域怎么切地址</td>
+<td>14.2、14.3</td>
+</tr>
+<tr>
+<td>为什么"每个算法一个 Block"</td>
+<td>14.3</td>
+</tr>
+<tr>
+<td>"跨 Block 保持 Set/Node ID 一致"带来什么</td>
+<td>14.3.1</td>
+</tr>
+<tr>
+<td>Set 按需分配与按区域平均，差多少</td>
+<td>14.4</td>
+</tr>
+<tr>
+<td>224 个 Set 到底够不够（真实的约束是什么）</td>
+<td>14.6</td>
+</tr>
+<tr>
+<td>从主机到容器，为什么不需要 MPLS 了</td>
+<td>14.7</td>
+</tr>
+</tbody>
+</table>
+<p>一句话概括：<strong>Bell 的规划之所以能当模板，是因为它把"地址"变成了"可加总、可汇总、可预测"的工程物</strong>——每一个决策都能算出一个数，而不是"看起来够用"。</p>
 <h2 id="141">14.1 背景与动机</h2>
 <div class="en">
 <p>Bell Canada is the largest communications company in Canada. It deployed one of the earliest SR-MPLS networks in 2017, and the first benefit it realized was TI-LFA protection. Because of the compelling advantages of SRv6 uSIDs, Bell then transitioned to SRv6, replacing the complexity of MPLS at the host, socket and container level, and removing the need for SR-MPLS, LDP and SRv6 gateways at the data center and network edge.</p>
 </div>
-<p>Bell 是加拿大最大的通信公司。2017 年它就建成了最早的一批 SR-MPLS 网络，<strong>第一个真正落地的收益是 TI-LFA 保护</strong>。后来因为 uSID 的优势太明显，转向 SRv6：主机/套接字/容器层面不再需要 MPLS，数据中心与网络边缘也不再需要 SR-MPLS/LDP/SRv6 网关。</p>
+<p>Bell 是<strong>加拿大最大的通信公司</strong>。<strong>2017 年它就建成了最早的一批 SR-MPLS 网络</strong>，<strong>第一个真正落地的收益是 TI-LFA 保护</strong>。后来因为 <strong>uSID 的优势太明显</strong>，转向 SRv6：<strong>主机 / 套接字 / 容器层面不再需要 MPLS</strong>，<strong>数据中心与网络边缘也不再需要 SR-MPLS / LDP / SRv6 网关</strong>。</p>
+<p>这条演进路径值得单独记住——<strong>它不是"跳过 SR-MPLS 直接上 SRv6"，而是"先用 SR-MPLS 拿到保护，再用 SRv6 拿到端到端"</strong>：</p>
+<pre><code class="language-text">图 14-1：Bell 的两步走（原书 Figure 14.1 重绘）
+
+  2017  SR-MPLS（Segment Routing over MPLS）
+        ✔ TI-LFA 保护（第一个收益）
+        ✘ 主机/容器侧仍需 MPLS 栈
+        ✘ DC 与边缘仍需 SR-MPLS / LDP / SRv6 网关
+
+  之后  SRv6 + uSID
+        ✔ 端到端（host → socket → container）统一为 IPv6
+        ✔ 删掉边缘与 DC 的互通网关
+        ✔ 获得 IGP 汇总能力（MPLS 做不到）
+</code></pre>
 <div class="en">
 <p>The reported benefits include a potential reduction of up to 90% in carrier network service OPEX, a 75% reduction in equipment footprint, and as much as 66% reduction in power consumption per central office when service programming is used. SRv6 uSID also removes the BGP 3107 complexity tax and enables IGP summarization, which MPLS cannot do.</p>
 </div>
-<p>公开的数字：载波业务 OPEX 最多降 <strong>90%</strong>、设备占地降 <strong>75%</strong>、启用服务编程后单局功耗最多降 <strong>66%</strong>；同时删掉 BGP 3107 那笔复杂度税，并获得 MPLS 不具备的 IGP 汇总能力。</p>
+<p>公开的数字：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>降幅</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>载波业务 OPEX</td>
+<td><strong>最多 90%</strong></td>
+<td>服务编程 + 自动化</td>
+</tr>
+<tr>
+<td>设备占地（footprint）</td>
+<td><strong>75%</strong></td>
+<td>网关/设备退场、局所合并</td>
+</tr>
+<tr>
+<td>单局功耗</td>
+<td><strong>最多 66%</strong></td>
+<td>服务编程取代专用设备</td>
+</tr>
+<tr>
+<td>BGP 3107 复杂度</td>
+<td><strong>删除</strong></td>
+<td>uSID 不需要 3107 承载</td>
+</tr>
+<tr>
+<td>IGP 汇总能力</td>
+<td><strong>新增</strong></td>
+<td>MPLS 标签无法汇总，IPv6 前缀可以</td>
+</tr>
+</tbody>
+</table>
+<p>最后一项是<strong>技术上最本质的差异</strong>：<strong>MPLS 标签是"平的"，无法汇总；IPv6 前缀是"分层的"，可以汇总</strong>。这一条直接决定了"核心表项随节点数增长还是随区域数增长"（14.5）。</p>
 <h2 id="142-81-19720">14.2 网络结构：81 个区域、19,720 个节点</h2>
 <div class="en">
 <p>Bell operates a multi-level IS-IS network with a level-2 backbone and up to 80 level-1 areas, for a total of 81 areas. The network is expected to have around 19,000 nodes considering mid-term growth. Area sizes vary between 100 and 700 nodes: 48 small areas of up to 150 nodes, 25 medium areas of up to 300 nodes, and 7 large areas of up to 700 nodes.</p>
 </div>
-<p>Bell 跑的是多级 IS-IS：1 个 L2 骨干 + 最多 80 个 L1 区域，共 <strong>81 个区域</strong>；考虑中期增长，全网约 <strong>19,000+ 节点</strong>。区域规模从 100 到 700 不等：</p>
+<p>Bell 跑的是<strong>多级 IS-IS</strong>：<strong>1 个 L2 骨干 + 最多 80 个 L1 区域，共 81 个区域</strong>；考虑中期增长，全网约 <strong>19,000+ 节点</strong>。<strong>区域规模从 100 到 700 不等</strong>：</p>
 <table>
 <thead>
 <tr>
@@ -117,16 +207,50 @@
 <div class="en">
 <p>The distribution matters: there are many more small areas than large ones. Allocating the same number of sets to every area would waste a large fraction of the space in the small areas and leave no room for growth in the large ones.</p>
 </div>
-<p>这个分布是规划的关键：<strong>小区域远多于大区域</strong>。若给每个区域平均分配 Set，小区浪费一大片、大区又不够涨——这是最典型的错误分配方式（第 10.2 节算过：57,000 / 81 ≈ 700，理论可行，实践不可取）。</p>
+<p>这个分布是规划的关键：<strong>小区域远多于大区域</strong>。<strong>若给每个区域平均分配 Set，小区浪费一大片、大区又不够涨</strong>——这是最典型的错误分配方式（第 10.1.2 节算过：按平均分 19,720 / 81 ≈ 243 个 uSID，看似可行，实践不可取）。</p>
 <h2 id="143-space-block224-set">14.3 地址规划：一个 Space、三个 Block、224 个 Set</h2>
 <div class="en">
 <p>Bell designates a small portion of the ULA range, fd00::/8, as the SRv6 space: 0.0015% of this space is enough. Using ULA provides excellent addressing scale, and also network opacity and privacy, since ULAs are not routable outside the domain.</p>
 </div>
-<p>Bell 从 <code>fd00::/8</code>（ULA 私有空间）里取极小一段作为 SRv6 Space——<strong>只占 0.0015%</strong>。用 ULA 有两个好处：地址规模充裕；且 ULA 在域外不可路由，天然带来网络不透明性与隐私性。</p>
+<p>Bell 从 <strong><code>fd00::/8</code>（ULA 私有空间）</strong> 里取极小一段作为 SRv6 Space——<strong>只占 0.0015%</strong>。用 ULA 有两个好处：</p>
+<ol>
+<li><strong>地址规模充裕</strong>（<code>fd00::/8</code> 有 2^120 个地址）；</li>
+<li><strong>ULA 在域外不可路由</strong>，天然带来<strong>网络不透明性与隐私性</strong>。</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>选择</th>
+<th>规模</th>
+<th>风险</th>
+<th>Bell 的选择</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>公网 IPv6（2000::/3）</td>
+<td>大</td>
+<td>与外部路由冲突、安全暴露</td>
+<td>✘</td>
+</tr>
+<tr>
+<td><strong>ULA（fc00::/7，取 fd00::/8）</strong></td>
+<td>极大</td>
+<td>需自管唯一性</td>
+<td><strong>✔</strong></td>
+</tr>
+<tr>
+<td>普通私有段（如 fdxx 小段）</td>
+<td>够用</td>
+<td>后期扩展受限</td>
+<td>部分运营商用</td>
+</tr>
+</tbody>
+</table>
 <div class="en">
 <p>They allocate one uSID block per algorithm: fdbb:bb00::/32 for algorithm 0 (minimum cost), fdbb:bb01::/32 for Flex-Algo 128 (minimum delay), and fdbb:bb02::/32 for Flex-Algo 129 (restrict link). Each block provides about 57,000 global uSIDs, which exceeds current requirements.</p>
 </div>
-<p>每个算法一个 Block：</p>
+<p><strong>每个算法一个 Block</strong>：</p>
 <table>
 <thead>
 <tr>
@@ -139,7 +263,7 @@
 <tr>
 <td><code>fdbb:bb00::/32</code></td>
 <td>Algo 0</td>
-<td>最短路（低成本）</td>
+<td>最短路（最低成本）</td>
 </tr>
 <tr>
 <td><code>fdbb:bb01::/32</code></td>
@@ -149,28 +273,90 @@
 <tr>
 <td><code>fdbb:bb02::/32</code></td>
 <td>Flex-Algo 129</td>
-<td>限制链路（绕行）</td>
+<td>限制链路（绕行/排除）</td>
 </tr>
 </tbody>
 </table>
-<p>单个 Block 提供约 <strong>57,000</strong> 个全局 uSID，对 19,720 节点的网络绰绰有余。</p>
+<p>单个 Block 提供约 <strong>57,000</strong> 个全局 uSID（224 Set × 256），对 19,720 节点的网络<strong>绰绰有余</strong>。</p>
+<p><strong>为什么"每算法一个 Block"而不是"一个 Block 里分 Function"</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>地址形态</th>
+<th>Flex-Algo 切流怎么做</th>
+<th>排障难度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每算法一个 Block</td>
+<td><code>fdbb:bb00::/32</code>、<code>fdbb:bb01::/32</code></td>
+<td><strong>SID 前缀直接体现算法</strong></td>
+<td>看前缀即知算法</td>
+</tr>
+<tr>
+<td>单 Block 多 Function</td>
+<td>同前缀，靠 Function 位区分</td>
+<td>需查映射表</td>
+<td>看 SID 不能直接判断</td>
+</tr>
+</tbody>
+</table>
+<p>第一条是<strong>运维可见性</strong>的胜利：<strong>trace 出来一看是 <code>fdbb:bb01</code> 就知道走了低时延平面</strong>，不需要查任何表（第 9 章的案例 A 就是靠这个定位的）。</p>
 <div class="en">
 <p>Sets simplify the allocation: each set holds 256 uSIDs and is represented by a /40. A block contains 224 sets, with set IDs from 0x00 to 0xdf, for global uSID allocation. One or more sets are allocated to each region, and a region gets the same set IDs from every block. A node gets the same set ID and node ID in every block, so its locators differ only in the block ID.</p>
 </div>
-<p><strong>Set 是分配的基本单位</strong>：一个 Set 装 256 个 uSID，对应一个 /40；一个 Block 有 <strong>224 个 Set</strong>（ID <code>0x00</code>–<code>0xdf</code>）用于全局分配。</p>
+<p><strong>Set 是分配的基本单位</strong>：一个 Set 装 <strong>256 个 uSID</strong>，对应一个 <strong><code>/40</code></strong>；一个 Block 有 <strong>224 个 Set</strong>（ID <code>0x00</code>–<code>0xdf</code>）用于全局分配。</p>
 <p>规则极其干净：</p>
 <ol>
-<li>每个区域分配一到多个 Set。</li>
-<li><strong>同一区域在每个 Block 里拿相同的 Set ID</strong>。</li>
+<li><strong>每个区域分配一到多个 Set</strong>；</li>
+<li><strong>同一区域在每个 Block 里拿相同的 Set ID</strong>；</li>
 <li><strong>同一节点在每个 Block 里拿相同的 Set ID + Node ID</strong>。</li>
 </ol>
-<p>于是同一节点的三个 locator 只差 Block ID 那一段：</p>
-<pre><code class="language-text">Algo 0     : fdbb:bb00:080e::/48
-Algo 128   : fdbb:bb01:080e::/48
-Algo 129   : fdbb:bb02:080e::/48
-              └─┬──┘ └┬┘└┬┘
-             Block  Set Node(=14=0x0e)
+<h3 id="1431">14.3.1 三条规则的价值：一个节点只有"一段"不同</h3>
+<pre><code class="language-text">图 14-2：同一节点在三个 Block 里的 locator（原书 Figure 14.2 重绘）
+
+  Algo 0     : fdbb:bb00:080e::/48
+  Algo 128   : fdbb:bb01:080e::/48
+  Algo 129   : fdbb:bb02:080e::/48
+                └─┬──┘ └┬┘└┬┘
+               Block  Set Node(=14=0x0e)
+
+  → 三个 locator 只在第 3 个 16 bit 段不同（Block ID）
+  → Set 与 Node 完全一致
 </code></pre>
+<table>
+<thead>
+<tr>
+<th>带来的好处</th>
+<th>具体表现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>人眼可换算</strong></td>
+<td>看到 <code>080e</code> 就知道是 Set 0x08 的 0x0e 号节点，任意算法通用</td>
+</tr>
+<tr>
+<td><strong>脚本可生成</strong></td>
+<td>配置模板只需替换 Block 字段，不会错位</td>
+</tr>
+<tr>
+<td><strong>排障可推断</strong></td>
+<td>trace 出 <code>fdbb:bb02:080e::</code> 立即知道"该节点在绕行平面"</td>
+</tr>
+<tr>
+<td><strong>扩容可预测</strong></td>
+<td>新节点在三个 Block 里都拿同一个 Set/Node，一步完成</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>This consistency is not cosmetic: it means that the three locators of a node can be generated from a single pair of numbers, which removes an entire class of configuration errors during provisioning and makes cross-algorithm troubleshooting mechanical rather than investigative.</p>
+</div>
+<p>这种一致性<strong>不是为了好看</strong>：它意味着<strong>一个节点的三个 locator 可以由"一对数字"生成</strong>，从而<strong>消除配置下发时的一整类错误</strong>，并让<strong>跨算法排障从"调查"变成"机械换算"</strong>。</p>
+<h2 id="144-set">14.4 Set 分配模型：按需，不按平均</h2>
 <div class="en">
 <p>The allocation model is not equal-sized per area. Small areas get one set (256 uSIDs for up to 150 nodes), medium areas get two, and large areas get three, with additional sets assigned on demand. Sets allocated to one region need not be contiguous: growth simply takes the next free set.</p>
 </div>
@@ -181,51 +367,285 @@ Algo 129   : fdbb:bb02:080e::/48
 <th>区域规模</th>
 <th>节点数</th>
 <th>Set 数</th>
-<th>uSID 余量</th>
+<th>uSID 容量</th>
+<th>余量</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td>骨干</td>
+<td>120</td>
+<td>1</td>
+<td>256</td>
+<td>136</td>
+</tr>
+<tr>
 <td>小</td>
 <td>≤150</td>
 <td>1</td>
+<td>256</td>
 <td>106</td>
 </tr>
 <tr>
 <td>中</td>
 <td>≤300</td>
 <td>2</td>
+<td>512</td>
 <td>212</td>
 </tr>
 <tr>
 <td>大</td>
 <td>≤700</td>
 <td>3</td>
+<td>768</td>
 <td>68</td>
-</tr>
-<tr>
-<td>骨干</td>
-<td>120</td>
-<td>1</td>
-<td>136</td>
 </tr>
 </tbody>
 </table>
-<p>Set <strong>不必连续</strong>：区域长大了，从空闲池里再拿一个 Set 就行，边界路由器加一条 /40 汇总即可。</p>
-<h2 id="144">14.4 汇总与增长</h2>
+<p>Set <strong>不必连续</strong>：区域长大了，<strong>从空闲池里再拿一个 Set</strong> 就行，<strong>边界路由器加一条 <code>/40</code> 汇总即可</strong>。</p>
+<pre><code class="language-text">图 14-3：Set 池的分配（原书 Figure 14.3 重绘）
+
+  Set ID: 00 01 02 03 04 05 06 07 08 09 ... df   （共 224 个）
+          │  │  │  │  │  │  │  │  │  │
+          │  │  └──┴──┘  │  │  └──┘  │       已分配（按区域，不连续）
+          │  │  区域 A   │  区域 C   │
+          │  │           └─ 区域 B    └─ 区 D（新开）
+          │  └─ 骨干
+          └─ 刻意留空（或给未来最大区域）
+
+  区域 A 扩容：直接拿走 0x0a → 新增一条 fdbb:bb00:0a00::/40 汇总
+  → 不需要移动任何已分配地址
+</code></pre>
+<div class="en">
+<p>The decision to allow non-contiguous sets is what makes the plan maintainable over a decade: contiguous allocation looks tidier on paper, but it forces address renumbering whenever a region grows into the wrong direction. Non-contiguous allocation trades a little tidiness for the complete elimination of renumbering.</p>
+</div>
+<p><strong>允许 Set 不连续，是这份规划能维护十年的原因</strong>：连续分配<strong>在纸面上更整齐</strong>，但它会在<strong>区域朝错误方向增长时逼出重新编址</strong>。不连续分配<strong>用一点整齐度，换掉了"重新编址"这件事本身</strong>。</p>
+<h2 id="145">14.5 汇总与增长：核心表项随区域数增长</h2>
 <div class="en">
 <p>The set structure leads naturally to summarization: 256 /48 prefixes collapse into one /40, a 256-to-1 gain. Border routers of each region advertise one summary per assigned set into the core. When a region outgrows its sets, the operator assigns another set and adds one more summary prefix.</p>
 </div>
-<p>Set 结构天然带来汇总：<strong>256 个 /48 → 1 个 /40，256:1</strong>。每个区域的边界路由器按"已分配的 Set"向核心通告汇总，一个 Set 一条。区域扩容时，加一个 Set、加一条汇总——<strong>核心表项随区域数增长，不随节点数增长</strong>。</p>
-<h2 id="bell-2">实战案例：把 Bell 的模型套到一张 2 万节点的网上</h2>
+<p>Set 结构天然带来汇总：<strong>256 个 <code>/48</code> → 1 个 <code>/40</code>，256:1</strong>。<strong>每个区域的边界路由器按"已分配的 Set"向核心通告汇总，一个 Set 一条</strong>。区域扩容时，<strong>加一个 Set、加一条汇总</strong>——<strong>核心表项随区域数增长，不随节点数增长</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>汇总粒度</th>
+<th>核心表项数（本案例）</th>
+<th>故障域</th>
+<th>评价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不汇总（每节点 /48）</td>
+<td>19,720</td>
+<td>单节点</td>
+<td>不可接受</td>
+</tr>
+<tr>
+<td><strong>按 Set 汇总（/40）</strong></td>
+<td><strong>约 224</strong></td>
+<td>单 Set（≤256 节点）</td>
+<td><strong>Bell 的选择</strong></td>
+</tr>
+<tr>
+<td>按区域汇总（多 Set 合一）</td>
+<td>约 81</td>
+<td>单区域（≤700 节点）</td>
+<td>精度下降</td>
+</tr>
+<tr>
+<td>按 Block 汇总</td>
+<td>3</td>
+<td>全网</td>
+<td>仅极端场景</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-text">图 14-4：核心视角的差别（原书 Figure 14.4 重绘）
+
+  无汇总：核心装 19,720 条 /48        → SPF/LSP 规模大，收敛慢
+  按 Set 汇总：核心装 ~224 条 /40      → 规模降两个数量级
+  按区域汇总：核心装 ~81 条 /36~38     → 更小，但定位精度差
+
+  Bell 选&quot;按 Set&quot;：在&quot;规模&quot;与&quot;故障定位精度&quot;之间取平衡点
+</code></pre>
+<div class="en">
+<p>Summarization at the set level also bounds the blast radius of a change: a new node in a region only modifies the set summary if the set is new, and a failure inside a set is contained to that set's 256 nodes. This is the operational reason to summarize at /40 rather than at the block level.</p>
+</div>
+<p><strong>按 Set 汇总还限定了变更的爆炸半径</strong>：<strong>区域内新增节点，只有在"新开 Set"时才会改动汇总</strong>；而<strong>一个 Set 内部的故障被限制在该 Set 的 256 个节点里</strong>。这就是<strong>在 <code>/40</code> 而不是 Block 级做汇总的运维理由</strong>。</p>
+<h2 id="146">14.6 容量实算：真正的约束不是节点数</h2>
+<p>这是本章最值得抄的一段——<strong>224 个 Set 听起来很多，实际不一定够</strong>。</p>
+<pre><code class="language-text">例 14.1：224 个 Set 到底够不够
+
+需求 = 区域数 × 每区 Set 数（含预留）
+
+按 Bell 的实际情况（按需分配，不预留太多）:
+  骨干 1×1 + 小 48×1 + 中 25×2 + 大 7×3
+  = 1 + 48 + 50 + 21 = 120 个 Set         → 224 够，余 104
+
+按&quot;每区预留 1 个&quot;的保守策略:
+  1×2 + 48×2 + 25×3 + 7×4
+  = 2 + 96 + 75 + 28 = 201 个 Set         → 224 勉强够，余 23
+
+按&quot;三算法各自独立规划 + 每区预留 1 个&quot;:
+  = 201 × 1（因为 Set ID 跨 Block 复用）   → 仍 201，够
+  但若三算法各用独立 Set 池（不复用）:
+  = 603 个 Set                            → 224 远远不够！
+
+② 关键洞察：
+   Bell 的&quot;跨 Block 复用相同 Set ID&quot;不是省事，而是【直接把需求除以 3】
+   没有这条规则，224 个 Set 只够 1/3 的规模
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>规划方式</th>
+<th>Set 需求</th>
+<th>224 够吗</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>跨 Block 复用 Set ID，按需分配</td>
+<td>120</td>
+<td>✔ 充裕</td>
+<td><strong>Bell 的做法</strong></td>
+</tr>
+<tr>
+<td>跨 Block 复用 Set ID，每区预留 1</td>
+<td>201</td>
+<td>✔ 勉强</td>
+<td>留 23 给新开区</td>
+</tr>
+<tr>
+<td>每算法独立 Set 池</td>
+<td>603</td>
+<td>✘</td>
+<td>必须加宽 Block</td>
+</tr>
+<tr>
+<td>每区平均分（224/81 ≈ 2.7）</td>
+<td>224</td>
+<td>✘ 局部</td>
+<td>大区不够，小区浪费</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The capacity constraint is therefore a product of two numbers that are easy to overlook: the number of regions and the reserve factor per region. Node count enters only indirectly, through the number of sets needed to hold the largest area. A plan that is sized on node count alone will look sufficient and fail on the first region split.</p>
+</div>
+<p>所以真正的容量约束是<strong>两个容易被忽略的数的乘积</strong>：<strong>区域数 × 每区预留系数</strong>。<strong>节点数只是间接进入</strong>（通过"最大区域需要几个 Set"）。<strong>只按节点数做容量的规划，看起来够用，却会在第一次"区域拆分"时失败。</strong></p>
+<h2 id="147-mpls">14.7 从主机到容器：为什么不再需要 MPLS</h2>
+<div class="en">
+<p>With SRv6 uSIDs, the same addressing hierarchy extends from the provider edge into the data center and into the host networking stack. A container can be assigned a SID from the same space as a router, which means the first hop of a service chain is not a gateway but the workload itself.</p>
+</div>
+<p>用 SRv6 uSID 时，<strong>同一套编址层级从 PE 一直延伸到数据中心、延伸到主机网络栈</strong>。<strong>一个容器可以从"和路由器相同的空间"里分配到一个 SID</strong>，这意味着<strong>服务链的第一跳不再是网关，而是工作负载本身</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>MPLS 时代</th>
+<th>SRv6 uSID 时代</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>骨干路由器</td>
+<td>MPLS 标签</td>
+<td>IPv6 + uSID</td>
+</tr>
+<tr>
+<td>PE / 边缘</td>
+<td>SR-MPLS 或 SRv6 网关</td>
+<td>直接 SRv6</td>
+</tr>
+<tr>
+<td>DC 网关</td>
+<td>需要封装转换</td>
+<td><strong>不需要</strong>（同一封装）</td>
+</tr>
+<tr>
+<td>主机 / socket</td>
+<td>需要 MPLS 栈（几乎没人做）</td>
+<td><strong>原生 IPv6</strong></td>
+</tr>
+<tr>
+<td>容器</td>
+<td>需 sidecar / CNI 转换</td>
+<td><strong>可直接持有 SID</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>This is the real reason the equipment footprint drops: every boundary that used to require a translation device is now just a router, because there is nothing to translate. The 75% footprint reduction is not primarily a hardware shrink; it is the removal of encapsulation conversion points.</p>
+</div>
+<p>这才是<strong>设备占地下降的真实原因</strong>：<strong>过去每一个需要"转换设备"的边界，现在只是一台路由器</strong>，因为<strong>没有东西需要转换</strong>。<strong>75% 的占地下降主要不是硬件变小，而是"封装转换点"消失了</strong>。</p>
+<h2 id="148">14.8 本章小结</h2>
+<div class="en">
+<p>Bell's plan is a template because every choice is arithmetic: one space from ULA, one block per algorithm, 224 sets per block, sets allocated per region on demand with no contiguity requirement, and identical set and node IDs across blocks. The result is a network that summarizes 256:1, grows by adding a set, and stays readable to a human.</p>
+</div>
+<p>Bell 的规划能当模板，是因为<strong>每个选择都是算术</strong>：<strong>ULA 里取一个 Space、每算法一个 Block、每 Block 224 个 Set、Set 按区域按需分配且不要求连续、跨 Block 保持相同 Set/Node ID</strong>。结果是：<strong>现状 256:1 汇总、增长时加一个 Set、对人类可读</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>决策</th>
+<th>Bell 的选择</th>
+<th>一句话理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Space</td>
+<td>ULA <code>fd00::/8</code> 的 0.0015%</td>
+<td>规模够、域外不可路由</td>
+</tr>
+<tr>
+<td>Block</td>
+<td><strong>每算法一个 <code>/32</code></strong></td>
+<td>前缀即体现算法，排障可见</td>
+</tr>
+<tr>
+<td>Set 容量</td>
+<td>256 个 uSID（<code>/40</code>）</td>
+<td>汇总单位 = 分配单位</td>
+</tr>
+<tr>
+<td>Set 分配</td>
+<td><strong>按需、可非连续</strong></td>
+<td>永不重新编址</td>
+</tr>
+<tr>
+<td>跨 Block 一致性</td>
+<td><strong>同 Set ID + 同 Node ID</strong></td>
+<td>需求除以 3、配置可生成</td>
+</tr>
+<tr>
+<td>汇总</td>
+<td>每 Set 一条 <code>/40</code></td>
+<td>核心表项随区域数增长</td>
+</tr>
+<tr>
+<td>真实约束</td>
+<td><strong>区域数 × 预留系数</strong></td>
+<td>不是节点数</td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>地址规划的水平，体现在"能不能用两个数把全网算出来"</strong>。Bell 的答案是：<strong>区域数</strong> 与 <strong>每区 Set 数</strong>。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="a-bell-2">案例 A：把 Bell 的模型套到一张 2 万节点的网上（原书练习）</h3>
 <p><strong>输入</strong>：80 个区域，最大 700 节点，3 个算法。</p>
-<p><strong>算账</strong>：</p>
-<ol>
-<li>每区 Set 数 = ⌈节点数 / 256⌉ + 1（预留增长）→ 小 2、中 3、大 4。</li>
-<li>总 Set 需求 ≈ 48×2 + 25×3 + 7×4 + 1×1 ≈ 200，<strong>224 个 Set 几乎用尽</strong>。</li>
-<li>结论：如果按"预留一个"的保守策略，单个 Block 不够——此时要么减少预留，要么<strong>再开一个 Block</strong>（地址空间完全允许：256 个 Block 只占 /24）。</li>
-</ol>
-<p><strong>这正是 Bell 规划里最容易被忽略的一条</strong>：224 个 Set 听起来很多，但在 80 个区域 × 3 个算法的场景下，真正的约束不是节点数，而是<strong>区域数 × 预留系数</strong>。</p>
+<pre><code class="language-text">算账:
+① 每区 Set 数 = ⌈节点数 / 256⌉ + 1（预留增长）
+   → 小 2、中 3、大 4
+② 总 Set 需求 ≈ 48×2 + 25×3 + 7×4 + 1×1 ≈ 200
+   → 224 个 Set 几乎用尽
+③ 结论：按&quot;预留一个&quot;的保守策略，单个 Block 不够
+   → 要么减少预留，要么再开一个 Block
+     （地址空间完全允许：256 个 Block 只占 /24）
+</code></pre>
+<p><strong>这正是 Bell 规划里最容易被忽略的一条</strong>：<strong>224 个 Set 听起来很多，但在 80 个区域 × 3 个算法的场景下，真正的约束不是节点数，而是"区域数 × 预留系数"。</strong></p>
 <p><strong>落地检查表</strong>：</p>
 <table>
 <thead>
@@ -249,7 +669,7 @@ Algo 129   : fdbb:bb02:080e::/48
 </tr>
 <tr>
 <td>汇总覆盖</td>
-<td>每条 /40 完整覆盖内部 /48</td>
+<td>每条 <code>/40</code> 完整覆盖内部 <code>/48</code></td>
 </tr>
 <tr>
 <td>增长路径</td>
@@ -257,14 +677,71 @@ Algo 129   : fdbb:bb02:080e::/48
 </tr>
 </tbody>
 </table>
-<h2 id="_1">本章小结</h2>
-<ol>
-<li>Bell 用 ULA 的 0.0015% 承载 19,720 节点、3 个算法。</li>
-<li>Space → Block（按算法）→ Set（按区域，/40）→ Node（/48）四层结构。</li>
-<li>跨 Block 保持 Set ID 与 Node ID 一致，locator 只差 Block，运维友好。</li>
-<li>Set 按需分配、可不连续；汇总是 256:1。</li>
-<li>真正的容量约束是"区域数 × 预留"，不是节点数。</li>
-</ol>
+<h3 id="b-bell-block">案例 B：照抄 Bell 到省级网，栽在"跨 Block 复用"这一条</h3>
+<p><strong>背景</strong>：某省级网（38 个区域，6,800 节点，3 个算法）照抄 Bell 模型，但<strong>每算法独立分配 Set</strong>（"更清晰"），半年后无法扩容。</p>
+<pre><code class="language-text">① 规划：每区 2 个 Set × 3 个算法 × 38 区 = 228 个 Set
+   → 单 Block 只有 224 个 Set → 一开始就不够
+② 现场做法：把部分区域压到 1 个 Set，勉强塞进去
+③ 结果：
+   - 大区（600 节点）只有 1 个 Set = 256 个 uSID → 不够，无法加节点
+   - 被迫在区内做&quot;二级拆分&quot;，汇总层级乱掉
+   - 三个算法的 Set ID 对不上，配置模板全部要写三份
+④ 修复（耗时 4 个月）：
+   a. 改为&quot;跨 Block 同 Set ID/Node ID&quot;（Bell 的做法）
+   b. 需求从 228 降到 76，一个 Block 余量充足
+   c. 配置模板恢复单份
+</code></pre>
+<p><strong>教训</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>看似"更清晰"的做法</th>
+<th>实际代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每算法独立 Set 池</td>
+<td>需求 ×3，很快撞墙</td>
+</tr>
+<tr>
+<td>Set 连续分配</td>
+<td>扩容方向受限，易逼出重编址</td>
+</tr>
+<tr>
+<td>每区平均分</td>
+<td>小区浪费、大区不够</td>
+</tr>
+<tr>
+<td>不给预留</td>
+<td>新开区无处安放</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c-bell">案例 C：用 Bell 的"两数模型"做一次招标应答</h3>
+<p><strong>场景</strong>：投标要求回答"如何支撑未来 5 年从 15,000 节点增长到 30,000 节点，区域数从 60 增至 85"。</p>
+<pre><code class="language-text">按 Bell 的两数模型：
+① 最大区按 800 节点 → 每区 Set = ⌈800/256⌉ = 4（不留预留则 3）
+② 总需求 = 85 区 × (3 + 1 预留) = 340 个 Set
+③ 224 个 Set 不够 → Block 从 /32 扩到 /30（Set 字段 10 bit = 1,024 个）
+④ 结论：地址空间不是瓶颈（/30 只占 ULA 的极小部分），
+   真正的瓶颈是【IGP 汇总后的核心表项】= 340 条 /40，
+   仍在现代路由器承受范围内（万级前缀）
+⑤ 应答要点：
+   - 给出 224 → 1,024 的扩容路径，且&quot;不改已分配地址&quot;
+   - 给出核心表项测算（340 条），证明可扩展
+   - 给出&quot;新开区只需 1 个 Set + 1 条汇总&quot;的操作模型
+</code></pre>
+<p><strong>启示</strong>：<strong>招标应答里"地址够不够"不是重点，"扩容时要不要动存量"才是重点</strong>。Bell 模型的杀伤力就在"<strong>不重新编址</strong>"。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 4193</strong>：Unique Local IPv6 Unicast Addresses（ULA），<code>fd00::/8</code> 的使用依据。</li>
+<li><strong>RFC 3849</strong>：IPv6 地址前缀保留示例（文档用）。</li>
+<li><strong>RFC 8200 / RFC 4291</strong>：IPv6 编址与前缀长度语义，理解 <code>/40</code>、<code>/48</code> 的分层。</li>
+<li><strong>draft-ietf-spring-srv6-srh-compression</strong>：uSID 容器与 <code>pfx-16</code> 的规范（第 3 章）。</li>
+<li><strong>RFC 9352 / Flex-Algo 相关</strong>：Algo 128（min-delay）、Algo 129（restrict）的定义。</li>
+<li>交叉参考：第 10 章（通用部署规划，本章的抽象版）、第 15 章（阿里的双 Block 与 WLIB，另一种解法）、第 5 章（泄露与汇总的 IGP 细节）、第 16 章（Bell SP 的生产服务链）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="13-sr-proxy.html">← 遗留应用的 SR Proxy</a><a class="next" href="15-case-alibaba.html">案例：阿里巴巴核心网 SRv6 设计 →</a></nav>
     <footer class="foot">
@@ -284,10 +761,22 @@ Algo 129   : fdbb:bb02:080e::/48
 <ul>
 <li><a href="#141">14.1 背景与动机</a></li>
 <li><a href="#142-81-19720">14.2 网络结构：81 个区域、19,720 个节点</a></li>
-<li><a href="#143-space-block224-set">14.3 地址规划：一个 Space、三个 Block、224 个 Set</a></li>
-<li><a href="#144">14.4 汇总与增长</a></li>
-<li><a href="#bell-2">实战案例：把 Bell 的模型套到一张 2 万节点的网上</a></li>
-<li><a href="#_1">本章小结</a></li>
+<li><a href="#143-space-block224-set">14.3 地址规划：一个 Space、三个 Block、224 个 Set</a><ul>
+<li><a href="#1431">14.3.1 三条规则的价值：一个节点只有"一段"不同</a></li>
+</ul>
+</li>
+<li><a href="#144-set">14.4 Set 分配模型：按需，不按平均</a></li>
+<li><a href="#145">14.5 汇总与增长：核心表项随区域数增长</a></li>
+<li><a href="#146">14.6 容量实算：真正的约束不是节点数</a></li>
+<li><a href="#147-mpls">14.7 从主机到容器：为什么不再需要 MPLS</a></li>
+<li><a href="#148">14.8 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a-bell-2">案例 A：把 Bell 的模型套到一张 2 万节点的网上（原书练习）</a></li>
+<li><a href="#b-bell-block">案例 B：照抄 Bell 到省级网，栽在"跨 Block 复用"这一条</a></li>
+<li><a href="#c-bell">案例 C：用 Bell 的"两数模型"做一次招标应答</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>

@@ -32,26 +32,26 @@
 
 ## 章节地图
 
-> 带 <span class="done">已精读</span> 标记的章节，已按原书段落**逐段中英对照**重写：英文块是原文摘录，中文是完整翻译，书中的图按原描述用 ASCII 重绘，并补充了可直接落地的实战案例与排障命令。
+> 全书 17 章均带 <span class="done">已精读</span> 标记：每章已按原书段落**逐段中英对照**重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附**实战案例**（含排障分支与期望值表）和**延伸阅读**（RFC 编号与交叉章节）。
 
 <div class="cards">
-<div class="card"><a href="01-introduction.html">01 SRv6 导论</a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
+<div class="card"><a href="01-introduction.html">01 SRv6 导论 <span class="done">已精读</span></a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
 <div class="card"><a href="02-fundamentals.html">02 SRv6 基础 <span class="done">已精读</span></a><p>LOC:FUNCT:ARG、shift-and-forward、SRH 格式与三种节点角色</p></div>
 <div class="card"><a href="03-underlay.html">03 Underlay 指令 <span class="done">已精读</span></a><p>Locator 配置/通告、End 与 flavor、End.X、TI-LFA 保护</p></div>
 <div class="card"><a href="04-flex-algo.html">04 Flex-Algo <span class="done">已精读</span></a><p>按算法分片：min-cost / min-delay / 排除链路，独立地址块</p></div>
 <div class="card"><a href="05-isis-locator.html">05 IS-IS 泄露与汇总 <span class="done">已精读</span></a><p>Level-1/2 泄露与 down 位、多实例重分发、summary-prefix 与分层保护</p></div>
 <div class="card"><a href="06-l3vpn.html">06 SRv6 L3VPN <span class="done">已精读</span></a><p>End.DT/DX 行为族、per-VRF 与 per-CE、RFC 9252 Prefix-SID、uSID 单指令、转置与 MTU</p></div>
-<div class="card"><a href="07-l2vpn.html">07 SRv6 L2VPN</a><p>uDX2/uDX2V/uDT2M、E-Line/E-LAN、多归、WLIB</p></div>
-<div class="card"><a href="08-upa.html">08 UPA</a><p>汇总 + BGP PIC 场景下的静默丢包问题与解法</p></div>
-<div class="card"><a href="09-oam.html">09 Ping/Traceroute</a><p>带 SID list 的探测、O-flag、ECMP 下的路径校验</p></div>
-<div class="card"><a href="10-deployment.html">10 部署规划</a><p>地址层级、Set/Node 分配、MTU、SR Domain 加固、无缝演进</p></div>
-<div class="card"><a href="11-service-programming.html">11 服务编程</a><p>Service SID、SR Service Policy、BSID、BGP-LS SC/OM TLV</p></div>
-<div class="card"><a href="12-sr-aware.html">12 SR-aware 服务</a><p>内层报文暴露、SERA 防火墙、SR-Snort、Metadata</p></div>
-<div class="card"><a href="13-sr-proxy.html">13 SR Proxy</a><p>静态/动态/伪装三种代理，让老设备进链</p></div>
-<div class="card"><a href="14-case-bell.html">14 案例 Bell</a><p>19,000 节点、81 个区域、ULA 地址怎么切</p></div>
-<div class="card"><a href="15-case-alibaba.html">15 案例阿里</a><p>UNI/NNI 双块、Anycast、两级 TE、WLIB</p></div>
-<div class="card"><a href="16-case-bell-sp.html">16 案例 Bell SP</a><p>生产环境 DDOS 服务链，真实 IOS XR 配置</p></div>
-<div class="card"><a href="17-ipv6-essentials.html">17 IPv6 必备</a><p>扩展头、Flow Label、MTU/PMTUD，读 SRv6 的底子</p></div>
+<div class="card"><a href="07-l2vpn.html">07 SRv6 L2VPN <span class="done">已精读</span></a><p>uDX2/uDX2V/uDT2M、E-Line/E-LAN、多归、WLIB</p></div>
+<div class="card"><a href="08-upa.html">08 UPA <span class="done">已精读</span></a><p>汇总 + BGP PIC 场景下的静默丢包问题与解法</p></div>
+<div class="card"><a href="09-oam.html">09 Ping/Traceroute <span class="done">已精读</span></a><p>带 SID list 的探测、O-flag、ECMP 下的路径校验</p></div>
+<div class="card"><a href="10-deployment.html">10 部署规划 <span class="done">已精读</span></a><p>地址层级、Set/Node 分配、MTU、SR Domain 加固、无缝演进</p></div>
+<div class="card"><a href="11-service-programming.html">11 服务编程 <span class="done">已精读</span></a><p>Service SID、SR Service Policy、BSID、BGP-LS SC/OM TLV</p></div>
+<div class="card"><a href="12-sr-aware.html">12 SR-aware 服务 <span class="done">已精读</span></a><p>内层报文暴露、SERA 防火墙、SR-Snort、Metadata</p></div>
+<div class="card"><a href="13-sr-proxy.html">13 SR Proxy <span class="done">已精读</span></a><p>静态/动态/伪装三种代理，让老设备进链</p></div>
+<div class="card"><a href="14-case-bell.html">14 案例 Bell <span class="done">已精读</span></a><p>19,000 节点、81 个区域、ULA 地址怎么切</p></div>
+<div class="card"><a href="15-case-alibaba.html">15 案例阿里 <span class="done">已精读</span></a><p>UNI/NNI 双块、Anycast、两级 TE、WLIB</p></div>
+<div class="card"><a href="16-case-bell-sp.html">16 案例 Bell SP <span class="done">已精读</span></a><p>生产环境 DDOS 服务链，真实 IOS XR 配置</p></div>
+<div class="card"><a href="17-ipv6-essentials.html">17 IPv6 必备 <span class="done">已精读</span></a><p>扩展头、Flow Label、MTU/PMTUD，读 SRv6 的底子</p></div>
 </div>
 
 ## 阅读约定
