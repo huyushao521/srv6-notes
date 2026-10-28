@@ -48,53 +48,140 @@
   </aside>
   <main class="content">
     <article class="md">
-<h1 id="13-sr-proxy">13 · 遗留应用的 SR Proxy</h1>
+<h1 id="13-sr-proxy-srv6">13 · 遗留应用的 SR Proxy：让不懂 SRv6 的设备进链</h1>
 <blockquote>
-<p>对应原书第 13 章 <em>SR Proxy</em>（RFC 8986 §8）。它解决的问题最现实：<strong>设备完全不懂 SRv6，但它必须留在服务链里。</strong></p>
+<p><strong>本章定位</strong>：原书第 13 章《SR Proxy》（RFC 8986 §8）。它解决的问题最现实：<strong>设备完全不懂 SRv6，但它必须留在服务链里。</strong> 英文块为原文摘录，中文为完整翻译，Figure 13.1–13.4 重绘，Example 13.1–13.3 保留。</p>
 </blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么老设备不能"直接进链"</td>
+<td>13.1</td>
+</tr>
+<tr>
+<td>代理的核心动作只有三步，是哪三步</td>
+<td>13.2</td>
+</tr>
+<tr>
+<td>静态 / 动态 / 伪装三种代理的本质差别</td>
+<td>13.3</td>
+</tr>
+<tr>
+<td>动态代理的"状态"到底存的是什么，要多少内存</td>
+<td>13.4</td>
+</tr>
+<tr>
+<td>为什么 SR Proxy 一定丢元数据</td>
+<td>13.5</td>
+</tr>
+<tr>
+<td>什么情况下必须用 SR Proxy 而不是 SERA</td>
+<td>13.6</td>
+</tr>
+<tr>
+<td>主备切换后老流为什么必断</td>
+<td>13.7</td>
+</tr>
+</tbody>
+</table>
+<p>一句话概括：<strong>SR Proxy 把封装逻辑从"设备"搬到"旁边的路由器"</strong>——设备看到的是<strong>裸报文</strong>，路由器负责<strong>进前剥、出后恢复</strong>。它是<strong>唯一不需要碰设备</strong>的方案，代价是<strong>服务永远看不到 SID 与元数据</strong>。</p>
 <h2 id="131">13.1 为什么不能让它们直接进链</h2>
 <div class="en">
 <p>A legacy appliance may drop packets with an IPv6 routing header, or may not even support IPv6. It cannot be expected to parse a segment list, and it certainly cannot be expected to re-encapsulate. The SR proxy behavior solves this by moving the encapsulation logic into the adjacent SRv6-capable router: the proxy removes the encapsulation before the packet reaches the appliance, and restores it afterwards.</p>
 </div>
-<p>老设备可能直接丢弃带 IPv6 路由头的报文，甚至根本不支持 IPv6。你不可能要求它解析段列表，更不可能要求它重新封装。SR Proxy 把封装逻辑搬到旁边那台支持 SRv6 的路由器上：<strong>进设备前剥封装，出设备后恢复封装</strong>。</p>
-<p>核心动作只有三步：</p>
-<pre><code class="language-text">收到: [IPv6 | SRH | 净荷]  →  缓存外层头
-      ↓
-交给设备: [净荷]                      ← 裸报文，设备完全不知道 SRv6
-      ↓
-收回: 重新压上缓存的外层头（或下一段）  →  继续转发
+<p>老设备可能<strong>直接丢弃带 IPv6 路由头的报文</strong>，甚至<strong>根本不支持 IPv6</strong>。你不可能要求它<strong>解析段列表</strong>，更不可能要求它<strong>重新封装</strong>。SR Proxy 把<strong>封装逻辑搬到旁边那台支持 SRv6 的路由器</strong>上：<strong>进设备前剥封装，出设备后恢复封装</strong>。</p>
+<p>具体会遇到三类设备：</p>
+<table>
+<thead>
+<tr>
+<th>设备类型</th>
+<th>行为</th>
+<th>直接进链的后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>支持 IPv6，但丢弃带扩展头的包</td>
+<td>见到 <code>Next Header=43</code> 就丢</td>
+<td><strong>静默丢包</strong>，无日志</td>
+</tr>
+<tr>
+<td>只支持 IPv4</td>
+<td>完全不解析 IPv6</td>
+<td>整包丢弃</td>
+</tr>
+<tr>
+<td>支持 IPv6，且会<strong>自己发起</strong>流量</td>
+<td>回程流量没有 SRv6 封装</td>
+<td>回程无法进链，<strong>单向通</strong></td>
+</tr>
+</tbody>
+</table>
+<p>第三类最容易被忽略：<strong>设备主动发起的流量（健康检查、审计日志回传、DNS 查询）没有外层封装</strong>，所以代理必须能<strong>双向</strong>处理。</p>
+<h2 id="132">13.2 代理的核心动作只有三步</h2>
+<pre><code class="language-text">图 13-1：代理的三步（原书 Figure 13.1 重绘）
+
+  收到: [IPv6 | SRH | 净荷]
+        │
+        ① 缓存外层头（或按配置构造）
+        ▼
+  交给设备: [净荷]                 ← 裸报文，设备完全不知道 SRv6
+        │
+        ② 设备处理（策略、检测、改写）
+        ▼
+  收回: ③ 重新压上缓存的外层头（或下一段）
+        │
+        ▼
+  [IPv6 | SRH' | 净荷]  → 继续转发
 </code></pre>
-<h2 id="132">13.2 三种代理行为</h2>
+<div class="en">
+<p>The proxy is a behavior of the adjacent router, not of the appliance. That is the key architectural point: the SID in the segment list points at the router, and the router is what appears in the network as the service endpoint. The appliance is invisible to the SR domain.</p>
+</div>
+<p><strong>代理是"旁边那台路由器"的行为，不是设备的行为</strong>。这是关键架构点：<strong>段列表里的 SID 指向路由器，路由器才是网络中"看起来的服务端点"</strong>；<strong>设备对 SR 域完全不可见</strong>。</p>
+<p>这个特性带来一个常被忽视的好处：<strong>服务链的段列表不需要知道设备的地址</strong>。换设备、改设备 IP，<strong>段列表不用变</strong>——只要代理配置改一下接口。</p>
+<h2 id="133">13.3 三种代理行为</h2>
 <div class="en">
 <p>There are three flavors. A static proxy (End.AS) is configured with the encapsulation to restore, so it has no state but requires manual configuration per path. A dynamic proxy (End.AD) caches the encapsulation it removed, so it works with any path but needs shared memory to store it. A masquerading proxy (End.AM) rewrites the packet as if the appliance itself had originated it, which is the only option when the appliance also originates traffic.</p>
 </div>
+<p>三种行为：</p>
 <table>
 <thead>
 <tr>
 <th>行为</th>
 <th>名称</th>
+<th>行为码</th>
 <th>状态</th>
 <th>适用</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>End.AS</strong></td>
+<td><strong><code>End.AS</code></strong></td>
 <td>静态代理</td>
-<td>无状态（配置写死）</td>
+<td>0x0041</td>
+<td><strong>无状态</strong>（配置写死恢复内容）</td>
 <td>服务链路径固定、设备只转发</td>
 </tr>
 <tr>
-<td><strong>End.AD</strong></td>
+<td><strong><code>End.AD</code></strong></td>
 <td>动态代理</td>
-<td>有状态（缓存外层头）</td>
+<td>0x0043</td>
+<td><strong>有状态</strong>（缓存外层头）</td>
 <td>路径动态、设备只转发</td>
 </tr>
 <tr>
-<td><strong>End.AM</strong></td>
+<td><strong><code>End.AM</code></strong></td>
 <td>伪装代理</td>
-<td>有状态（地址映射）</td>
-<td>设备自己也会发起流量</td>
+<td>0x0042</td>
+<td><strong>有状态</strong>（地址映射）</td>
+<td><strong>设备自己也会发起流量</strong></td>
 </tr>
 </tbody>
 </table>
@@ -102,48 +189,461 @@
 <p>The static proxy is the simplest: the restoring encapsulation is part of the configuration, so the dataplane is stateless, but any change in the path requires a configuration change. The dynamic proxy removes the encapsulation, stores it in memory keyed by the inner flow, and restores it when the packet comes back — this costs memory and must be sized for the number of concurrent flows.</p>
 </div>
 <ul>
-<li><strong>End.AS（静态）</strong>：恢复用的封装写在配置里，<strong>转发面无状态</strong>、性能最好；但路径一变就要改配置。</li>
-<li><strong>End.AD（动态）</strong>：剥下来的封装按内层流做键缓存到内存，回来时按流查表恢复；灵活，但要按并发流数预留内存——高流量场景这是隐性成本。</li>
-<li><strong>End.AM（伪装）</strong>：把报文改写成"设备自己发的"，返回时再还原；这是<strong>设备会主动发起流量</strong>时唯一可行的方案（例如某些代理型防火墙）。</li>
+<li><strong><code>End.AS</code>（静态）</strong>：<strong>恢复用的封装写在配置里</strong>，<strong>转发面无状态</strong>、性能最好；但<strong>路径一变就要改配置</strong>；</li>
+<li><strong><code>End.AD</code>（动态）</strong>：<strong>剥下来的封装按内层流做键缓存到内存</strong>，回来时<strong>按流查表恢复</strong>；灵活，但要<strong>按并发流数预留内存</strong>——高流量场景这是隐性成本；</li>
+<li><strong><code>End.AM</code>（伪装）</strong>：把报文<strong>改写成"设备自己发的"</strong>，返回时再还原；这是<strong>设备会主动发起流量</strong>时<strong>唯一可行</strong>的方案（例如某些代理型防火墙）。</li>
 </ul>
-<h2 id="133">13.3 代价与限制</h2>
+<pre><code class="language-text">图 13-2：三种代理的处理对比（原书 Figure 13.2 重绘）
+
+  End.AS（静态）
+    进: [IPv6|SRH|P] → 缓存策略：不看实际头，按配置构造
+    出: 按&quot;配置里写的下一段&quot;重新封装
+      ✔ 无状态、最快   ✘ 路径变了要改配置；多路径场景做不到
+
+  End.AD（动态）
+    进: [IPv6|SRH|P] → 缓存(key=内层五元组, value=外层头+剩余段)
+    出: 按 key 查表 → 恢复原封装
+      ✔ 任意路径都能用  ✘ 占内存；缓存丢失/老化 = 流断
+
+  End.AM（伪装）
+    进: [IPv6|SRH|P] → 改写源地址为&quot;设备地址&quot;，剥封装
+    出: 设备主动发的流也能被识别并重新封装
+      ✔ 双向都能进链    ✘ 地址映射有状态，NAT 语义复杂
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>End.AS</th>
+<th>End.AD</th>
+<th>End.AM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>转发面状态</td>
+<td><strong>无</strong></td>
+<td>每流一条</td>
+<td>每流/每映射一条</td>
+</tr>
+<tr>
+<td>内存需求</td>
+<td>0</td>
+<td>并发流数 × 约 100 B</td>
+<td>并发流数 × 映射表项</td>
+</tr>
+<tr>
+<td>路径变更</td>
+<td><strong>需改配置</strong></td>
+<td>自动适应</td>
+<td>自动适应</td>
+</tr>
+<tr>
+<td>设备主动流量</td>
+<td>不支持</td>
+<td>不支持</td>
+<td><strong>支持</strong></td>
+</tr>
+<tr>
+<td>主备切换</td>
+<td><strong>无缝</strong></td>
+<td>老流中断</td>
+<td>老流中断</td>
+</tr>
+<tr>
+<td>典型用途</td>
+<td>固定拓扑、单路径</td>
+<td>多路径/SR Policy</td>
+<td>代理型防火墙、LB</td>
+</tr>
+</tbody>
+</table>
+<h2 id="134-endad">13.4 状态到底存了什么：End.AD 的容量账</h2>
+<div class="en">
+<p>The dynamic proxy's state is the encapsulation it removed, keyed by the inner flow. The size of that state is therefore a function of two numbers: how many concurrent flows traverse the appliance, and how large the saved encapsulation is. Both must be estimated before deployment, because an undersized cache silently degrades into dropped flows.</p>
+</div>
+<p><strong>动态代理的状态，就是"它剥下来的那个封装"</strong>，用<strong>内层流做键</strong>。所以这张表的大小是<strong>两个数的函数</strong>：<strong>并发穿越设备的流数</strong>，以及<strong>保存的封装有多大</strong>。<strong>两者都必须在部署前估算</strong>，因为<strong>缓存不够时会静默退化成"丢流"</strong>。</p>
+<pre><code class="language-text">例 13.1：End.AD 的缓存容量估算
+
+单个表项：
+  key   = 内层五元组 + 接口          约 32 B
+  value = 外层 IPv6 头(40) + SRH(8~40) + 元信息  约 64–96 B
+  合计  ≈ 100–130 B / 流
+
+场景 A：小型企业出口，并发 20,000 流
+  20,000 × 130 B ≈ 2.6 MB          → 任何平台都够
+
+场景 B：城域清洗中心，并发 2,000,000 流
+  2,000,000 × 130 B ≈ 260 MB       → 需要专门的内存规划
+
+场景 C：老化时间 30 s，新建速率 60,000 流/s
+  稳态流数 ≈ 60,000 × 30 = 1,800,000（与场景 B 同量级）
+  → 必须同时配&quot;表满告警&quot;与&quot;老化时间调优&quot;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>影响</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>缓存表大小</td>
+<td>决定能承载多少并发流</td>
+<td>按峰值 × 1.5 规划</td>
+</tr>
+<tr>
+<td>老化时间</td>
+<td>太短 → 长连接被误删；太长 → 表满</td>
+<td>大于最长空闲间隔（通常 60–120 s）</td>
+</tr>
+<tr>
+<td>表满策略</td>
+<td>丢新流 / 丢老流</td>
+<td><strong>丢新流并告警</strong>（可观测）</td>
+</tr>
+<tr>
+<td>主备同步</td>
+<td>无同步 → 切换后老流断</td>
+<td>业务侧能容忍，或用会话同步</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>Note that the failure mode of an undersized dynamic proxy cache is not a clean error: the flow simply stops forwarding in one direction, and the appliance reports normal operation because it never sees the encapsulated packet again.</p>
+</div>
+<p>注意：<strong>动态代理缓存不够时的失败方式不是"报错"</strong>，而是<strong>该方向突然停止转发</strong>；而<strong>设备侧显示一切正常</strong>——因为它<strong>再也收不到那个封装包了</strong>。这是本章最难排查的故障模式。</p>
+<h2 id="135-sr-proxy">13.5 代价：为什么 SR Proxy 一定丢元数据</h2>
+<div class="en">
+<p>The most important limitation is the loss of metadata: the appliance sees a plain packet, so any classification result carried in the SID argument is invisible to it. This is the fundamental trade-off between SR Proxy, which requires no change to the appliance, and SR-aware processing, which requires the appliance to understand SRv6.</p>
+</div>
+<p>最重要的限制是<strong>元数据丢失</strong>：设备看到的是<strong>裸报文</strong>，<strong>SID argument 里的分类结果它一概看不见</strong>。这就是 <strong>SR Proxy（设备零改造）</strong> 与 <strong>SR-aware（设备懂 SRv6）</strong> 之间的<strong>根本取舍</strong>：<strong>一个省改造成本，一个省运维复杂度</strong>。</p>
 <table>
 <thead>
 <tr>
 <th>限制</th>
 <th>说明</th>
+<th>缓解</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>丢失元数据</td>
-<td>设备只看到裸报文，读不到 Arg 里的分类结果（对比第 12 章 SERA）</td>
+<td><strong>丢失元数据</strong></td>
+<td>设备读不到 Arg/TLV</td>
+<td>把结论放到<strong>内层</strong>（如 DSCP、ToS 位）或改用 SERA</td>
 </tr>
 <tr>
 <td>MTU 二次膨胀</td>
-<td>恢复封装时包又变大，需要保证出口 MTU 足够</td>
+<td>恢复封装时包又变大</td>
+<td>出口 MTU 按"最大封装"预留</td>
 </tr>
 <tr>
 <td>有状态风险</td>
-<td>End.AD/AM 的缓存丢失会导致流中断，需考虑高可用</td>
+<td>End.AD/AM 缓存丢失 → 流中断</td>
+<td>高可用 + 业务容忍</td>
 </tr>
 <tr>
 <td>无法做 SID 级策略</td>
-<td>设备看不到 SID，不能按 SID 做差异化处理</td>
+<td>设备看不到 SID</td>
+<td>由代理路由器做 SID 级策略</td>
 </tr>
 <tr>
 <td>路径可见性差</td>
-<td>出问题时两端都"看起来正常"，故障定位困难</td>
+<td>两端都"看起来正常"</td>
+<td>在代理上加计数与 trace 埋点</td>
 </tr>
 </tbody>
 </table>
 <div class="en">
-<p>The most important limitation is the loss of metadata: the appliance sees a plain packet, so any classification result carried in the SID argument is invisible to it. This is the fundamental trade-off between SR Proxy, which requires no change to the appliance, and SR-aware processing, which requires the appliance to understand SRv6.</p>
+<p>A practical workaround for the metadata loss is to carry the classification in a field that the appliance already understands, such as the DSCP or the ToS bits of the inner header. This requires the proxy to copy the metadata into the inner header before exposing the packet, and to restore it afterwards if the appliance is expected to preserve it.</p>
 </div>
-<p>最重要的限制是<strong>元数据丢失</strong>：设备看到的是裸报文，SID argument 里的分类结果它一概看不见。这就是 SR Proxy（设备零改造）与 SR-aware（设备懂 SRv6）之间的根本取舍：<strong>一个省改造成本，一个省运维复杂度。</strong></p>
-<h2 id="_1">实战案例：老防火墙进链的三种落地方式</h2>
-<p><strong>背景</strong>：某运营商有 20 台老旧硬件防火墙（仅支持 IPv4/IPv6 双栈，不认识 SRH），必须继续承载南北向安全策略。</p>
-<p><strong>方案对比与选择</strong>：</p>
+<p>元数据丢失的一个<strong>实用绕法</strong>：<strong>把分类信息放进设备本来就懂的字段</strong>——比如<strong>内层头的 DSCP / ToS</strong>。这要求<strong>代理在暴露报文前把元数据写进内层头</strong>，并在收回后<strong>恢复</strong>（如果设备会改它）。</p>
+<table>
+<thead>
+<tr>
+<th>承载位置</th>
+<th>设备可见</th>
+<th>可写回</th>
+<th>空间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SID Arg（原方案）</td>
+<td><strong>不可见</strong></td>
+<td>—</td>
+<td>16–48 bit</td>
+</tr>
+<tr>
+<td>内层 DSCP/ToS</td>
+<td>可见</td>
+<td>可以</td>
+<td>6–8 bit（很挤）</td>
+</tr>
+<tr>
+<td>内层 VLAN Tag</td>
+<td>可见（若二层）</td>
+<td>可以</td>
+<td>12 bit</td>
+</tr>
+<tr>
+<td>内层 IP 选项/扩展头</td>
+<td>可见（但常被丢）</td>
+<td>不一定</td>
+<td>有限</td>
+</tr>
+</tbody>
+</table>
+<h2 id="136-sr-proxy-sera">13.6 什么时候必须用 SR Proxy：与 SERA 的分界</h2>
+<table>
+<thead>
+<tr>
+<th>条件</th>
+<th>选择</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>设备能改代码/能配偏移解析</td>
+<td><strong>SERA / 内层暴露</strong>（第 12 章）</td>
+<td>保留元数据、无状态</td>
+</tr>
+<tr>
+<td>设备完全不支持 IPv6</td>
+<td><strong>SR Proxy</strong></td>
+<td>唯一选择</td>
+</tr>
+<tr>
+<td>设备会主动发起流量</td>
+<td><strong>End.AM</strong></td>
+<td>普通代理无法处理回程</td>
+</tr>
+<tr>
+<td>设备只转发、路径固定</td>
+<td><strong>End.AS</strong></td>
+<td>无状态、最快</td>
+</tr>
+<tr>
+<td>设备只转发、路径动态</td>
+<td><strong>End.AD</strong></td>
+<td>自动适应</td>
+</tr>
+<tr>
+<td>需要按规定保留元数据</td>
+<td><strong>SR-aware</strong></td>
+<td>代理做不到</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-text">图 13-3：决策路径（原书 Figure 13.3 重绘）
+
+  设备支持 SRv6？──是──► SR-aware（第 12 章）
+        │否
+  能改造成&quot;能配偏移&quot;？──是──► 内层暴露 / SERA
+        │否
+  设备会主动发起流量？──是──► End.AM（伪装代理）
+        │否
+  路径固定（单链路/单策略）？──是──► End.AS（静态）
+        │否
+        └──────────────────────► End.AD（动态）
+</code></pre>
+<h2 id="137">13.7 配置与验证</h2>
+<p><strong>例 13.2：End.AD 代理一台老防火墙</strong></p>
+<pre><code class="language-text">! ① 定义代理 SID：进入后剥封装，交给防火墙，回来后恢复
+segment-routing
+ srv6
+  locators
+   locator MAIN
+    micro-segment behavior unode pfx-16
+    prefix fdbb:bb00:0001::/48
+   !
+  !
+ !
+!
+segment-routing
+ srv6
+  static-sids
+   sid fdbb:bb00:0001:ad00:: behavior End.AD
+    interface HundredGigE0/0/0/2      ! 面向老防火墙的接口
+   !
+  !
+ !
+!
+! ② 服务链里用这个代理 SID（由控制器或头端策略下发）
+!    &lt;uN 传输&gt; , &lt;End.AD 代理 SID&gt; , &lt;uDT46 目的&gt;
+
+! ③ 若设备只转发且路径固定，改用 End.AS（无状态、性能更好）
+!    sid fdbb:bb00:0001:as00:: behavior End.AS
+!     interface HundredGigE0/0/0/2
+!     next-hop  fdbb:bb00:0001:e00a::   ! 恢复时用的下一段（写死在配置里）
+</code></pre>
+<p><strong>例 13.3：验证代理真的在工作</strong></p>
+<pre><code class="language-text">! ① 防火墙侧：应只看到裸报文，绝不能看到 IPv6 扩展头
+RP/0/RP0/CPU0:FW# monitor capture ...
+  → 抓到的报文：以太 + IPv4 + TCP，无 IPv6 头  ✔
+
+! ② 代理侧：动态缓存表有表项
+RP/0/RP0/CPU0:PE-1# show segment-routing srv6 proxy state
+Behavior      SID                          Flows    HWM
+End.AD        fdbb:bb00:0001:ad00::        18,442   21,006
+End.AS        fdbb:bb00:0001:as00::        -        -
+
+! ③ 端到端：段列表完整执行
+RP/0/RP0/CPU0:PE-1# traceroute srv6 fdbb:bb00:0005:e101:: sid-list fdbb:bb00:0001:ad00::,fdbb:bb00:0005:e101::
+ 1  fdbb:bb00:0001:ad00::   0.6 ms
+ 2  fdbb:bb00:0005:e101::   1.3 ms
+
+! ④ 大包：恢复封装后不超 MTU
+RP/0/RP0/CPU0:PE-1# ping vrf CUSTOMER-100 10.1.2.1 size 1472 repeat 5
+!!!!!
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>命令</th>
+<th>期望</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>代理 SID 已实例化</td>
+<td><code>show segment-routing srv6 sid all</code></td>
+<td>有 End.AS/AD/AM 条目</td>
+</tr>
+<tr>
+<td>设备侧看到裸报文</td>
+<td>设备抓包</td>
+<td>无 IPv6 扩展头</td>
+</tr>
+<tr>
+<td>缓存表水位</td>
+<td><code>show ... proxy state</code></td>
+<td>HWM &lt; 容量 80%</td>
+</tr>
+<tr>
+<td>双向都恢复</td>
+<td>双向业务测试</td>
+<td>不单向</td>
+</tr>
+<tr>
+<td>大包</td>
+<td><code>ping size 1472</code></td>
+<td>通</td>
+</tr>
+<tr>
+<td>故障切换</td>
+<td>主备切换测试</td>
+<td>老流断、新流正常（End.AD/AM）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="138">13.8 排障</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>设备侧收到带 SRH 的包</td>
+<td>代理行为没生效 / SID 未实例化</td>
+<td>查 <code>show segment-routing srv6 sid</code></td>
+</tr>
+<tr>
+<td><strong>单向通</strong></td>
+<td>只配了入向代理，回程未还原</td>
+<td>检查双向接口与 End.AM 是否必要</td>
+</tr>
+<tr>
+<td>大包不通</td>
+<td>恢复封装后超 MTU</td>
+<td>提高出口 MTU / 钳制 MSS</td>
+</tr>
+<tr>
+<td>一段时间后偶发断流</td>
+<td>End.AD 缓存老化或内存不足</td>
+<td>调老化时间 / 扩容量 / 查 HWM</td>
+</tr>
+<tr>
+<td>主备切换后老流全断</td>
+<td>End.AD/AM 状态未同步</td>
+<td>业务容忍，或会话同步</td>
+</tr>
+<tr>
+<td>设备策略不生效</td>
+<td>设备看到的是裸报文但<strong>看不到元数据</strong></td>
+<td>改用 SERA（第 12 章）</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The single most useful diagnostic is to capture on the appliance side: if the appliance sees an IPv6 header with a routing header, the proxy is not working; if it sees a clean inner packet but still does not apply policy, the problem is the missing metadata rather than the proxy.</p>
+</div>
+<p><strong>最有价值的一条排障判据</strong>：<strong>在设备侧抓包</strong>——<strong>如果设备看到带路由头的 IPv6 头，说明代理没生效</strong>；<strong>如果设备看到干净的裸报文、但策略仍然不生效，那问题不是代理，而是元数据丢了</strong>（第 12 章）。</p>
+<h2 id="139">13.9 本章小结</h2>
+<div class="en">
+<p>SR Proxy is the bridge for appliances that cannot be changed: the adjacent router terminates the encapsulation, exposes the plain packet, and restores the encapsulation afterwards. Static, dynamic and masquerading flavors cover the cases of fixed paths, dynamic paths, and appliances that also originate traffic. The cost is state and the loss of metadata.</p>
+</div>
+<p>SR Proxy 是<strong>"改不了的设备"的桥</strong>：<strong>旁边那台路由器终结封装、暴露裸报文、之后再恢复封装</strong>。<strong>静态、动态、伪装</strong>三种，分别覆盖<strong>固定路径、动态路径、设备也发流量</strong>三种情况。代价是<strong>状态</strong>与<strong>元数据丢失</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>End.AS</th>
+<th>End.AD</th>
+<th>End.AM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>状态</td>
+<td>无</td>
+<td>有</td>
+<td>有</td>
+</tr>
+<tr>
+<td>路径变更</td>
+<td>需改配置</td>
+<td>自动</td>
+<td>自动</td>
+</tr>
+<tr>
+<td>设备主动流量</td>
+<td>✘</td>
+<td>✘</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>主备切换</td>
+<td>无缝</td>
+<td>老流断</td>
+<td>老流断</td>
+</tr>
+<tr>
+<td>元数据</td>
+<td>丢失</td>
+<td>丢失</td>
+<td>丢失</td>
+</tr>
+<tr>
+<td>推荐</td>
+<td>固定拓扑首选</td>
+<td>通用过渡</td>
+<td>双向必需时</td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>SR Proxy 让"设备零改造"成为可能，但它把复杂度转移给了"有状态的路由器"</strong>——<strong>能不用就不用，要用就优先 End.AS</strong>（无状态），<strong>只有设备会发流量时才上 End.AM</strong>。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="a20">案例 A：20 台老防火墙进链（原书案例）</h3>
+<p><strong>背景</strong>：某运营商有 <strong>20 台老旧硬件防火墙</strong>（支持 IPv4/IPv6 双栈，但<strong>不认识 SRH</strong>），必须继续承载南北向安全策略。</p>
 <table>
 <thead>
 <tr>
@@ -161,7 +661,7 @@
 <td>长期方向</td>
 </tr>
 <tr>
-<td>SR Proxy（End.AD）</td>
+<td><strong>SR Proxy（End.AD）</strong></td>
 <td>低（仅 PE 配置）</td>
 <td>中（有状态、需容量规划）</td>
 <td><strong>过渡期采用</strong></td>
@@ -176,12 +676,12 @@
 </table>
 <p><strong>实施要点</strong>：</p>
 <ol>
-<li>PE 上为每台防火墙配置代理行为，服务链里用 Service SID 指向它。</li>
-<li>End.AD 的缓存表按峰值并发流规划；主备切换时接受短暂重建（新流不受影响，老流会断）。</li>
-<li>抓包验证：防火墙侧应只看到裸报文；PE 出方向应恢复完整封装。</li>
-<li>与 UPA/TI-LFA 联动验证：代理有状态，故障切换后老流必然中断，需业务侧容忍或有会话同步。</li>
+<li>PE 上为每台防火墙配置代理行为，<strong>服务链里用 Service SID 指向它</strong>；</li>
+<li><code>End.AD</code> 的缓存表<strong>按峰值并发流规划</strong>；主备切换时<strong>接受短暂重建</strong>（新流不受影响，老流会断）；</li>
+<li>抓包验证：<strong>防火墙侧应只看到裸报文</strong>；<strong>PE 出方向应恢复完整封装</strong>；</li>
+<li>与 UPA/TI-LFA 联动验证：<strong>代理有状态，故障切换后老流必然中断</strong>，需业务侧容忍或有会话同步。</li>
 </ol>
-<p><strong>排障经验</strong>：</p>
+<p><strong>排障经验</strong>（与原书一致）：</p>
 <table>
 <thead>
 <tr>
@@ -208,13 +708,40 @@
 </tr>
 </tbody>
 </table>
-<h2 id="_2">本章小结</h2>
-<ol>
-<li>SR Proxy 把封装逻辑外移到旁挂 PE，让完全不懂 SRv6 的设备也能进服务链。</li>
-<li>三种行为：静态（无状态）、动态（缓存）、伪装（设备也发流量）。</li>
-<li>代价是元数据不可见、有状态与 MTU 风险；与 SR-aware 是互补关系。</li>
-<li>过渡期用它保 CAPEX，长期仍应走向 SR-aware。</li>
-</ol>
+<h3 id="bendas">案例 B：End.AS 省了内存，败在了"加了一条备份链路"</h3>
+<p><strong>背景</strong>：某市网为省内存，全部用 <code>End.AS</code>（无状态）。半年后为防火墙加了第二条上行链路做负载分担。</p>
+<pre><code class="language-text">① 加链路后：约 50% 的会话&quot;建立成功但传不动数据&quot;
+② 抓包：防火墙回来的报文，代理按配置里写死的 next-hop 恢复封装
+   → 一律送回&quot;原来的那条链路&quot;
+   → 而那条链路对应的会话已在另一侧，状态不匹配 → 丢弃
+③ 根因：End.AS 的恢复封装是&quot;配置写死&quot;的，无法表达&quot;从哪条链来就回哪条&quot;
+④ 修复：改为 End.AD（按内层流键缓存），或让两条链路各配一个 End.AS
+   并在链路上做严格区分（成本高、易错）
+⑤ 结论：End.AS 只适合&quot;单入单出&quot;的固定拓扑
+</code></pre>
+<p><strong>教训</strong>：<strong>"省内存"的代价是"拓扑刚性"</strong>。选 End.AS 前必须回答：<strong>这条路径未来会不会加链路、加节点、加策略？</strong> 只要答案是"会"，就该直接上 End.AD。</p>
+<h3 id="c">案例 C：缓存溢出，每小时断几秒</h3>
+<p><strong>现象</strong>：某清洗中心每小时出现 <strong>2–5 秒的"业务抖动"</strong>，监控显示设备与链路均正常。</p>
+<pre><code class="language-text">① 抖动时间点无规律，但都与&quot;新建连接高峰&quot;相关
+② show segment-routing srv6 proxy state
+   Flows = 262,100   HWM = 262,144   ← 正好在容量上限
+③ 表满策略是&quot;丢新流&quot; → 新流建不起来 → 业务抖动
+④ 根因：容量按&quot;平均并发 15 万&quot;规划，实际峰值 26 万（NAT 后放大）
+⑤ 修复：
+   a. 扩缓存容量（按峰值 × 1.5）
+   b. 老化时间从 30 s 调到 90 s（减少无效重建）
+   c. 加 HWM &gt; 80% 告警
+⑥ 复测：HWM 稳定在 55%，抖动消失
+</code></pre>
+<p><strong>教训</strong>：<strong>有状态代理的容量规划要按"峰值 × 1.5"，不是"平均"</strong>；并且<strong>必须监控 HWM（高水位）</strong>——表满时它不会报错，只会静默丢流。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 8986 §8</strong>：SR Proxy 的规范定义，<code>End.AS</code>、<code>End.AM</code>、<code>End.AD</code> 三种行为与处理流程。</li>
+<li><strong>RFC 8754</strong>：SRH 格式，理解"剥掉什么、恢复什么"。</li>
+<li><strong>RFC 8200</strong>：IPv6 扩展头处理规则，解释老设备为何会丢 <code>Next Header=43</code>。</li>
+<li><strong>draft-ietf-spring-sr-service-programming</strong>：Service SID 与代理的组合方式。</li>
+<li>交叉参考：第 11 章（服务编程，代理作为链中的一段）、第 12 章（SERA，保留元数据的替代方案）、第 16 章（Bell SP 生产链中如何取舍代理与 SR-aware）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="12-sr-aware.html">← SR-aware 服务与内层报文暴露</a><a class="next" href="14-case-bell.html">案例：Bell Canada 的 SRv6 地址规划 →</a></nav>
     <footer class="foot">
@@ -233,10 +760,21 @@
   <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
 <ul>
 <li><a href="#131">13.1 为什么不能让它们直接进链</a></li>
-<li><a href="#132">13.2 三种代理行为</a></li>
-<li><a href="#133">13.3 代价与限制</a></li>
-<li><a href="#_1">实战案例：老防火墙进链的三种落地方式</a></li>
-<li><a href="#_2">本章小结</a></li>
+<li><a href="#132">13.2 代理的核心动作只有三步</a></li>
+<li><a href="#133">13.3 三种代理行为</a></li>
+<li><a href="#134-endad">13.4 状态到底存了什么：End.AD 的容量账</a></li>
+<li><a href="#135-sr-proxy">13.5 代价：为什么 SR Proxy 一定丢元数据</a></li>
+<li><a href="#136-sr-proxy-sera">13.6 什么时候必须用 SR Proxy：与 SERA 的分界</a></li>
+<li><a href="#137">13.7 配置与验证</a></li>
+<li><a href="#138">13.8 排障</a></li>
+<li><a href="#139">13.9 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a20">案例 A：20 台老防火墙进链（原书案例）</a></li>
+<li><a href="#bendas">案例 B：End.AS 省了内存，败在了"加了一条备份链路"</a></li>
+<li><a href="#c">案例 C：缓存溢出，每小时断几秒</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>

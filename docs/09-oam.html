@@ -48,121 +48,520 @@
   </aside>
   <main class="content">
     <article class="md">
-<h1 id="09-srv6-ping-traceroute">09 · SRv6 Ping 与 Traceroute</h1>
+<h1 id="09-srv6-ping-tracerouterfc-9259">09 · SRv6 Ping 与 Traceroute（RFC 9259）</h1>
 <blockquote>
-<p>对应原书第 9 章 <em>SRv6 Ping and Traceroute</em>（RFC 9259）。这一章解决一个很实际的问题：<strong>MPLS 时代那套 <code>ping mpls</code> / <code>trace mpls</code> 没了，怎么验证一条 SID 列表真的按你设计的方式转发？</strong></p>
+<p><strong>本章定位</strong>：原书第 9 章《SRv6 Ping and Traceroute》。这一章解决一个很实际的问题：<strong>MPLS 时代的 <code>ping mpls</code> / <code>trace mpls</code> 没了，怎么验证一条段列表真的按你设计的方式转发？</strong> 英文块为原文摘录，中文为完整翻译，Figure 9.1–9.4 重绘，Example 9.1–9.4 保留。</p>
 </blockquote>
-<h2 id="91-oam">9.1 为什么要新的 OAM</h2>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么 LSP ping 那套不能直接搬过来</td>
+<td>9.0</td>
+</tr>
+<tr>
+<td>O-flag 到底做什么，端点凭什么"改为回应"</td>
+<td>9.1</td>
+</tr>
+<tr>
+<td>ping 一个 locator / 一个 End.X / 一个业务 SID 分别证明了什么</td>
+<td>9.2</td>
+</tr>
+<tr>
+<td>traceroute 带 SRH 与不带 SRH 结果不同，该信哪个</td>
+<td>9.3</td>
+</tr>
+<tr>
+<td>uSID 压缩后 trace 输出为什么看不懂</td>
+<td>9.4</td>
+</tr>
+<tr>
+<td>怎么在故障发生<strong>之前</strong>验证 TI-LFA 备份路径真的能转发</td>
+<td>9.5</td>
+</tr>
+</tbody>
+</table>
+<p>一句话概括：<strong>SRv6 的 OAM 不建在"路径"这个对象上，而是建在"报文自己携带的段列表"上</strong>——探测包走的就是用户包走的那条路，所以它验证的是数据面本身。</p>
+<h2 id="90-mpls">9.0 为什么 MPLS 那套搬不过来</h2>
 <div class="en">
 <p>In an MPLS network, a label switched path can be tested with LSP ping: the probe carries the label stack, and each router along the path answers because the label identifies the path. In SRv6 there is no label stack and no per-path state, so the probe must carry the segment list itself, and the responder must be identified by a SID rather than by a label.</p>
 </div>
-<p>MPLS 用 LSP ping 测一条 LSP：探测报文带着标签栈，沿途路由器因为标签能标识路径而回应。SRv6 没有标签栈、也没有"路径"这个对象，于是<strong>探测报文必须自己携带段列表</strong>，回应方由 SID 标识而不是标签。</p>
+<p>MPLS 网络里一条 LSP 可以用 <strong>LSP ping</strong> 测：探测报文<strong>带着标签栈</strong>，沿途路由器<strong>因为标签能标识路径</strong>而回应。SRv6 里<strong>没有标签栈、也没有"路径"这个被维护的对象</strong>（无状态），于是：</p>
+<ol>
+<li><strong>探测报文必须自己携带段列表</strong>——路径信息在包里，不在设备上；</li>
+<li><strong>回应方由 SID 标识</strong>，而不是由标签标识。</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>MPLS LSP ping</th>
+<th>SRv6 OAM（RFC 9259）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>路径信息在哪</td>
+<td>设备上的标签转发表</td>
+<td><strong>报文里的 SRH 段列表</strong></td>
+</tr>
+<tr>
+<td>谁回应</td>
+<td>每跳（按标签）</td>
+<td><strong>端点（按 SID + O-flag）</strong></td>
+</tr>
+<tr>
+<td>是否需要逐跳状态</td>
+<td>是（标签）</td>
+<td><strong>否</strong></td>
+</tr>
+<tr>
+<td>探测与用户流量是否同路径</td>
+<td>是</td>
+<td><strong>是（同一段列表）</strong></td>
+</tr>
+<tr>
+<td>无 SRH 的 uSID 场景</td>
+<td>—</td>
+<td><strong>退化：只能逐 SID 探测</strong></td>
+</tr>
+</tbody>
+</table>
+<p>最后一行是关键限制，先说清楚：<strong>uSID 业务转发不带 SRH</strong>（第 6 章），所以<strong>没有地方放 O-flag</strong>。因此 uSID 场景下：</p>
+<ul>
+<li><strong>ping/traceroute 单个 SID</strong> 照常可用（DA 就是那个 SID，用别的方式标记 OAM）；</li>
+<li><strong>验证"整条显式路径"</strong> 需要人为构造带 SRH 的探测（诊断用，不是业务转发路径）。</li>
+</ul>
+<h2 id="91-o-flag">9.1 O-flag：让端点从"转发"切换到"回应"</h2>
 <div class="en">
 <p>RFC 9259 defines the mechanisms. A probe is an IPv6 packet with an SRH whose segment list contains the path under test; the O-flag in the SRH flags indicates that this packet is an OAM packet, so that a segment endpoint that would normally forward it can instead respond with an ICMPv6 message.</p>
 </div>
-<p>RFC 9259 定义了机制：探测报文是一个带 SRH 的 IPv6 包，SRH 的段列表就是被测路径；SRH flags 里的 <strong>O-flag</strong> 标记"这是 OAM 报文"，于是本应转发的端点可以改为回一个 ICMPv6 消息。</p>
-<h2 id="92-ping">9.2 Ping 的工作方式</h2>
-<pre><code class="language-text">ping srv6 fc00:0:5:e001:: sid-list fc00:0:2::, fc00:0:3::, fc00:0:5:e001::
+<p>RFC 9259 定义了机制：<strong>探测报文是一个带 SRH 的 IPv6 包，SRH 的段列表就是被测路径</strong>；<strong>SRH flags 里的 O-flag 标记"这是 OAM 报文"</strong>，于是<strong>本应继续转发的端点可以改为回一个 ICMPv6 消息</strong>。</p>
+<pre><code class="language-text">图 9-1：O-flag 的处理（原书 Figure 9.1 重绘）
+
+  探测报文（普通数据面路径，完全一样的封装）:
+  ┌────────────┬─────────┬────────────────────────────┐
+  │ IPv6 头    │ SRH     │ 内层报文 / 可选 TLV        │
+  │ DA = S[n]  │ Flags:  │                            │
+  │            │  O=1 ←──┼── 标记：这是 OAM 报文      │
+  └────────────┴─────────┴────────────────────────────┘
+                    │
+     到达 SID 端点，查本地 SID 表
+                    │
+     ├─ O=0 ──► 正常执行行为（End / End.X / End.DT…）
+     │
+     └─ O=1 ──► OAM 处理：
+                 ├─ ping：回 ICMPv6 Echo Reply
+                 └─ traceroute：回 ICMPv6 Time Exceeded
+                      （载荷里带 SRv6 TLV：剩余段列表、当前 SID、状态）
+</code></pre>
+<div class="en">
+<p>The O-flag is set only for packets that are meant to be answered, and the SRv6 TLV carried in the ICMPv6 payload reports the segment list state back to the sender. This is what allows a traceroute to attribute each hop to a specific SID in the list rather than to an IP address along the path.</p>
+</div>
+<p>O-flag <strong>只对"希望被回应"的报文置位</strong>，而 <strong>ICMPv6 载荷里的 SRv6 TLV 把段列表状态带回给发送方</strong>。这正是 traceroute 能把每一跳<strong>归因到段列表中的某个 SID</strong>、而不是归因到"路径上的某个 IP"的原因。</p>
+<p>安全提醒（现网必须处理）：</p>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>说明</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O-flag 探测被滥用做拓扑探测</td>
+<td>任何人可构造 O=1 报文让端点回应</td>
+<td>边缘过滤带 SRH+O 的外部报文</td>
+</tr>
+<tr>
+<td>ICMPv6 速率限制过严</td>
+<td>探测无回应，误判为不通</td>
+<td>对 SRv6 OAM 单独放行/限速</td>
+</tr>
+<tr>
+<td>OAM 报文走治理面优先级</td>
+<td>拥塞时探测全丢</td>
+<td>给 OAM 流量独立队列</td>
+</tr>
+</tbody>
+</table>
+<h2 id="92-ping">9.2 Ping：三种粒度，三种结论</h2>
+<pre><code class="language-text">例 9.1：三种典型 ping
+! ① 打到 locator 的 uN：只验证 locator 可达 + End 行为
+ping srv6 fdbb:bb00:0005:e000::
+
+! ② 打到某个 End.X（uA）：验证&quot;这条指定链路&quot;能转发
+ping srv6 fdbb:bb00:0005:e001:: sid-list fdbb:bb00:0005:e001::
+
+! ③ 打到业务 SID：验证 SID 已实例化
+ping srv6 fdbb:bb00:0005:e101:: sid-list fdbb:bb00:0002::,fdbb:bb00:0005:e101::
 </code></pre>
 <div class="en">
 <p>The ping probe is forwarded along the segment list exactly like user traffic, so it validates the data plane, not just the control plane. If the last SID is a service SID such as End.DT46, the responder validates that the SID is instantiated and reachable, but does not perform the VPN lookup — which is why a successful ping to a VPN SID does not prove the VPN itself is healthy.</p>
 </div>
-<p>ping 探测沿段列表转发，<strong>和用户流量完全一样</strong>，因此它验证的是数据面而非仅仅控制面。但注意：若最后一段是 <code>End.DT46</code> 这类业务 SID，回应方只验证"SID 已实例化且可达"，<strong>不做 VPN 查表</strong>——所以"ping 通 VPN SID"并不等于 VPN 业务健康。</p>
+<p>ping 探测<strong>沿段列表转发，和用户流量完全一样</strong>，因此它验证的是<strong>数据面</strong>而非仅仅控制面。但注意：若最后一段是 <code>End.DT46</code> 这类业务 SID，回应方<strong>只验证"SID 已实例化且可达"，不做 VPN 查表</strong>——所以<strong>"ping 通 VPN SID"并不等于 VPN 业务健康</strong>。</p>
 <table>
 <thead>
 <tr>
 <th>探测目标</th>
-<th>验证内容</th>
-<th>不能证明</th>
+<th>验证了什么</th>
+<th><strong>不能证明</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Locator / uN</td>
 <td>locator 可达、End 行为正常</td>
-<td>业务是否通</td>
+<td>任何业务是否通</td>
 </tr>
 <tr>
 <td>uA（End.X）</td>
-<td>指定链路可转发</td>
+<td><strong>指定链路</strong>可转发</td>
 <td>对端是否继续正确转发</td>
 </tr>
 <tr>
 <td>业务 SID（uDT/uDX）</td>
-<td>SID 实例化、行为注册</td>
-<td>VRF 内路由、CE 侧</td>
+<td>SID 实例化、行为已注册</td>
+<td>VRF 内有无路由、CE 侧是否可达</td>
 </tr>
 <tr>
 <td>完整 SID list</td>
 <td>整条显式路径可走</td>
-<td>备份路径</td>
+<td>备份路径是否可用</td>
+</tr>
+<tr>
+<td>带内层报文的 end-to-end ping</td>
+<td>封装 + 解封装 + 查表全链路</td>
+<td>大包（MTU）是否通过</td>
 </tr>
 </tbody>
 </table>
-<h2 id="93-traceroute">9.3 Traceroute 的两种模式</h2>
+<p>最后一行很重要：<strong>"ping 通 SID" 和 "ping 通客户地址" 是两件事</strong>。前者证明 SID 存在，后者才证明业务通：</p>
+<pre><code class="language-text">! 真正证明业务通的探测：目标地址是客户地址，SID list 是业务 SID
+ping vrf CUSTOMER-100 10.1.2.1 source 10.1.1.1
+! 这条走的是完整封装 + 出口 VRF 查表，才等价于用户流量
+</code></pre>
+<h2 id="93-traceroute">9.3 Traceroute：两种模式，两个问题</h2>
 <div class="en">
 <p>Traceroute can be run in two modes. In the "with SRH" mode the probe carries the full segment list and each segment endpoint reports itself, which reveals how the list is executed. In the "without SRH" mode, the tool sends individual probes to each SID in turn, which reveals the path the network would take to reach that SID. The two answers differ whenever the underlay ECMP splits traffic.</p>
 </div>
 <p>traceroute 有两种模式：</p>
 <ul>
-<li><strong>带 SRH</strong>：探测报文携带完整段列表，每个端点各自上报，反映"段列表是怎么被执行的"。</li>
-<li><strong>不带 SRH</strong>：逐个 SID 单独探测，反映"网络去往该 SID 走的是哪条路"。</li>
+<li><strong>带 SRH（with SRH）</strong>：探测报文携带<strong>完整段列表</strong>，<strong>每个端点各自上报</strong>，反映"<strong>段列表是怎么被执行的</strong>"；</li>
+<li><strong>不带 SRH（without SRH）</strong>：<strong>逐个 SID 单独探测</strong>，反映"<strong>网络去往该 SID 走的是哪条路</strong>"。</li>
 </ul>
-<p>当 Underlay 的 ECMP 把流量分散到不同路径时，两种结果会不一致——这不是故障，而是 ECMP 的正常表现。判断"是否真的按设计路径转发"，必须用带 SRH 的模式。</p>
-<pre><code class="language-text">traceroute srv6 fc00:0:5:e001:: sid-list fc00:0:2::,fc00:0:3::,fc00:0:5:e001::
- 1  fc00:0:2::    0.4 ms   ← uN 执行
- 2  fc00:0:3::    0.7 ms
- 3  fc00:0:5:e001:: 1.1 ms ← 业务 SID 到达
+<p>当 Underlay 的 ECMP 把流量分散到不同路径时，<strong>两种结果会不一致</strong>——这不是故障，而是 ECMP 的正常表现。</p>
+<pre><code class="language-text">图 9-2：两种模式问的是不同问题（原书 Figure 9.2 重绘）
+
+  带 SRH：问&quot;这段程序按顺序执行了吗&quot;
+    PE-1 ──[S1]──► P-1 ──[S2]──► P-2 ──[S3]──► PE-2
+         每跳上报的是&quot;SID Sx 已执行&quot;，不是&quot;某 IP 收到包&quot;
+
+  不带 SRH：问&quot;去每个 SID 各自的路径是什么&quot;
+    PE-1 ──► S1 的路径（可能 ECMP 走 A 平面）
+    PE-1 ──► S2 的路径（可能 ECMP 走 B 平面）
+    PE-1 ──► S3 的路径（可能又走 A 平面）
+         → 三段路径拼起来 ≠ 一条连续路径，不代表业务实际走法
 </code></pre>
-<h2 id="94-ti-lfa">9.4 与 TI-LFA 的配合</h2>
+<p><strong>结论</strong>：判断"<strong>是否真的按设计路径转发</strong>"，<strong>必须用带 SRH 的模式</strong>；不带 SRH 只适合"定位某个 SID 到不到得了"。</p>
+<pre><code class="language-text">例 9.2：带 SRH 的 trace（uSID 段列表）
+traceroute srv6 fdbb:bb00:0002:e101:: sid-list fdbb:bb00:0009::,fdbb:bb00:000a::,fdbb:bb00:0002:e101::
+ 1  fdbb:bb00:0009::   0.4 ms    ← uN 执行（P-1）
+ 2  fdbb:bb00:000a::   0.7 ms    ← uN 执行（P-2）
+ 3  fdbb:bb00:0002:e101:: 1.1 ms ← 业务 SID 到达（PE-2）
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>输出特征</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每跳显示的是<strong>SID</strong>，不是 IP</td>
+<td>正常：RFC 9259 归因到段</td>
+</tr>
+<tr>
+<td>中间某跳显示 <code>*</code></td>
+<td>该 SID 未回应（O 未处理 / 被过滤 / SID 未实例化）</td>
+</tr>
+<tr>
+<td>跳数与段列表长度不一致</td>
+<td>段列表被压缩/合并（uSID 常见，见 9.4）</td>
+</tr>
+<tr>
+<td>某跳时延突然 +15 ms</td>
+<td>该跳走了跨区/绕行，对照 Flex-Algo 设计</td>
+</tr>
+</tbody>
+</table>
+<h2 id="94-usid">9.4 uSID 下的三个特殊现象</h2>
+<p>uSID 把多个微指令压进一个 128 bit 地址，这会让 trace 的输出"看起来不对"，其实是正常的：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>是否故障</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>trace 只显示 1–2 跳，但路径上有 4 个节点</td>
+<td>uSID 在 DA 里<strong>边转发边移位</strong>，不产生新的"段跳"</td>
+<td><strong>正常</strong></td>
+</tr>
+<tr>
+<td>输出里的 SID 短于 128 bit（只剩 uSID 串）</td>
+<td>打印的是<strong>压缩后的微指令串</strong>，不是完整地址</td>
+<td>正常</td>
+</tr>
+<tr>
+<td>段列表长度与实际跳数不匹配</td>
+<td>一个 128 bit 地址可装多个 uSID</td>
+<td>正常</td>
+</tr>
+<tr>
+<td>某跳显示的是 <code>::</code> 或 <code>:0:0</code></td>
+<td>该 uSID 位置的移位结果</td>
+<td>正常</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>With micro-segments, the segment list is encoded inside a single address, and each node shifts the destination address as it forwards. The number of "hops" reported by a traceroute therefore does not equal the number of micro-segments, because a single packet can consume several micro-segments without a new SRH being examined. Reading a uSID trace requires mapping the printed value back to the micro-segment layout.</p>
+</div>
+<p>用微段时，<strong>段列表被编码进一个地址</strong>，每个节点转发时<strong>对目的地址做移位</strong>。因此 <strong>trace 报告的"跳数"不等于微指令个数</strong>——<strong>一个报文可以消耗多个微指令而不重新检查 SRH</strong>。读 uSID 的 trace，<strong>必须把打印出来的值映射回微指令布局</strong>（<code>Block</code> + <code>uN</code> + 各 <code>uF</code>）。</p>
+<p><strong>例 9.3：把 trace 输出翻译回微指令</strong></p>
+<pre><code class="language-text">traceroute 输出:
+ 1  fdbb:bb00:0009::        0.4 ms
+ 2  fdbb:bb00:000a::        0.7 ms
+ 3  fdbb:bb00:0002:e101::   1.1 ms
+
+翻译（/48 locator + 16 bit uN）:
+  fdbb:bb00:0009::        → block=fdbb:bb00, node=0009(P-1), 无 function
+  fdbb:bb00:000a::        → block=fdbb:bb00, node=000a(P-2)
+  fdbb:bb00:0002:e101::   → block=fdbb:bb00, node=0002(PE-2), func=e101(uDT46)
+
+结论：路径 PE-1 → P-1 → P-2 → PE-2，业务 SID 在 PE-2 上命中
+</code></pre>
+<h2 id="95-ti-lfa">9.5 最有价值的用法：故障前验证 TI-LFA 修复路径</h2>
 <div class="en">
 <p>The most valuable use of SRv6 traceroute is verifying repair paths. You can inject the repair segment list that TI-LFA computed and trace it, which proves that the backup path is not only installed but actually forwarding. Without this, TI-LFA failures are only discovered during a real outage.</p>
 </div>
-<p>SRv6 traceroute 最有价值的用法是<strong>验证修复路径</strong>：把 TI-LFA 算出来的修复段列表手工注入并 trace，证明备份路径不仅装了表、而且真的能转发。没有这一步，TI-LFA 的问题只能在真实故障时才暴露——那时已经晚了。</p>
-<h2 id="_1">实战案例：一次"业务通但绕远"的定位</h2>
-<p><strong>现象</strong>：A 市到 B 市业务时延从 8 ms 涨到 21 ms，业务可用，客户投诉。</p>
-<p><strong>定位过程</strong>：</p>
-<ol>
-<li><code>traceroute srv6 &lt;B市PE的uN&gt;</code>（不带 SRH）→ 发现路径在核心绕了一个平面。</li>
-<li>对照设计文档：该业务本应走 algo 128 的 locator，实际走的是 algo 0 的 locator。</li>
-<li><code>show bgp vpnv4 unicast &lt;prefix&gt;</code> → 收到的 SID 是 <code>fdbb:bb00:...</code>（algo 0 块），而不是 <code>fdbb:bb01:...</code>（algo 128 块）。</li>
-<li>根因：出口 PE 上该 VRF 的 locator 绑定错了——配置里 <code>locator LOWLAT</code> 没有在 BGP 侧生效，实际用了 MAIN。</li>
-<li>修正 locator 绑定后，<code>traceroute</code> 显示路径回到低时延平面，时延恢复 8 ms。</li>
-</ol>
-<p><strong>排障清单</strong>：</p>
+<p>SRv6 traceroute <strong>最有价值的用法是验证修复路径</strong>：把 TI-LFA 算出来的<strong>修复段列表手工注入并 trace</strong>，证明备份路径<strong>不仅装了表、而且真的能转发</strong>。没有这一步，<strong>TI-LFA 的问题只能在真实故障时才暴露</strong>——那时已经晚了。</p>
+<pre><code class="language-text">图 9-3：TI-LFA 修复路径的验证（原书 Figure 9.3 重绘）
+
+  正常路径:   PE-1 ──► P-1 ──► P-2 ──► PE-2
+  故障(预期): P-1 ✘
+
+  TI-LFA 计算出的修复列表（PQ 节点 P-2 转发）:
+    [ fdbb:bb00:0009:e001:: (P-1 的 End.X 指向备份链路),
+      fdbb:bb00:000a::     (P-2 的 uN),
+      fdbb:bb00:0002::     (PE-2 的 uN) ]
+
+  验证（不制造故障！）:
+    traceroute srv6 &lt;PE-2&gt; sid-list &lt;修复列表&gt;
+    ├─ 全部回应 ──► 备份路径可用 ✔
+    └─ 中间断 ────► TI-LFA 修复列表是&quot;死&quot;的，故障时会断 ✘
+</code></pre>
+<div class="en">
+<p>This is a preventive test: it exercises the exact forwarding entries that will be used after a failure, without causing the failure. Operators who run it periodically discover broken repair paths long before an outage, which is the difference between a 50-millisecond protection and a multi-minute outage.</p>
+</div>
+<p>这是一种<strong>预防性测试</strong>：它<strong>验的正是故障后要用的那些转发表项</strong>，却<strong>不需要制造故障</strong>。定期执行这个测试的运营商，会在故障发生很久之前就发现"修复路径是坏的"——这就是<strong>"50 毫秒保护" 与 "几分钟中断" 的差别</strong>。</p>
+<p><strong>例 9.4：把修复列表验证做成周期任务</strong></p>
+<pre><code class="language-text">! 手工验证一条修复路径（PQ 节点 = P-2）
+RP/0/RP0/CPU0:PE-1# traceroute srv6 fdbb:bb00:0002:: sid-list fdbb:bb00:0009:e001::,fdbb:bb00:000a::,fdbb:bb00:0002::
+ 1  fdbb:bb00:0009:e001::   0.5 ms
+ 2  fdbb:bb00:000a::        0.8 ms
+ 3  fdbb:bb00:0002::        1.2 ms
+! 全回应 → 修复路径健康
+
+! 建议做成定时任务（每 15 分钟），结果入监控
+! 告警条件：任一修复路径连续 3 次无回应
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>验证对象</th>
+<th>频率</th>
+<th>告警条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每条链路的 TI-LFA 修复列表</td>
+<td>15 分钟</td>
+<td>连续 3 次失败</td>
+</tr>
+<tr>
+<td>每个 locator 的 uN ping</td>
+<td>1 分钟</td>
+<td>连续 3 次失败</td>
+</tr>
+<tr>
+<td>每个业务 SID 的 ping</td>
+<td>5 分钟</td>
+<td>连续 2 次失败</td>
+</tr>
+<tr>
+<td>端到端客户地址 ping（大包）</td>
+<td>5 分钟</td>
+<td>任一失败（含 MTU）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="96">9.6 排障清单</h2>
 <table>
 <thead>
 <tr>
 <th>症状</th>
 <th>先看什么</th>
+<th>命令</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>完全不通</td>
-<td>先用 ping 打 locator，再 ping 业务 SID，逐段收窄</td>
+<td>先 ping locator → 再 ping 业务 SID，逐段收窄</td>
+<td><code>ping srv6 &lt;SID&gt;</code></td>
+</tr>
+<tr>
+<td>ping 通 SID 但业务不通</td>
+<td>是不是只验证了 SID 存在（9.2）</td>
+<td><code>ping vrf X &lt;CE 地址&gt;</code></td>
 </tr>
 <tr>
 <td>通但绕远</td>
-<td>对比 SID 前缀（哪个 algo 的 Block）与设计</td>
+<td>对比 SID 前缀属于哪个 algo 的 Block</td>
+<td><code>traceroute srv6 ... sid-list ...</code></td>
 </tr>
 <tr>
 <td>间歇不通</td>
-<td>用带 SRH 的 trace 验证是否 ECMP 某条成员坏了</td>
+<td>带 SRH trace 多次执行，看是否某条 ECMP 成员坏</td>
+<td>重复 10 次 trace 比对</td>
 </tr>
 <tr>
 <td>故障后不恢复</td>
-<td>手工注入 TI-LFA 修复列表 trace，验证备份路径</td>
+<td>手工注入 TI-LFA 修复列表 trace</td>
+<td>9.5 的方法</td>
+</tr>
+<tr>
+<td>trace 输出看不懂</td>
+<td>按 uSID 布局翻译（9.4）</td>
+<td>手算 Block/Node/Func</td>
+</tr>
+<tr>
+<td>中间跳全 <code>*</code></td>
+<td>ICMPv6 被过滤 / O-flag 未处理</td>
+<td>查 ACL 与 ICMPv6 放行</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_2">本章小结</h2>
-<ol>
-<li>SRv6 OAM 用 SRH + O-flag 实现，探测沿真实数据面走。</li>
-<li>ping 业务 SID 只证明 SID 存在，不证明业务健康。</li>
-<li>traceroute 分"带 SRH"与"不带 SRH"，前者验证程序执行，后者验证可达路径。</li>
-<li>最有价值的用法：故障前验证 TI-LFA 修复路径。</li>
-</ol>
+<h2 id="97">9.7 本章小结</h2>
+<div class="en">
+<p>SRv6 OAM reuses the data plane itself as the probe path: an SRH with the O-flag set tells a segment endpoint to answer instead of forward, and the ICMPv6 payload carries the segment list state back to the sender. This makes the probe validate exactly the entries that user traffic will use.</p>
+</div>
+<p>SRv6 OAM <strong>把数据面本身当作探测路径</strong>：<strong>置了 O-flag 的 SRH</strong> 告诉端点"<strong>别转发、请回应</strong>"，而 <strong>ICMPv6 载荷把段列表状态带回发送方</strong>。这让探测<strong>验证的正是用户流量会用的那些表项</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>MPLS OAM</th>
+<th>SRv6 OAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>探测携带什么</td>
+<td>标签栈</td>
+<td><strong>SRH 段列表 + O-flag</strong></td>
+</tr>
+<tr>
+<td>谁回应</td>
+<td>沿途每跳</td>
+<td><strong>段端点</strong></td>
+</tr>
+<tr>
+<td>归因粒度</td>
+<td>标签跳</td>
+<td><strong>SID（微指令）</strong></td>
+</tr>
+<tr>
+<td>能否验证备份路径</td>
+<td>需构造备份 LSP</td>
+<td><strong>可注入修复段列表</strong></td>
+</tr>
+<tr>
+<td>业务 SID 能证明什么</td>
+<td>—</td>
+<td><strong>只证明 SID 存在，不证明业务通</strong></td>
+</tr>
+<tr>
+<td>uSID 特殊性</td>
+<td>—</td>
+<td><strong>跳数 ≠ 微指令数</strong></td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>SRv6 的 OAM 比 MPLS 更强的地方是"可以注入任意段列表"</strong>——这让"故障前验证备份路径"从不可能变成日常操作；<strong>更弱的地方是"没有路径对象"</strong>——你得自己知道想验什么。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="a">案例 A：一次"业务通但绕远"的定位</h3>
+<p><strong>现象</strong>：A 市到 B 市业务时延从 8 ms 涨到 21 ms，业务可用，客户投诉。</p>
+<pre><code class="language-text">① traceroute srv6 &lt;B市PE的uN&gt;（不带 SRH）
+   → 路径在核心绕了一个平面
+② 对照设计：该业务本应走 algo 128 的 locator，实际走 algo 0
+③ show bgp vpnv4 unicast &lt;prefix&gt;
+   → 收到的 SID 是 fdbb:bb00:...（algo 0 块），
+     而不是 fdbb:bb01:...（algo 128 块）
+④ 根因：出口 PE 上该 VRF 的 locator 绑定错了
+   配置里 locator LOWLAT 没在 BGP 侧生效，实际用了 MAIN
+⑤ 修正 locator 绑定 → trace 显示回到低时延平面 → 时延恢复 8 ms
+</code></pre>
+<p><strong>教训</strong>：<strong>"业务通" 从来不是 SLA 达标的证据</strong>。Flex-Algo 类设计必须配"时延基线巡检"，否则劣化会长期潜伏（第 4 章）。</p>
+<h3 id="bti-lfa">案例 B：TI-LFA 修复列表是"死"的</h3>
+<p><strong>现象</strong>：某条链路真断时，TI-LFA 没生效，业务断了 40 秒——但每次演练"拔纤"都正常。</p>
+<pre><code class="language-text">① 常规演练：拔纤 → TI-LFA 生效（因为拔纤触发了 IGP 重收敛，
+   期间靠的是另一套机制，掩盖了修复列表本身的问题）
+② 用 9.5 的方法注入修复列表 trace：
+   traceroute srv6 &lt;PE-2&gt; sid-list &lt;修复列表&gt;
+   → 第 1 跳就 * * *（P-1 的 End.X SID 没回应）
+③ 查 P-1：show segment-routing srv6 sid | include e001
+   → 该 End.X SID 不存在（备份链路的 adjacency SID 没生成）
+④ 根因：备份链路开了 ISIS 但没开 SRv6，adjacency SID 未分配
+⑤ 修复后：修复列表 trace 全回应；再拔纤实测保护 32 ms
+</code></pre>
+<p><strong>教训</strong>：<strong>"演练通过"不等于"保护可用"</strong>。演练时要<strong>看切换后的路径是不是设计的修复路径</strong>，而不是只看"业务没断"。</p>
+<h3 id="cusid-trace-1">案例 C：uSID trace 只显示 1 跳，被误判为"路径没生效"</h3>
+<p><strong>现象</strong>：割接到 uSID 后，trace 一条 5 节点的路径只显示 2 跳，运维判断"段列表没生效"，回退。</p>
+<pre><code class="language-text">① trace 输出：
+   1  fdbb:bb00:0001::   0.4 ms
+   2  fdbb:bb00:0005::   1.2 ms
+② 实际路径：PE-1 → P-1 → P-2 → P-3 → PE-5（5 个节点）
+③ 原因：uSID 压缩后，中间节点的 uN 在 DA 内被&quot;移位消耗&quot;，
+   不产生独立的 SRH 处理，因此不各自回应
+④ 正确验证方式：查每个中间节点的 SID 计数
+   show segment-routing srv6 sid detail  → Packets 递增
+⑤ 结论：路径是对的，是&quot;读法&quot;错了
+</code></pre>
+<p><strong>教训</strong>：<strong>uSID 场景不能用"跳数"判断路径</strong>，要用 <strong>SID 计数 + CEF 下一跳</strong>交叉验证。这一条应写进割接检查单。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 9259</strong>：Operations, Administration, and Maintenance for SRv6，O-flag、ICMPv6 扩展、SRv6 TLV 的规范依据。</li>
+<li><strong>RFC 8986</strong>：端点行为定义（含 OAM 处理与 <code>End</code> 的 O-bit 语义）。</li>
+<li><strong>RFC 8754</strong>：SRH，Flags 字段与 O-bit 的位置。</li>
+<li><strong>RFC 8200 / RFC 4443</strong>：IPv6 与 ICMPv6 基础，理解 Time Exceeded / Echo Reply 的承载。</li>
+<li><strong>draft-ietf-6man-srv6-oam</strong>（如已更新）：uSID 场景下的 OAM 补充。</li>
+<li>交叉参考：第 3 章（End/End.X 行为）、第 6 章（业务 SID 的语义）、第 10 章（运维巡检项设计）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="08-upa.html">← 不可达前缀通告 UPA</a><a class="next" href="10-deployment.html">SRv6 网络部署：地址规划、MTU 与安全 →</a></nav>
     <footer class="foot">
@@ -180,12 +579,21 @@
   </main>
   <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
 <ul>
-<li><a href="#91-oam">9.1 为什么要新的 OAM</a></li>
-<li><a href="#92-ping">9.2 Ping 的工作方式</a></li>
-<li><a href="#93-traceroute">9.3 Traceroute 的两种模式</a></li>
-<li><a href="#94-ti-lfa">9.4 与 TI-LFA 的配合</a></li>
-<li><a href="#_1">实战案例：一次"业务通但绕远"的定位</a></li>
-<li><a href="#_2">本章小结</a></li>
+<li><a href="#90-mpls">9.0 为什么 MPLS 那套搬不过来</a></li>
+<li><a href="#91-o-flag">9.1 O-flag：让端点从"转发"切换到"回应"</a></li>
+<li><a href="#92-ping">9.2 Ping：三种粒度，三种结论</a></li>
+<li><a href="#93-traceroute">9.3 Traceroute：两种模式，两个问题</a></li>
+<li><a href="#94-usid">9.4 uSID 下的三个特殊现象</a></li>
+<li><a href="#95-ti-lfa">9.5 最有价值的用法：故障前验证 TI-LFA 修复路径</a></li>
+<li><a href="#96">9.6 排障清单</a></li>
+<li><a href="#97">9.7 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a">案例 A：一次"业务通但绕远"的定位</a></li>
+<li><a href="#bti-lfa">案例 B：TI-LFA 修复列表是"死"的</a></li>
+<li><a href="#cusid-trace-1">案例 C：uSID trace 只显示 1 跳，被误判为"路径没生效"</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>

@@ -50,77 +50,549 @@
     <article class="md">
 <h1 id="12-sr-aware">12 · SR-aware 服务与内层报文暴露</h1>
 <blockquote>
-<p>对应原书第 12 章 <em>SR-aware Services</em>。问题很直接：<strong>防火墙只看到外层 IPv6 头，看不到内层五元组，策略就失效了。</strong> 这一章讲三类做法。</p>
+<p><strong>本章定位</strong>：原书第 12 章《SR-aware Services》。问题很直接：<strong>防火墙只看到外层 IPv6 头，看不到内层五元组，策略就失效了。</strong> 这一章讲三类做法。英文块为原文摘录，中文为完整翻译，Figure 12.1–12.4 重绘，Example 12.1–12.2 保留。</p>
 </blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>为什么封装会让服务设备"失明"</td>
+<td>12.1</td>
+</tr>
+<tr>
+<td>三条路线（原生 / 固定偏移 / 代理）怎么选</td>
+<td>12.2</td>
+</tr>
+<tr>
+<td>SR-aware 服务具体要做哪五件事</td>
+<td>12.3</td>
+</tr>
+<tr>
+<td>老设备不换代的"固定偏移"法为什么可行</td>
+<td>12.4</td>
+</tr>
+<tr>
+<td>SERA 架构解决了什么问题</td>
+<td>12.5</td>
+</tr>
+<tr>
+<td>元数据（Arg）怎么在服务之间传递结论</td>
+<td>12.6</td>
+</tr>
+<tr>
+<td>"服务设备没告警"怎么排</td>
+<td>12.7</td>
+</tr>
+</tbody>
+</table>
+<p>一句话概括：<strong>服务编排的前提是"服务能看见流量"</strong>。SRv6 把真实报文藏进外层封装里，于是必须先解决"看得见"的问题，才谈得上"串起来"。</p>
 <h2 id="121">12.1 问题：服务设备"看不见"真实流量</h2>
 <div class="en">
 <p>When a packet is encapsulated in SRv6, the appliance in the middle sees only the outer IPv6 header. A firewall that must match on the customer's five-tuple, or a DPI engine that must inspect the payload, cannot do its job on the outer header alone. The service is blind unless something exposes the inner packet to it.</p>
 </div>
-<p>报文一旦被 SRv6 封装，中间设备只能看到外层 IPv6 头。防火墙要按客户五元组匹配、DPI 要检查净荷，光看外层头根本做不了。<strong>除非有机制把内层报文"暴露"给服务设备，否则服务就是瞎的。</strong></p>
-<h2 id="122">12.2 三种处理方式</h2>
+<p>报文一旦被 SRv6 封装，<strong>中间设备只能看到外层 IPv6 头</strong>。防火墙要按<strong>客户五元组</strong>匹配、DPI 要<strong>检查净荷</strong>，光看外层头根本做不了。<strong>除非有机制把内层报文"暴露"给服务设备，否则服务就是瞎的。</strong></p>
+<pre><code class="language-text">图 12-1：失明的三个层次（原书 Figure 12.1 重绘）
+
+  封装后的报文:
+  ┌──────────────┬─────────┬─────────────────┬──────────┐
+  │ 外层 IPv6 头 │ SRH     │ 内层 IPv4/IPv6  │ 净荷     │
+  │ src/dst=SID  │ 段列表  │ 真实五元组 ★    │ 应用数据 │
+  └──────────────┴─────────┴─────────────────┴──────────┘
+        ▲            ▲              ▲              ▲
+        │            │              │              │
+     设备能看     设备能看       ★ 设备看不到    看不到
+     （但没意义）  （拓扑信息）    策略无法匹配    无法检测
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>服务类型</th>
+<th>需要什么</th>
+<th>只看外层会怎样</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>防火墙</td>
+<td>内层五元组</td>
+<td><strong>策略全部失效</strong>（或退化为"全通/全禁"）</td>
+</tr>
+<tr>
+<td>DPI / IDS</td>
+<td>净荷</td>
+<td><strong>零告警</strong>（规则按内层协议写）</td>
+</tr>
+<tr>
+<td>NAT</td>
+<td>内层地址</td>
+<td>无法转换</td>
+</tr>
+<tr>
+<td>LB</td>
+<td>内层 L4 端口</td>
+<td>无法分发</td>
+</tr>
+<tr>
+<td>QoS 整形</td>
+<td>内层 DSCP</td>
+<td>分类失效</td>
+</tr>
+<tr>
+<td>计费</td>
+<td>内层流标识</td>
+<td>计费错误</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>There is a subtlety worth stating: an appliance that is SR-aware sees more than the inner packet, it also sees the segment list. This can be an advantage (the service can make decisions based on the intended path) or a risk (the service can break the path by mishandling the SRH).</p>
+</div>
+<p>一个值得点明的细节：<strong>SR-aware 设备看到的不只是内层报文，还能看到段列表</strong>。这既是优势（<strong>服务可以按"预期路径"做决策</strong>），也是风险（<strong>服务处理不当就会把路径弄坏</strong>）。</p>
+<h2 id="122">12.2 三条路线怎么选</h2>
 <table>
 <thead>
 <tr>
 <th>方式</th>
 <th>设备需要改造</th>
 <th>能否看内层</th>
+<th>能否读写元数据</th>
 <th>典型场景</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>SR-aware</strong>（原生解析）</td>
-<td>是（支持 SRv6）</td>
+<td>是（支持 SRv6/SRH）</td>
 <td>能</td>
+<td><strong>能</strong></td>
 <td>新一代 vFW / vDPI / MEC</td>
 </tr>
 <tr>
 <td><strong>内层暴露</strong>（SERA 类）</td>
 <td>少量（解析固定偏移）</td>
 <td>能</td>
+<td>部分（可读固定字段）</td>
 <td>改造困难的老设备</td>
 </tr>
 <tr>
 <td><strong>SR Proxy</strong>（第 13 章）</td>
-<td>否</td>
+<td><strong>否</strong></td>
 <td>不能（只看裸报文）</td>
+<td><strong>不能</strong></td>
 <td>完全不支持 IPv6 的老设备</td>
 </tr>
 </tbody>
 </table>
+<pre><code class="language-text">图 12-2：三条路线的选择树（原书 Figure 12.2 重绘）
+
+  服务设备支持 SRv6？
+   ├─ 是 ──► ① SR-aware：直接分配 Service SID（最佳）
+   └─ 否
+       ├─ 能改代码/能配&quot;偏移解析&quot;？
+       │   ├─ 是 ──► ② 内层暴露 / SERA：旁挂组件做封装终结
+       │   └─ 否 ──► ③ SR Proxy（静态/动态/伪装的）
+       └─ 连 IPv6 都不支持？ ──► ③ 静态代理（接口对绑定）
+</code></pre>
 <div class="en">
 <p>An SR-aware service parses the SRv6 encapsulation, extracts the inner packet, applies its policy, then re-encapsulates the packet and continues the segment list. The cost is that the appliance must implement SRv6, including the SRH and the endpoint behaviors; the benefit is that it can also read and write metadata.</p>
 </div>
-<p><strong>SR-aware</strong> 服务解析 SRv6 封装、取出内层报文、执行策略，然后重新封装并继续段列表。代价是设备必须实现 SRv6（含 SRH 与端点行为）；收益是它还能<strong>读写的元数据</strong>。</p>
+<p><strong>SR-aware</strong> 服务<strong>解析 SRv6 封装、取出内层报文、执行策略，然后重新封装并继续段列表</strong>。代价是<strong>设备必须实现 SRv6（含 SRH 与端点行为）</strong>；收益是它<strong>还能读写元数据</strong>。</p>
 <div class="en">
 <p>Inner packet exposure is a lighter option: the appliance is told the fixed offset at which the inner packet starts, so it can inspect the inner headers after a simple shift, without implementing any SRv6 logic. This is how legacy appliances are given visibility without being replaced.</p>
 </div>
-<p><strong>内层暴露</strong>是更轻的方案：告诉设备"内层报文从固定偏移开始"，它做一次简单的偏移取指就能看到内层头部，<strong>完全不需要实现 SRv6 逻辑</strong>。这是让老设备"获得可见性"而不必换代的办法。</p>
-<h2 id="123-sera-srv6">12.3 SERA：让防火墙看懂 SRv6</h2>
+<p><strong>内层暴露</strong>是更轻的方案：<strong>告诉设备"内层报文从固定偏移开始"</strong>，它做一次简单的<strong>偏移取指</strong>就能看到内层头部，<strong>完全不需要实现 SRv6 逻辑</strong>。这是让<strong>老设备"获得可见性"而不必换代</strong>的办法。</p>
+<p>三条路线的成本对比（含隐性成本）：</p>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>一次性成本</th>
+<th>长期成本</th>
+<th>性能影响</th>
+<th>适用寿命</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SR-aware</td>
+<td>高（设备换代）</td>
+<td>低</td>
+<td>线速（硬件）</td>
+<td>长</td>
+</tr>
+<tr>
+<td>内层暴露</td>
+<td>中（旁挂组件）</td>
+<td>中（组件要维护）</td>
+<td>略降（多一跳/一次拷贝）</td>
+<td>中</td>
+</tr>
+<tr>
+<td>SR Proxy</td>
+<td>低</td>
+<td><strong>高（静态配置漂移）</strong></td>
+<td>低</td>
+<td>短（作为过渡）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="123-sr-aware">12.3 SR-aware 服务必须做的五件事</h2>
+<ol>
+<li><strong>识别 SID</strong>：DA 命中本地分配的 Service SID；</li>
+<li><strong>取内层</strong>：跳过 IPv6 头与 SRH（含 TLV），定位内层报文起始；</li>
+<li><strong>执行策略</strong>：用内层五元组/净荷做匹配；</li>
+<li><strong>重建封装</strong>：按<strong>剩余段列表</strong>重新封装（不能把 SID 列表弄丢或弄乱）；</li>
+<li><strong>可选：写元数据</strong>：把自己的判定写回 Arg/TLV，供下游使用。</li>
+</ol>
+<div class="en">
+<p>The fourth step is where most implementations fail: re-encapsulation must preserve the remaining segment list and decrement the segment left pointer correctly. An appliance that pops the SRH and re-pushes a fresh one will silently break any chain longer than one segment.</p>
+</div>
+<p><strong>第四步是大多数实现翻车的地方</strong>：重新封装<strong>必须保留剩余段列表，并正确递减 Segment Left 指针</strong>。<strong>一个"弹出 SRH 再重新压一个全新 SRH"的实现，会静默破坏任何长度大于 1 的链</strong>——它自己"工作正常"，但后面所有段都失效。</p>
+<table>
+<thead>
+<tr>
+<th>实现错误</th>
+<th>现象</th>
+<th>排查方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SL 指针未正确递减</td>
+<td>报文在服务后回到"已访问过的段"</td>
+<td>trace 看是否回跳</td>
+</tr>
+<tr>
+<td>剩余段被清空</td>
+<td>服务后报文直接按外层 DA 路由</td>
+<td>trace 后续段无回应</td>
+</tr>
+<tr>
+<td>SRH 重写丢失 TLV</td>
+<td>元数据丢失，下游策略失效</td>
+<td>服务侧抓包比对</td>
+</tr>
+<tr>
+<td>内层偏移硬编码</td>
+<td>带 SRH 的报文解析错位</td>
+<td>只在不带 SRH 时正常</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-text">例 12.1：SR-aware 服务的处理骨架（伪代码）
+on packet:
+    if DA not in local_service_sids: forward_normally()
+    srh   = parse_srh(ipv6)
+    inner = strip(ipv6, srh)
+    verdict = policy_engine(inner)          # 五元组/净荷
+    if verdict == DROP: drop(); return
+    if verdict == MODIFY: inner = rewrite(inner)
+    meta = encode_verdict(verdict)          # 可选：写回 Arg
+    out = reencap(inner, remaining_segments(srh), meta)
+    forward(out)                            # 继续段列表
+</code></pre>
+<h2 id="124-work">12.4 内层暴露：为什么"固定偏移"能work</h2>
+<div class="en">
+<p>Inner packet exposure works because the encapsulation has a deterministic shape: after the outer IPv6 header and, when present, the SRH, the inner packet begins at an offset that the appliance can be configured with. The appliance is not required to understand SRv6; it only needs to be told where to look.</p>
+</div>
+<p>内层暴露能成立，是因为<strong>封装具有确定的形状</strong>：<strong>外层 IPv6 头之后、以及（存在时）SRH 之后，内层报文从一个可配置的偏移开始</strong>。设备<strong>不需要理解 SRv6</strong>，<strong>只需要被告知"从哪看"</strong>。</p>
+<pre><code class="language-text">图 12-3：固定偏移（原书 Figure 12.3 重绘）
+
+  情况 A：无 SRH（uSID 业务转发最常见）
+    [IPv6 40B][内层 IP ...]
+              ↑ 偏移 = 40（固定）
+
+  情况 B：带 SRH，1 个容器 SID
+    [IPv6 40B][SRH 8B][SID 16B][内层 IP ...]
+              ↑ 偏移 = 64
+
+  情况 C：带 SRH，2 个容器 SID
+    [IPv6 40B][SRH 8B][SID 16B][SID 16B][内层 IP ...]
+              ↑ 偏移 = 80
+
+  老设备配置示例（只需一个数字）：
+    inspect-offset 40     ← 无 SRH 场景
+    inspect-offset 64     ← 带 SRH 场景
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>前提</th>
+<th>说明</th>
+<th>违反后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>偏移可配置</td>
+<td>设备支持配"从第 N 字节开始看"</td>
+<td>只能用 SR Proxy</td>
+</tr>
+<tr>
+<td>偏移<strong>稳定</strong></td>
+<td>该链路上封装形状不变（总是 40 或总是 64）</td>
+<td>解析错位，误判</td>
+</tr>
+<tr>
+<td>不需要写回</td>
+<td>设备只做"看"，不改报文</td>
+<td>需 SR-aware 或代理</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The constraint that makes this fragile in practice is the requirement that the offset be stable. If some traffic on the same appliance arrives with an SRH and some without, a single configured offset cannot serve both, and the operator must either split the traffic by policy or move to an SR-aware implementation.</p>
+</div>
+<p>这个办法在工程上<strong>真正脆弱的地方</strong>是：<strong>它要求偏移稳定</strong>。如果<strong>同一台设备上，一部分流量带 SRH、一部分不带</strong>，<strong>一个固定偏移不可能同时适配两者</strong>，运维只能<strong>按策略把流量分开</strong>，或者<strong>改用 SR-aware 实现</strong>。</p>
+<h2 id="125-sera">12.5 SERA：在设备前面放一个"翻译层"</h2>
 <div class="en">
 <p>SERA (SR-aware Edge Router Architecture) places an SR-aware component in front of the appliance. It terminates the SRv6 encapsulation, hands the inner packet to the firewall in the clear, receives it back, and re-imposes the encapsulation with the remaining segment list. The firewall's policy model stays exactly the same, and the network gains service chaining.</p>
 </div>
-<p>SERA（SR-aware Edge Router Architecture）在服务设备前面放一个 SR-aware 组件：它终止 SRv6 封装，把裸内层报文交给防火墙，收回处理后的报文，再按剩余段列表重新封装。<strong>防火墙的策略模型一行不改</strong>，网络侧却获得了服务链能力。</p>
-<pre><code class="language-text">报文: [IPv6 | SRH | 内层 IP ]
+<p><strong>SERA（SR-aware Edge Router Architecture）</strong> 在服务设备<strong>前面</strong>放一个 SR-aware 组件：它<strong>终止 SRv6 封装</strong>，把<strong>裸内层报文</strong>交给防火墙，<strong>收回</strong>处理后的报文，再<strong>按剩余段列表重新封装</strong>。<strong>防火墙的策略模型一行不改</strong>，网络侧却获得了服务链能力。</p>
+<pre><code class="language-text">图 12-4：SERA 的处理回路（原书 Figure 12.4 重绘）
+
+  进: [IPv6 | SRH | 内层 IP ]
          │
          ▼
-    SERA 组件 ──裸内层报文──► 防火墙 ──处理结果──► SERA 重新封装
-         │
-         ▼
-    [IPv6 | SRH' | 内层 IP ]  → 继续下一段
+    SERA 组件（旁挂或内联）
+         ├─ ① 暂存 SRH 与剩余段
+         ├─ ② 剥封装 → 裸内层报文
+         │        │
+         │        ▼
+         │    防火墙（策略完全不变）
+         │        │
+         │        ▼
+         ├─ ③ 收回处理结果（可能被改、可能被丢）
+         ├─ ④ 按暂存的段列表重新封装
+         └─ ⑤ 写回元数据（判定结果）→ 继续下一段
+
+  出: [IPv6 | SRH' | 内层 IP ]
 </code></pre>
-<h2 id="124">12.4 元数据：把策略结果带回网络</h2>
+<p>SERA 与"固定偏移"的本质区别：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>固定偏移</th>
+<th>SERA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>谁解析封装</td>
+<td><strong>服务设备自己</strong>（按偏移）</td>
+<td><strong>外部组件</strong></td>
+</tr>
+<tr>
+<td>服务设备改动</td>
+<td>需要"偏移可配"</td>
+<td><strong>零改动</strong></td>
+</tr>
+<tr>
+<td>能否写回元数据</td>
+<td>一般不能</td>
+<td><strong>能</strong></td>
+</tr>
+<tr>
+<td>适应 SRH 变化</td>
+<td>不能（偏移固定）</td>
+<td><strong>能</strong>（组件动态解析）</td>
+</tr>
+<tr>
+<td>额外故障点</td>
+<td>无</td>
+<td><strong>组件本身</strong>（需高可用）</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The trade-off is explicit: SERA moves all SRv6 complexity into one well-understood component, at the price of making that component a critical dependency. In production it must be redundant, because its failure takes the service chain down even though the appliance itself is healthy.</p>
+</div>
+<p>这个交换是显式的：<strong>SERA 把所有 SRv6 复杂度集中到一个"懂 SRv6 的组件"里</strong>，代价是<strong>这个组件成了关键依赖</strong>。生产环境里<strong>它必须做冗余</strong>——因为它挂了，<strong>即使服务设备本身健康，服务链也会断</strong>。</p>
+<h2 id="126">12.6 元数据：让服务之间传递结论</h2>
 <div class="en">
 <p>SID arguments can carry metadata: a classification result, a tenant identifier, a policy tag. An SR-aware service can read the metadata without parsing the full payload, and can write its own verdict back into the argument so that downstream services do not repeat the same work.</p>
 </div>
-<p>SID 的 <strong>Argument 可以携带元数据</strong>：分类结果、租户标识、策略标签。SR-aware 服务不用解析整个净荷就能读到元数据，还能把自己的判定写回 argument，<strong>下游服务无需重复劳动</strong>。</p>
+<p>SID 的 <strong>Argument 可以携带元数据</strong>：分类结果、租户标识、策略标签。SR-aware 服务<strong>不用解析整个净荷就能读到元数据</strong>，还能<strong>把自己的判定写回 argument</strong>，<strong>下游服务无需重复劳动</strong>。</p>
+<pre><code class="language-text">例 12.2：元数据在链上流动
+① 头端分类：识别为&quot;游戏流量，租户 T-100，SLA 低时延&quot;
+   → 写入 Arg：app=GAME, tenant=100, sla=low
+
+② 防火墙：读 Arg → 免做 DPI（已知是游戏）→ 只做 ACL 检查
+   → 写回：verdict=allow
+
+③ DDoS 清洗：读 verdict=allow + app=GAME
+   → 跳过重复分类，直接进入游戏专用清洗模板
+
+④ 出口 VPN SID：不再需要元数据（已落地）
+
+收益：全链只做一次深度检测，其余节点读结论
+</code></pre>
 <blockquote>
-<p>这也解释了第 15 章阿里为什么坚持把 TE-class 与 tenant ID 编进本地 SID 结构——他们用的是 WLIB（32 bit 本地 uSID）来腾出这些字段。</p>
+<p>这也解释了第 15 章阿里为什么坚持把 TE-class 与 tenant ID 编进本地 SID 结构——他们用 <strong>WLIB（32 bit 本地 uSID）</strong> 腾出这些字段。</p>
 </blockquote>
-<h2 id="sr-snort">实战案例：SR-Snort 与"看不见"的排障</h2>
-<p><strong>背景</strong>：某实验室把开源 IDS（Snort）接入 SRv6 服务链做验证，最初的做法是直接把流量引到 Snort 所在主机。</p>
-<p><strong>现象</strong>：Snort 一条告警都不出。抓包发现它收到的是 <code>IPv6 + SRv6</code> 封装包，规则库全部按内层 IPv4 匹配，自然全部落空。</p>
-<p><strong>三种修法对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>元数据承载方式</th>
+<th>空间</th>
+<th>可见范围</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SID 的 <strong>Argument 字段</strong></td>
+<td>随 locator 规划而定（16–48 bit）</td>
+<td>沿途所有节点</td>
+<td>简短标签（app/tenant/class）</td>
+</tr>
+<tr>
+<td><strong>SRH TLV</strong></td>
+<td>较大（受 MTU 限制）</td>
+<td>SR-aware 节点</td>
+<td>结构化信息</td>
+</tr>
+<tr>
+<td><strong>内层封装</strong>（如 NSH、VXLAN-GPE）</td>
+<td>大</td>
+<td>需内层解析能力</td>
+<td>已有 overlay 体系</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>Metadata must be treated as untrusted when it crosses a boundary: an argument set by one administrative domain should not be relied upon by another without validation, because it is carried in the packet and can be forged.</p>
+</div>
+<p>元数据<strong>在跨域时必须当作不可信输入</strong>：<strong>一个管理域写入的 argument，另一个域在使用前必须校验</strong>——因为它<strong>装在报文里，是可以被伪造的</strong>。</p>
+<h2 id="127">12.7 排障：服务设备"没反应"</h2>
+<pre><code class="language-text">服务设备没告警 / 策略不生效
+  │
+  ├─ ① 它看到的是不是裸报文？
+  │    tcpdump -i any -nn -v
+  │    └─ 看到 IPv6 + Next Header=43 → 封装没剥，设备失明
+  │
+  ├─ ② 是不是把扩展头当&quot;未知协议&quot;丢了？
+  │    设备日志 &quot;unknown protocol 43&quot; / &quot;unsupported next header&quot;
+  │    └─ 需 SERA 或 SR Proxy
+  │
+  ├─ ③ 偏移对不对？
+  │    同一链路上部分流量带 SRH、部分不带
+  │    └─ 偏移配错 → 解析错位，规则乱匹配
+  │
+  ├─ ④ 元数据还在吗？
+  │    服务侧抓包看 Arg/TLV
+  │    └─ 丢失 → 中间有节点重写了 SRH
+  │
+  └─ ⑤ 服务之后为什么断了？
+       trace 带完整列表
+       └─ 后续段无回应 → 服务重封装时破坏了剩余段
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>命令/方法</th>
+<th>期望</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>服务侧看到的报文</td>
+<td><code>tcpdump -nn -v</code></td>
+<td>裸内层（或已知偏移）</td>
+</tr>
+<tr>
+<td>Next Header</td>
+<td>同上</td>
+<td>不是 43（或设备能处理 43）</td>
+</tr>
+<tr>
+<td>策略命中</td>
+<td>设备计数</td>
+<td>有匹配计数增长</td>
+</tr>
+<tr>
+<td>剩余段完好</td>
+<td><code>traceroute srv6 ... sid-list ...</code></td>
+<td>服务后续段有回应</td>
+</tr>
+<tr>
+<td>元数据</td>
+<td>抓包比对 Arg/TLV</td>
+<td>与写入值一致</td>
+</tr>
+<tr>
+<td>SERA 组件状态</td>
+<td>组件自身健康检查</td>
+<td>主备都正常</td>
+</tr>
+</tbody>
+</table>
+<h2 id="128">12.8 本章小结</h2>
+<div class="en">
+<p>Encapsulation hides the packet from the service, and every option in this chapter is a way of giving the service its sight back: native SR-awareness, inner packet exposure at a fixed offset, or an SR-aware proxy in front. The choice is dictated by what the appliance can be made to do, not by what the network would prefer.</p>
+</div>
+<p><strong>封装让服务失明</strong>，本章的每一个选项都是<strong>把"视力"还给服务的办法</strong>：<strong>原生 SR-aware、固定偏移的内层暴露、或者前置一个 SR-aware 代理</strong>。选择<strong>由设备能被改到什么程度决定，而不是由网络侧的偏好决定</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SR-aware</th>
+<th>固定偏移</th>
+<th>SR Proxy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>服务设备改动</td>
+<td>大</td>
+<td>小（偏移可配）</td>
+<td><strong>零</strong></td>
+</tr>
+<tr>
+<td>看内层</td>
+<td>能</td>
+<td>能</td>
+<td><strong>不能</strong>（只看裸报文）</td>
+</tr>
+<tr>
+<td>读写元数据</td>
+<td>能</td>
+<td>一般不能</td>
+<td><strong>不能</strong></td>
+</tr>
+<tr>
+<td>对 SRH 变化的适应性</td>
+<td>强</td>
+<td>弱</td>
+<td>中</td>
+</tr>
+<tr>
+<td>额外组件</td>
+<td>无</td>
+<td>无</td>
+<td>有</td>
+</tr>
+<tr>
+<td>推荐度</td>
+<td><strong>首选</strong></td>
+<td>过渡</td>
+<td><strong>过渡</strong></td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>"服务能编排" 的前提是 "服务能看见"</strong>；而<strong>能不能看见，取决于你愿不愿意改设备</strong>——不改设备，就只能接受"看不见元数据"的代价。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="asr-snort">案例 A：SR-Snort 与"看不见"的排障（原书案例）</h3>
+<p><strong>背景</strong>：某实验室把开源 IDS（Snort）接入 SRv6 服务链做验证，最初把流量直接引到 Snort 所在主机。</p>
+<p><strong>现象</strong>：<strong>Snort 一条告警都不出</strong>。抓包发现它收到的是 <code>IPv6 + SRv6</code> 封装包，<strong>规则库全部按内层 IPv4 匹配</strong>，自然全部落空。</p>
 <table>
 <thead>
 <tr>
@@ -131,8 +603,8 @@
 </thead>
 <tbody>
 <tr>
-<td>在 Snort 前加解封装 + 后加重新封装</td>
-<td>需要旁挂组件</td>
+<td>Snort 前加解封装 + 后加重新封装</td>
+<td>需旁挂组件</td>
 <td>可用，但引入额外一跳与 MTU 问题</td>
 </tr>
 <tr>
@@ -143,24 +615,79 @@
 <tr>
 <td>改造为 SR-aware（SERA）</td>
 <td>Snort 侧加解析层</td>
-<td>能看内层 + 能读写元数据，最佳</td>
+<td><strong>能看内层 + 能读写元数据，最佳</strong></td>
 </tr>
 </tbody>
 </table>
-<p><strong>最终选择</strong>：SERA 组件 + 原生 Snort 规则，规则不动、链路可编排；同时把分类结果写入 Arg，下游 DDoS 清洗直接读取，省一次检测。</p>
+<p><strong>最终选择</strong>：SERA 组件 + 原生 Snort 规则，<strong>规则不动、链路可编排</strong>；同时<strong>把分类结果写入 Arg</strong>，下游 DDoS 清洗直接读取，<strong>省一次检测</strong>。</p>
 <p><strong>排障提示</strong>：</p>
 <ul>
-<li>"服务设备没告警"优先怀疑：它看到的是不是裸报文？<code>tcpdump -i any -nn -v</code> 看外层有没有 IPv6 扩展头。</li>
-<li>若设备报"未知协议"，检查它是否把 <code>Next Header = 43</code> 当成不可识别协议丢弃。</li>
+<li>"服务设备没告警"优先怀疑：<strong>它看到的是不是裸报文</strong>？<code>tcpdump -i any -nn -v</code> 看外层有没有 IPv6 扩展头；</li>
+<li>若设备报"未知协议"，检查它是否把 <code>Next Header = 43</code> 当成不可识别协议丢弃；</li>
 <li>元数据被中间节点改写 → 检查是否有节点误配了 Arg 相关的行为。</li>
 </ul>
-<h2 id="_1">本章小结</h2>
-<ol>
-<li>封装导致服务设备失明，必须显式暴露内层或让设备 SR-aware。</li>
-<li>三条路线：原生 SR-aware、固定偏移暴露、SR Proxy。</li>
-<li>元数据（Arg）是"服务之间传递结论"的载体，避免重复检测。</li>
-<li>选型取决于设备改造能力，而不是网络侧偏好。</li>
-</ol>
+<h3 id="b">案例 B：防火墙上线后"策略全放通"</h3>
+<p><strong>现象</strong>：某企业专线接入 SRv6 服务链后，防火墙（老型号，不支持 IPv6 扩展头）显示"策略命中为零"，但业务全部通——<strong>等于没有防护</strong>。</p>
+<pre><code class="language-text">① 防火墙侧日志：无匹配记录，会话表为空
+② 抓包：防火墙上收到的是 [IPv6][SRH][内层 IPv4]，
+   它把 IPv6 头当作&quot;透明&quot;跳过，直接看到的是……什么都没有
+   因为它只解析到 IPv4 就停，遇到 IPv6 直接按默认策略放行
+③ 关键风险：默认策略是&quot;允许&quot;，于是全通
+④ 临时措施：把默认策略改为&quot;拒绝&quot; → 业务全断（说明确实没生效）
+⑤ 修复：加 SERA 组件，防火墙收到裸 IPv4 报文，策略立刻正常命中
+⑥ 复盘：割接前必须做&quot;负向验证&quot;——用一条本该被拒绝的流量试一下
+</code></pre>
+<p><strong>教训</strong>：<strong>"业务通" 可能是"防护没生效"的伪装</strong>。服务链上线验收必须包含<strong>负向测试</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>验收项</th>
+<th>方法</th>
+<th>判据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>策略真的生效</td>
+<td>发一条应被拒绝的流量</td>
+<td>被拒（而非放通）</td>
+</tr>
+<tr>
+<td>策略不是默认放通</td>
+<td>清空策略后重试</td>
+<td>应全断</td>
+</tr>
+<tr>
+<td>内层可见</td>
+<td>设备侧抓包</td>
+<td>能看到内层五元组</td>
+</tr>
+<tr>
+<td>计数器</td>
+<td>设备策略计数</td>
+<td>有增长</td>
+</tr>
+</tbody>
+</table>
+<h3 id="c">案例 C：元数据被"好心"的中间节点抹掉</h3>
+<p><strong>现象</strong>：链上第 2 跳（DPI）写入的 <code>verdict</code> 元数据，到第 3 跳（清洗）时读不到，导致清洗平台重复做全量检测，性能掉 40%。</p>
+<pre><code class="language-text">① 抓包对比：DPI 出口的 SRH 有 TLV（verdict=allow）
+② 清洗平台入口的 SRH 没有 TLV
+③ 逐跳排查：中间的 PE 上启用了某&quot;SRH 规范化&quot;特性
+   ——它为了兼容老硬件，重建 SRH 时只保留 SID 列表，丢弃 TLV
+④ 修复：该 PE 关闭规范化；或将元数据改放到 Arg（Arg 随 SID 保留）
+⑤ 复测：清洗平台读到 verdict，跳过重复检测，性能恢复
+</code></pre>
+<p><strong>教训</strong>：<strong>元数据放在 TLV 里最"脆"，放在 Arg 里最"稳"</strong>——因为 <strong>Arg 是 SID 的一部分，任何按 SID 转发的节点都不会动它</strong>；TLV 则可能在任何一次"重建 SRH"中丢失。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 8986</strong>：端点行为与 <code>End.DT</code>/<code>End.DX</code> 族，SR-aware 服务需要实现的语义。</li>
+<li><strong>RFC 8754</strong>：SRH 格式与 SL 指针，12.3 中"重封装必须正确"的规范依据。</li>
+<li><strong>RFC 8300</strong>：NSH（Network Service Header），另一种"服务链元数据"思路的对照。</li>
+<li><strong>draft-ietf-spring-sr-service-programming</strong>：Service SID 与 SR-aware 服务架构。</li>
+<li><strong>SERA</strong>：SR-aware Edge Router Architecture（原书引用的架构提案）。</li>
+<li>交叉参考：第 11 章（服务编程的控制面）、第 13 章（SR Proxy 的三种实现）、第 16 章（Bell SP 的 DDoS 生产链怎么处理元数据）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="11-service-programming.html">← 服务编程 Service Programming</a><a class="next" href="13-sr-proxy.html">遗留应用的 SR Proxy →</a></nav>
     <footer class="foot">
@@ -179,11 +706,20 @@
   <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
 <ul>
 <li><a href="#121">12.1 问题：服务设备"看不见"真实流量</a></li>
-<li><a href="#122">12.2 三种处理方式</a></li>
-<li><a href="#123-sera-srv6">12.3 SERA：让防火墙看懂 SRv6</a></li>
-<li><a href="#124">12.4 元数据：把策略结果带回网络</a></li>
-<li><a href="#sr-snort">实战案例：SR-Snort 与"看不见"的排障</a></li>
-<li><a href="#_1">本章小结</a></li>
+<li><a href="#122">12.2 三条路线怎么选</a></li>
+<li><a href="#123-sr-aware">12.3 SR-aware 服务必须做的五件事</a></li>
+<li><a href="#124-work">12.4 内层暴露：为什么"固定偏移"能work</a></li>
+<li><a href="#125-sera">12.5 SERA：在设备前面放一个"翻译层"</a></li>
+<li><a href="#126">12.6 元数据：让服务之间传递结论</a></li>
+<li><a href="#127">12.7 排障：服务设备"没反应"</a></li>
+<li><a href="#128">12.8 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#asr-snort">案例 A：SR-Snort 与"看不见"的排障（原书案例）</a></li>
+<li><a href="#b">案例 B：防火墙上线后"策略全放通"</a></li>
+<li><a href="#c">案例 C：元数据被"好心"的中间节点抹掉</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>

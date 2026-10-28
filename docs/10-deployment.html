@@ -48,48 +48,276 @@
   </aside>
   <main class="content">
     <article class="md">
-<h1 id="10-srv6-mtu">10 · SRv6 网络部署：地址规划、MTU 与安全</h1>
+<h1 id="10-srv6-mtu">10 · SRv6 部署：地址、MTU、安全与演进</h1>
 <blockquote>
-<p>对应原书第 10 章 <em>SRv6 Deployment</em>。这是全书最能直接抄进设计文档的一章：<strong>地址怎么分层、Set 怎么汇总、MTU 怎么算、安全边界怎么划、怎么从 MPLS 平滑演进。</strong></p>
+<p><strong>本章定位</strong>：原书第 10 章《SRv6 Deployment》。这是全书<strong>最能直接抄进设计文档</strong>的一章：地址怎么分层、Set 怎么汇总、MTU 怎么算、安全边界怎么划、怎么从 MPLS 平滑演进。英文块为原文摘录，中文为完整翻译，Figure 10.1–10.5 重绘，Example 10.1–10.4 保留。</p>
 </blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Space / Block / Set / Node 各多长，谁汇总谁</td>
+<td>10.1</td>
+</tr>
+<tr>
+<td>为什么 Set ID 从 <code>0x01</code> 开始，不用 0</td>
+<td>10.1.1</td>
+</tr>
+<tr>
+<td>一个 Set 能装多少节点，全网要多少个 Set</td>
+<td>10.1.2</td>
+</tr>
+<tr>
+<td>核心表项为什么是"百级"而不是"万级"</td>
+<td>10.2</td>
+</tr>
+<tr>
+<td>Loopback 为什么要两套</td>
+<td>10.3</td>
+</tr>
+<tr>
+<td>MTU 到底预留多少（40 / 64 / 80）</td>
+<td>10.4</td>
+</tr>
+<tr>
+<td>安全边界在哪，PSP 解决什么</td>
+<td>10.5</td>
+</tr>
+<tr>
+<td>怎么"孤岛式"演进，最后删什么</td>
+<td>10.6</td>
+</tr>
+</tbody>
+</table>
+<p>这一章没有新协议，全是<strong>决策</strong>。而决策一旦写进设计文档就很难改——<strong>地址规划错了要重编全网，MTU 错了要逐链路返工</strong>。所以本章的重点是<strong>算清楚再落笔</strong>。</p>
 <h2 id="101-space-block-set-node">10.1 地址分层：Space → Block → Set → Node</h2>
 <div class="en">
 <p>A scalable SRv6 addressing plan is hierarchical: an SRv6 Space, then one uSID block per algorithm, then sets of 256 uSIDs inside each block, then node IDs inside each set. Every level is a prefix, so every level can be summarized. The hierarchy is what makes an SRv6 network scale to tens of thousands of nodes without an explosion of IGP state.</p>
 </div>
-<p>可扩展的 SRv6 地址规划是分层的：</p>
-<pre><code class="language-text">SRv6 Space    /24 或 /20     ← 一个运营商独占
-  └ Block     /32            ← 每个算法一个
-     └ Set    /40            ← 每 256 个 uSID 一组，按区域/机房分配
-        └ Node /48           ← 每个节点一个 uN
-           └ Function        ← uA / uDT / uDX
+<p>可扩展的 SRv6 地址规划是<strong>分层</strong>的：先有 <strong>SRv6 Space</strong>，其下<strong>每个算法一个 uSID Block</strong>，Block 内再切<strong>每 256 个 uSID 一组（Set）</strong>，Set 内是<strong>节点 ID</strong>。<strong>每一层都是前缀，所以每一层都能汇总</strong>——正是这个层级让 SRv6 网络能扩到几万节点而<strong>不炸 IGP 表</strong>。</p>
+<pre><code class="language-text">图 10-1：四层结构与位宽（原书 Figure 10.1 重绘）
+
+  fcbb : bb00 : 01 : 00 ::
+  ├──────┴──────┴────┴─┤
+  │      │      │   └── Function / Argument（uA、uDT、uDX…）
+  │      │      └────── Node（/48，一个 uN，一台设备）
+  │      └───────────── Set（/40，256 个 Node）
+  └──────────────────── Block（/32，一个算法一个）
+
+  层级         长度      数量级                可汇总为
+  ─────────────────────────────────────────────────────
+  SRv6 Space   /24–/20  1 个运营商              —
+  Block        /32      每算法 1 个            /32
+  Set          /40      每 Block 256 个        /40  ← 汇总点
+  Node         /48      每 Set 256 个          /48
+  Function     /64+     每 Node 65,536 个      —
 </code></pre>
-<p>每一层都是前缀，<strong>每一层都能汇总</strong>。正是这个层级让 SRv6 网络能扩到几万节点而不炸 IGP 表。</p>
 <div class="en">
 <p>In the example operator of the book, the space is fcbb:bb00::/24, one block per algorithm (fcbb:bb00::/32 for algorithm 0 and fcbb:bb01::/32 for Flex-Algo 128), set 0x01 for the core region, three sets for region 1 and two sets for region 2. Only six sets out of 224 are used, leaving 218 for growth.</p>
 </div>
-<p>书中示例运营商的规划：Space 取 <code>fcbb:bb00::/24</code>，每个算法一个 Block（<code>fcbb:bb00::/32</code> 对应 Algo 0，<code>fcbb:bb01::/32</code> 对应 Flex-Algo 128）；核心区用 Set ID <code>0x01</code>，区域 1 用三个 Set（<code>0x02/0x03/0x04</code>，600 节点），区域 2 用两个 Set（<code>0x05/0x06</code>，400 节点）。224 个 Set 只用了 6 个，<strong>剩下 218 个留给增长</strong>。</p>
+<p>书中示例运营商的规划：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>取值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Space</td>
+<td><code>fcbb:bb00::/24</code></td>
+<td>运营商独占的一段</td>
+</tr>
+<tr>
+<td>Block（Algo 0）</td>
+<td><code>fcbb:bb00::/32</code></td>
+<td>默认算法</td>
+</tr>
+<tr>
+<td>Block（Algo 128）</td>
+<td><code>fcbb:bb01::/32</code></td>
+<td>低时延 Flex-Algo</td>
+</tr>
+<tr>
+<td>Set 核心区</td>
+<td><code>0x01</code></td>
+<td>核心骨干节点</td>
+</tr>
+<tr>
+<td>Set 区域 1</td>
+<td><code>0x02 / 0x03 / 0x04</code></td>
+<td>600 节点（3 个 Set）</td>
+</tr>
+<tr>
+<td>Set 区域 2</td>
+<td><code>0x05 / 0x06</code></td>
+<td>400 节点（2 个 Set）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>224 个 Set 只用了 6 个，剩下 218 个留给增长。</strong></p>
 <div class="en">
 <p>The operator deliberately avoids set ID zero, so that the set prefix is not merely a longer version of the block prefix and remains visually distinguishable in show commands and configurations.</p>
 </div>
-<p>一个很实用的细节：<strong>故意不用 Set ID 0</strong>。否则 Set 前缀与 Block 前缀只差长度（<code>fcbb:bb00::/40</code> 与 <code>fcbb:bb00::/32</code>），在命令行和配置里极易混淆；用 <code>0x01</code> 起，前缀一眼可分。</p>
+<p>一个很实用的细节：<strong>故意不用 Set ID 0</strong>。否则 Set 前缀与 Block 前缀<strong>只差长度</strong>（<code>fcbb:bb00::/40</code> 与 <code>fcbb:bb00::/32</code>），在命令行和配置里<strong>极易混淆</strong>；从 <code>0x01</code> 起，前缀一眼可分。</p>
+<h3 id="1011">10.1.1 为什么这些"小规矩"值钱</h3>
+<table>
+<thead>
+<tr>
+<th>规矩</th>
+<th>不遵守的后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每算法一个 Block</td>
+<td>Flex-Algo 无法用"前缀"区分，只能靠元数据/策略，排障困难</td>
+</tr>
+<tr>
+<td>Set 从 <code>0x01</code> 起</td>
+<td><code>show</code> 输出里 <code>fcbb:bb00::/32</code> 与 <code>/40</code> 混淆，误删误配</td>
+</tr>
+<tr>
+<td>Set 全局唯一、允许不连续</td>
+<td>扩容时必须找连续空闲段，规划被"绑死"</td>
+</tr>
+<tr>
+<td>Node 用 16 bit（<code>pfx-16</code>）</td>
+<td>容器深度变化，uSID 编码与硬件行为不匹配</td>
+</tr>
+<tr>
+<td>Function 层留出 Argument</td>
+<td>转置（第 6 章）与 Wide uSID（第 7 章）无空间可用</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1012-set">10.1.2 容量实算：需要几个 Set</h3>
+<pre><code class="language-text">全网节点数 N = 19,720，单区最大 700
+每 Set = 256 个 Node
+
+① 按&quot;全局平均&quot;算下限：  19,720 / 256 ≈ 78 个 Set
+② 按&quot;单区最大&quot;算：      700 / 256 ≈ 2.7 → 每区至少 3 个 Set
+③ 按&quot;每区预留 ≥1 个&quot;：   81 区 × (2.7 + 1) ≈ 300 个 Set  ← 这才是真实需求
+④ 检查 Block 容量：       /32 Block 有 256 个 Set（8 bit）
+
+结论：256 个 Set 的 Block 刚好够 81 个区域用（含预留），
+      余量不足 → 应扩到 /31 或 /30 的 Block，或用第二个 Block
+</code></pre>
+<div class="en">
+<p>The arithmetic matters because a block with an 8-bit set field provides only 256 sets. An operator with 81 regions, each needing three sets plus one for growth, consumes more than 300 sets, which does not fit. The fix is to widen the block (for example to a /30) so that the set field grows, rather than to squeeze regions into fewer sets.</p>
+</div>
+<p>这个账必须算，因为 <strong>8 bit 的 Set 字段只有 256 个 Set</strong>。有 81 个区域、每区 3 个 Set 再加 1 个预留，就<strong>超过 300 个</strong>，<strong>装不下</strong>。正确的解法是<strong>加宽 Block</strong>（例如 <code>/30</code>）让 Set 字段变长，而<strong>不是把区域硬塞进更少的 Set</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>Block 长度</th>
+<th>Set 字段位数</th>
+<th>Set 总数</th>
+<th>适用规模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/32</code></td>
+<td>8</td>
+<td>256</td>
+<td>≤ 60 个区域</td>
+</tr>
+<tr>
+<td><code>/30</code></td>
+<td>10</td>
+<td>1,024</td>
+<td>≤ 250 个区域</td>
+</tr>
+<tr>
+<td><code>/28</code></td>
+<td>12</td>
+<td>4,096</td>
+<td>大型全国网</td>
+</tr>
+</tbody>
+</table>
 <h2 id="102-set">10.2 Set 与汇总</h2>
 <div class="en">
 <p>Because each set is a /40, border routers can advertise one /40 summary per set into the core, instead of 256 individual /48 locators. That is a 256-to-1 reduction, and it is the reason the core can stay small while the number of nodes grows.</p>
 </div>
-<p>每个 Set 就是一个 /40，边界路由器<strong>每个 Set 只向核心通告一条 /40</strong>，而不是 256 个 /48。压缩比 256:1，核心表项不随节点数线性增长。</p>
-<pre><code class="language-text">Region 1 (600 节点):
+<p>每个 Set 就是一个 <code>/40</code>，边界路由器<strong>每个 Set 只向核心通告一条 <code>/40</code></strong>，而不是 256 个 <code>/48</code>。<strong>压缩比 256:1</strong>，核心表项<strong>不随节点数线性增长</strong>——这是"核心能保持小、节点数却能长"的根本原因。</p>
+<pre><code class="language-text">图 10-2：汇总边界（原书 Figure 10.2 重绘）
+
+        核心（只装 /40）
+        ┌──────────────────────────────────┐
+        │  fdbb:bb00:0200::/40  ← Set 0x02 │
+        │  fdbb:bb00:0300::/40  ← Set 0x03 │
+        │  fdbb:bb00:0400::/40  ← Set 0x04 │
+        └───────────────┬──────────────────┘
+                        │ ABR（汇总点）
+        ┌───────────────┴──────────────────┐
+        │ 区域 1（600 节点，只装 /48）      │
+        │  fdbb:bb00:0201::/48 … 256 条     │
+        │  fdbb:bb00:0301::/48 … 256 条     │
+        │  fdbb:bb00:0401::/48 …  88 条     │
+        └──────────────────────────────────┘
+
+  核心表项：3 条（而非 600 条）
+</code></pre>
+<pre><code class="language-text">例 10.1：区域 1 的 Set 规划与增长
+Region 1 (600 节点):
   fdbb:bb00:0200::/40  ← Set 0x02 汇总
   fdbb:bb00:0300::/40  ← Set 0x03 汇总
   fdbb:bb00:0400::/40  ← Set 0x04 汇总
 增长后追加:
-  fdbb:bb00:0700::/40  ← Set 0x07 汇总（不要求连续）
+  fdbb:bb00:0700::/40  ← Set 0x07 汇总（不要求与 0x04 连续）
 </code></pre>
-<p>Set 之间<strong>不必连续</strong>，扩容时随便挑一个空闲 Set 即可——这也是分层规划相对"等分地址"的优势（详见第 14 章 Bell 的算账）。</p>
-<h2 id="103-loopback-locator">10.3 Loopback 与 Locator 的关系</h2>
+<p>Set 之间<strong>不必连续</strong>，扩容时随便挑一个空闲 Set 即可——这正是分层规划相对"等分地址"的优势（第 14 章 Bell 的算账把这点算到了极致）。</p>
+<table>
+<thead>
+<tr>
+<th>汇总方式</th>
+<th>核心表项</th>
+<th>故障域</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不汇总</td>
+<td>节点数（万级）</td>
+<td>全网</td>
+<td>不可接受</td>
+</tr>
+<tr>
+<td>按 Set 汇总（/40）</td>
+<td>Set 数（百级）</td>
+<td>单 Set</td>
+<td><strong>推荐</strong></td>
+</tr>
+<tr>
+<td>按区域汇总（多 Set 合一）</td>
+<td>区域数（十级）</td>
+<td>单区域</td>
+<td>精度下降，慎用</td>
+</tr>
+<tr>
+<td>按 Block 汇总</td>
+<td>1</td>
+<td>全网</td>
+<td>仅极端场景</td>
+</tr>
+</tbody>
+</table>
+<h2 id="103-loopback-locator">10.3 Loopback 与 Locator</h2>
 <div class="en">
 <p>Two kinds of loopback addresses coexist: the locator loopback, used as the source of SRv6 encapsulated traffic and as the node identifier in the IGP, and independent loopback addresses used by other protocols. Keeping them separate simplifies troubleshooting and avoids changing the locator when the IGP topology changes.</p>
 </div>
-<p>两类 Loopback 并存：</p>
+<p><strong>两类 Loopback 并存</strong>：</p>
 <table>
 <thead>
 <tr>
@@ -100,86 +328,396 @@
 </thead>
 <tbody>
 <tr>
-<td>Locator loopback</td>
+<td><strong>Locator loopback</strong></td>
 <td>SRv6 封装源地址、IGP 节点标识</td>
-<td>必须稳定，变更影响全网红</td>
+<td>必须稳定；变更<strong>影响全网</strong></td>
 </tr>
 <tr>
-<td>独立 loopback</td>
-<td>其他协议（BGP router-id、管理面）</td>
+<td><strong>独立 loopback</strong></td>
+<td>BGP router-id、管理面、其他协议</td>
 <td>与 SRv6 解耦，便于排障</td>
 </tr>
 </tbody>
 </table>
+<div class="en">
+<p>Note that the locator loopback address is itself a SID with the End behavior, and the last SID of an encapsulated packet is often the uN of the egress node. This means the source address of SRv6 traffic and the destination of the segment list share the same addressing hierarchy, which is what allows a single IGP advertisement to serve both purposes.</p>
+</div>
+<p>注意 <strong>locator loopback 本身就是一个 <code>End</code> 行为的 SID</strong>，而封装报文的<strong>最后一段往往就是出口节点的 uN</strong>。这意味着 <strong>SRv6 流量的源地址与段列表的目的地址共享同一套编址层级</strong>——一次 IGP 通告就能同时满足两个用途。</p>
+<p><strong>例 10.2：两套 loopback 的配置</strong></p>
+<pre><code class="language-text">interface Loopback0
+ description MGMT / BGP router-id
+ ipv4 address 192.0.2.1 255.255.255.255
+ ipv6 address 2001:db8:100::1/128
+!
+interface Loopback100
+ description SRv6 LOCATOR loopback
+ ipv6 address fdbb:bb00:0201::1/128
+!
+segment-routing
+ srv6
+  locators
+   locator MAIN
+    micro-segment behavior unode pfx-16
+    prefix fdbb:bb00:0201::/48
+   !
+  !
+ !
+!
+router isis 1
+ interface Loopback0
+  passive
+  address-family ipv6 unicast
+  !
+ !
+ interface Loopback100
+  passive
+  address-family ipv6 unicast
+  !
+ !
+!
+</code></pre>
+<p><strong>排障价值</strong>：把两套地址分开后，"ping 不通"能立刻分成两类——<strong>ping <code>2001:db8:100::1</code> 不通 = 控制面/路由问题</strong>；<strong>ping <code>fdbb:bb00:0201::</code> 不通 = locator 泄露/汇总/SRv6 问题</strong>。混用一套地址时，这两类故障无法区分。</p>
 <h2 id="104-mtu">10.4 MTU：最容易低估的一项</h2>
 <div class="en">
 <p>SRv6 adds an outer IPv6 header of 40 bytes, plus an SRH when more than six uSIDs are required. The SRH size depends on the number of container SIDs: 8 bytes of fixed header plus 16 bytes per container. In the common case of no SRH, the overhead is exactly 40 bytes; with one SRH carrying one container SID, it is 64 bytes.</p>
 </div>
-<p>开销计算：</p>
-<pre><code class="language-text">无 SRH（≤6 条 uSID）:      40 字节
-1 个容器 SID 的 SRH:       40 + 8 + 16 = 64 字节
-2 个容器 SID 的 SRH:       40 + 8 + 32 = 80 字节
+<p>SRv6 封装<strong>加 40 字节外层 IPv6 头</strong>，当<strong>超过 6 条 uSID</strong> 时需要再加 <strong>SRH</strong>。SRH 的大小取决于容器 SID 个数：<strong>固定头 8 字节 + 每个容器 SID 16 字节</strong>。常见情形下<strong>无 SRH，开销恰好 40 字节</strong>；<strong>带一个容器 SID 的 SRH 则是 64 字节</strong>。</p>
+<pre><code class="language-text">图 10-3：MTU 开销（原书 Figure 10.3 重绘）
+
+  无 SRH（≤6 条 uSID）:       40 字节
+  1 个容器 SID 的 SRH:        40 + 8 + 16 = 64 字节
+  2 个容器 SID 的 SRH:        40 + 8 + 32 = 80 字节
+  3 个容器 SID 的 SRH:        40 + 8 + 48 = 96 字节
+
+  客户报文 1500 → 核心链路需求：
+    无 SRH      1540
+    SRH×1       1564
+    SRH×2       1580
+  → 统一取 1600（留 20–60 字节余量给未来 flavor/扩展头）
 </code></pre>
 <div class="en">
 <p>Operators therefore raise the underlay MTU, typically to 1600 bytes or more, so that customer packets of 1500 bytes never need fragmentation. Relying on path MTU discovery is fragile in an SRv6 domain: ICMPv6 messages may be filtered, and a lost PMTUD message turns into a silent black hole for large packets only.</p>
 </div>
-<p>因此运营商通常把 Underlay MTU 提到 <strong>1600 字节以上</strong>，让 1500 字节的客户报文永远不需要分片。依赖 PMTUD 在 SRv6 域内很脆弱：ICMPv6 可能被过滤，一条丢失的 PMTUD 消息就变成"只有大包不通"的静默黑洞——比全不通更难查。</p>
+<p>因此运营商通常把 <strong>Underlay MTU 提到 1600 字节以上</strong>，让 1500 字节的客户报文<strong>永远不需要分片</strong>。依赖 PMTUD 在 SRv6 域内很脆弱：<strong>ICMPv6 可能被过滤</strong>，一条丢失的 PMTUD 消息就变成"<strong>只有大包不通</strong>"的静默黑洞——比全不通更难查。</p>
+<table>
+<thead>
+<tr>
+<th>MTU 方案</th>
+<th>取值</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>保守</td>
+<td>1540</td>
+<td>改动最小</td>
+<td>无余量，加 SRH 就超</td>
+</tr>
+<tr>
+<td><strong>推荐</strong></td>
+<td><strong>1600</strong></td>
+<td>覆盖 SRH×1~2，留余量</td>
+<td>需要逐链路核查</td>
+</tr>
+<tr>
+<td>激进</td>
+<td>9000</td>
+<td>一劳永逸，覆盖 jumbo 存储</td>
+<td>老设备/微波不支持</td>
+</tr>
+<tr>
+<td>依赖 PMTUD</td>
+<td>1500</td>
+<td>不改配置</td>
+<td><strong>不可靠，不推荐</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>例 10.3：MTU 全域核查（割接前必做）</strong></p>
+<pre><code class="language-text">! ① 列出所有链路 MTU（人工核对，或用脚本采集）
+show interfaces | include &quot;MTU|line protocol&quot;
+
+! ② 二分法探测实际路径 MTU（1472 是 1500 环境下 ICMP 的经典值）
+ping fdbb:bb00:0202:: size 1400 repeat 3
+ping fdbb:bb00:0202:: size 1472 repeat 3
+
+! ③ 带 SRv6 封装的真实业务探测
+ping vrf CUSTOMER-100 10.1.2.1 size 1472 repeat 3
+</code></pre>
+<p>判据：<strong>步骤 ② 通、③ 不通 = MTU；② 不通 = 路由/locator</strong>。这个二分能在一分钟内把两类问题分开。</p>
 <h2 id="105">10.5 安全边界</h2>
 <div class="en">
 <p>The SR domain boundary must be explicit. On edge interfaces, ACLs drop packets whose outer source address is not part of the SRv6 space, and uRPF is enabled where the topology allows it. Interior interfaces accept SRv6 traffic only from interior neighbors. Without this, the walled garden is a claim rather than a fact.</p>
 </div>
-<p>SR 域边界必须显式加固：</p>
+<p><strong>SR 域边界必须显式加固</strong>：边缘接口上用 <strong>ACL 丢弃"外层源地址不属于 SRv6 Space"的报文</strong>，拓扑允许时开 <strong>uRPF</strong>；域内接口<strong>只接受来自域内邻居的 SRv6 流量</strong>。不这么做，"walled garden"就只是<strong>说法</strong>，不是事实。</p>
 <table>
 <thead>
 <tr>
 <th>位置</th>
 <th>措施</th>
+<th>防什么</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>域外入向接口</td>
-<td>ACL 丢弃"外层源地址不属于 SRv6 Space"的报文</td>
+<td>ACL 丢弃外层源 ≠ SRv6 Space 的报文</td>
+<td>伪造源地址注入</td>
 </tr>
 <tr>
 <td>客户侧接口</td>
-<td>不接受任何带 SRv6 封装的报文（防注入）</td>
+<td>不接受任何带 SRv6 封装的报文</td>
+<td>客户伪造 SID 穿透核心</td>
 </tr>
 <tr>
 <td>域内接口</td>
-<td>只接受来自域内邻居的 SRv6 流量；可行时开 uRPF</td>
+<td>只接受域内邻居的 SRv6 流量；可行时开 uRPF</td>
+<td>域内横向渗透</td>
 </tr>
 <tr>
 <td>管理面</td>
 <td>只允许域内地址访问 SID 相关控制面</td>
+<td>未授权配置</td>
+</tr>
+<tr>
+<td>控制面</td>
+<td>保护 IGP/BGP 会话（MD5/keychain、TTL 安全）</td>
+<td>会话劫持</td>
 </tr>
 </tbody>
 </table>
 <div class="en">
 <p>A second, less obvious exposure is the SID list itself: an SRH delivered to an untrusted endpoint reveals the internal topology. This is exactly what the PSP flavor is for — the penultimate endpoint removes the SRH before the packet reaches a node that should not see the path.</p>
 </div>
-<p>第二个不那么显眼的暴露面是 <strong>SID 列表本身</strong>：带 SRH 的报文送到不可信末端，就把内部拓扑泄露出去了。这正是 <strong>PSP flavor</strong> 的用途——倒数第二个端点先把 SRH 删掉，末端看不到路径。</p>
+<p>第二个不那么显眼的暴露面是 <strong>SID 列表本身</strong>：带 SRH 的报文送到<strong>不可信末端</strong>，就把<strong>内部拓扑泄露</strong>出去了。这正是 <strong>PSP flavor</strong> 的用途——<strong>倒数第二个端点先把 SRH 删掉</strong>，末端看不到路径。</p>
+<pre><code class="language-text">图 10-4：安全边界与 PSP（原书 Figure 10.4 重绘）
+
+  域外                     SR 域                     客户侧
+  ──►[ACL: src ∉ Space ✘]──►[P]──►[P]──►[PE]──►[CE]
+                                  │        │
+                                  │        └─ PSP: 到达 CE 前 SRH 已删
+                                  └─ uRPF + 只信域内邻居
+
+  没有 ACL：任何伪造 src = fdbb:bb00:: 的报文都能进核心
+  没有 PSP：客户侧抓包即可还原内部 SID 列表与拓扑
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>flavor</th>
+<th>全称</th>
+<th>作用</th>
+<th>是否解决"拓扑泄露"</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PSP</td>
+<td>Penultimate Segment Pop</td>
+<td>倒数第二跳弹出 SRH</td>
+<td><strong>是</strong>（主要用途）</td>
+</tr>
+<tr>
+<td>USP</td>
+<td>Ultimate Segment Pop</td>
+<td>最后一跳弹出</td>
+<td>部分</td>
+</tr>
+<tr>
+<td>USD</td>
+<td>Ultimate Segment Decapsulation</td>
+<td>最后一跳解封装</td>
+<td>否</td>
+</tr>
+</tbody>
+</table>
 <h2 id="106">10.6 无缝演进路径</h2>
 <div class="en">
 <p>MPLS and SRv6 can coexist for a long time. A PE that supports both can advertise the same VPN route with both an MPLS label and an SRv6 SID; the ingress chooses the encapsulation based on the next hop's capability. This allows the migration to proceed island by island, with gateways only at the boundaries between islands.</p>
 </div>
-<p>MPLS 与 SRv6 可以长期共存：双栈 PE 对同一条 VPN 路由同时携带 MPLS 标签与 SRv6 SID，入口按下一跳能力选择封装。于是迁移可以<strong>一个区域一个区域地做</strong>，只在"孤岛"边界放互通网关，最终网关全部下线。</p>
-<pre><code class="language-text">阶段 1: 核心 SRv6, 边缘 MPLS        → 边界网关
-阶段 2: 区域 A 全 SRv6              → 网关下沉
-阶段 3: 全网 SRv6, MPLS 仅回退      → 网关删除
-阶段 4: 删 LDP / BGP3107 / 熵标签   → 纯 IPv6 数据面
+<p>MPLS 与 SRv6 <strong>可以长期共存</strong>：双栈 PE 对<strong>同一条 VPN 路由同时携带 MPLS 标签与 SRv6 SID</strong>，入口<strong>按下一跳能力选择封装</strong>。于是迁移可以<strong>一个区域一个区域地做</strong>，只在"孤岛"边界放互通网关，<strong>最终网关全部下线</strong>。</p>
+<pre><code class="language-text">图 10-5：四阶段演进（原书 Figure 10.5 重绘）
+
+  阶段 1: 核心 SRv6，边缘 MPLS     → 边界放互通网关
+  阶段 2: 区域 A 全 SRv6           → 网关下沉到区域边界
+  阶段 3: 全网 SRv6，MPLS 仅回退   → 网关删除（保留配置回退）
+  阶段 4: 删 LDP / BGP 3107 / 熵标签 → 纯 IPv6 数据面
 </code></pre>
-<h2 id="19000-mtu">实战案例：19,000 节点网的地址与 MTU 决策</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>判据（可以进下一阶段的条件）</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 → 2</td>
+<td>核心 SRv6 稳定运行 ≥ 1 个月，无 P1 故障</td>
+<td>网关成为单点，需双网关</td>
+</tr>
+<tr>
+<td>2 → 3</td>
+<td>至少 2 个区域全 SRv6，业务指标无劣化</td>
+<td>区域间策略需重新验证</td>
+</tr>
+<tr>
+<td>3 → 4</td>
+<td>全网无 MPLS-only 设备，回退窗口已过</td>
+<td><strong>不可逆操作，需变更评审</strong></td>
+</tr>
+<tr>
+<td>4 完成后</td>
+<td>标签池、LDP、3107 全部清理，配置基线归档</td>
+<td>遗留标签残留导致隐性依赖</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The last step is the one operators most often postpone: removing LDP and label allocation from a network that no longer needs them. Leaving them in place is not free — it keeps label-space planning, protocol state, and troubleshooting complexity alive long after the encapsulation that required them is gone.</p>
+</div>
+<p>最后一步是运营商<strong>最常拖延</strong>的一步：在<strong>已经不需要</strong>它们的网络里<strong>移除 LDP 与标签分配</strong>。留着<strong>不是免费的</strong>——它会<strong>让标签空间规划、协议状态、排障复杂度长期存在</strong>，而需要它们的封装早已消失。</p>
+<h2 id="107">10.7 部署检查清单</h2>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>检查项</th>
+<th>判据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>地址</td>
+<td>Space 与现网 IPv6 业务地址无交集</td>
+<td>无重叠前缀</td>
+</tr>
+<tr>
+<td>地址</td>
+<td>每算法一个 Block</td>
+<td>Algo 0/128/129 各有独立 /32</td>
+</tr>
+<tr>
+<td>地址</td>
+<td>Set 已用 &lt; 50%，每区预留 ≥ 1</td>
+<td>表格化登记</td>
+</tr>
+<tr>
+<td>地址</td>
+<td>Block 宽度够（Set 数 ≥ 区域数 × 4）</td>
+<td>见 10.1.2 实算</td>
+</tr>
+<tr>
+<td>汇总</td>
+<td>边界通告的 /40 完全覆盖内部 /48</td>
+<td>无遗漏、无多余</td>
+</tr>
+<tr>
+<td>汇总</td>
+<td>汇总后 IGP 表项 = Set 数级</td>
+<td>非节点数级</td>
+</tr>
+<tr>
+<td>Loopback</td>
+<td>两套分离（locator / mgmt）</td>
+<td>各自在 IGP 中 passive</td>
+</tr>
+<tr>
+<td>MTU</td>
+<td>所有链路 ≥ 客户 MTU + 40（建议 1600）</td>
+<td>含微波/互联段</td>
+</tr>
+<tr>
+<td>MTU</td>
+<td>PMTUD 不被阻断，或已钳制 MSS</td>
+<td>大包探测通过</td>
+</tr>
+<tr>
+<td>安全</td>
+<td>域边界 ACL + uRPF 生效</td>
+<td>定期审计</td>
+</tr>
+<tr>
+<td>安全</td>
+<td>PSP 在不可信末端启用</td>
+<td>客户侧抓包无 SRH</td>
+</tr>
+<tr>
+<td>演进</td>
+<td>双栈 PE 可同时通告两种封装</td>
+<td><code>show bgp</code> 两类信息都在</td>
+</tr>
+<tr>
+<td>演进</td>
+<td>回退路径可在一小时内恢复</td>
+<td>演练记录</td>
+</tr>
+</tbody>
+</table>
+<h2 id="108">10.8 本章小结</h2>
+<div class="en">
+<p>The deployment chapter is an exercise in getting the irreversible decisions right the first time: the addressing hierarchy determines how far the network can grow, the MTU determines whether large packets survive, and the SR domain boundary determines whether the walled garden is real.</p>
+</div>
+<p>部署这一章本质是"<strong>把不可逆的决策一次做对</strong>"：<strong>地址层级决定网络能长多大，MTU 决定大包能不能活，SR 域边界决定 walled garden 是真是假。</strong></p>
+<table>
+<thead>
+<tr>
+<th>决策</th>
+<th>一次做对的价值</th>
+<th>做错的代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Block/Set 宽度</td>
+<td>加区只需分配新 Set</td>
+<td><strong>重编全网地址</strong></td>
+</tr>
+<tr>
+<td>Set 汇总点</td>
+<td>核心表项百级</td>
+<td>核心表项万级，收敛变慢</td>
+</tr>
+<tr>
+<td>MTU = 1600</td>
+<td>大包永不分片</td>
+<td><strong>逐链路返工</strong>，且故障隐蔽</td>
+</tr>
+<tr>
+<td>双套 loopback</td>
+<td>故障可二分定位</td>
+<td>排障靠猜</td>
+</tr>
+<tr>
+<td>域边界 ACL/uRPF</td>
+<td>攻击面收敛</td>
+<td>随时可能被注入</td>
+</tr>
+<tr>
+<td>演进四阶段</td>
+<td>可回退、可并行</td>
+<td>大爆炸式割接，风险集中</td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>SRv6 的复杂不在协议，在规划</strong>。协议都在 RFC 里写死了，<code>Block</code> 切多宽、<code>Set</code> 留多少、<code>MTU</code> 取多少，<strong>只有你自己能决定，而且改起来最贵</strong>。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="a19720-mtu">案例 A：19,720 节点网的地址与 MTU 决策</h3>
 <p><strong>输入</strong>：81 个区域（1 个 L2 骨干 + 80 个 L1），节点数 19,720，单区最大 700 节点。</p>
 <p><strong>规划</strong>：</p>
-<ol>
-<li>Space 取 ULA 的一小段；每个算法一个 Block（Algo 0 / 128 / 129 共 3 个）。</li>
-<li>每区按节点数分配 1~3 个 Set（700 / 256 ≈ 3），Set ID 全局唯一、不连续也无所谓。</li>
-<li>边界路由器按 Set 做 /40 汇总，核心 IGP 表项 ≈ 区域数 × Set 数，而非节点数。</li>
-<li>Underlay MTU 设 1600，边缘按客户 MTU 1500 计算余量；为 TI-LFA（可能压 SRH）留 24 字节额外余量。</li>
-</ol>
-<p><strong>结果</strong>：核心表项从"万级 locator"降到"百级 /40"，且新增区域只需分配一个新 Set + 一条汇总。</p>
-<p><strong>检查清单</strong>：</p>
+<pre><code class="language-text">① Space 取 ULA 的一小段；每算法一个 Block（Algo 0 / 128 / 129 共 3 个）
+② 每区按节点数分配 1~3 个 Set（700 / 256 ≈ 3），Set ID 全局唯一，
+   不连续也无所谓
+③ 边界路由器按 Set 做 /40 汇总
+   核心 IGP 表项 ≈ 区域数 × Set 数，而非节点数
+④ Underlay MTU 设 1600，边缘按客户 MTU 1500 计算余量；
+   为 TI-LFA（可能压 SRH）留额外 24 字节
+</code></pre>
+<p><strong>结果</strong>：核心表项从"<strong>万级 locator</strong>"降到"<strong>百级 /40</strong>"，新增区域只需<strong>分配一个新 Set + 一条汇总</strong>。</p>
+<p><strong>检查清单</strong>（与原书一致）：</p>
 <table>
 <thead>
 <tr>
@@ -210,14 +748,44 @@
 </tr>
 </tbody>
 </table>
-<h2 id="_1">本章小结</h2>
+<h3 id="bset">案例 B：Set 规划不足，扩容时被迫重编地址</h3>
+<p><strong>现象</strong>：某省级网按 <code>/32</code> Block 规划，用掉 40 个 Set 后开始紧张；新开 20 个地市时发现<strong>只剩 30 个 Set</strong>，而每地市需要 2–3 个。</p>
+<pre><code class="language-text">① 原始规划：/32 Block = 8 bit Set 字段 = 256 个 Set
+   当时评估&quot;256 个 Set 足够&quot;，因为按&quot;节点数 12,000 / 256 = 47&quot;计算
+② 实际需求：每地市独立 Set（为了按地市汇总、按地市做故障隔离）
+   → 需求 = 地市数 × (Set/地市 + 预留) = 60 × 3 ≈ 180
+③ 加上 Flex-Algo 第二个 Block 也要同构规划，压力翻倍
+④ 结果：只剩 30 个 Set，无法继续按&quot;地市一个 Set&quot;扩容
+⑤ 补救：扩 Block 到 /30（Set 字段 10 bit = 1,024 个），
+   但已分配的地址不能动 → 新地市用新 Block，形成&quot;双 Block 共存&quot;
+⑥ 代价：运维要维护两套地址规则，排障时先判断&quot;SID 在哪个 Block&quot;
+</code></pre>
+<p><strong>教训</strong>：</p>
 <ol>
-<li>分层地址（Space/Block/Set/Node）是可扩展性的根，Set 的 256:1 汇总是核心。</li>
-<li>刻意避开 Set ID 0，减少人工误判。</li>
-<li>MTU 按"40 字节起、含 SRH 64/80 字节"预留，别依赖 PMTUD。</li>
-<li>安全靠域边界 ACL/uRPF + PSP 隐藏 SID list。</li>
-<li>演进靠双栈 PE 与孤岛式迁移，最后删网关。</li>
+<li><strong>Set 需求要按"汇总边界 + 故障隔离边界"算，不是按"节点数 / 256"算</strong>；</li>
+<li><strong>Block 宁可一次给宽</strong>（<code>/30</code> 甚至 <code>/28</code>），地址用不完不花钱，<strong>改地址要花几个月</strong>；</li>
+<li>预留不是"留 20%"，而是"<strong>每区至少 1 个，且总量 ≥ 需求 × 1.5</strong>"。</li>
 </ol>
+<h3 id="c-1500">案例 C：一条 1500 的互联链路，让整改全部回滚</h3>
+<p><strong>现象</strong>：全网 MTU 整改到 1600 完成两周后，跨运营商互联的一条链路（对端设备不支持 &gt;1500）导致<strong>只有该方向的大包不通</strong>，业务表现为"部分用户上传失败"。</p>
+<pre><code class="language-text">① ping 小包正常 → 误判为&quot;应用问题&quot;，排查了两天
+② 用 ping size 1472 复现 → 定位到 MTU
+③ show interface 该互联口 → MTU 1500（整改清单漏项，
+   因为它不在&quot;核心链路&quot;分类里）
+④ 方案：
+   a. 短期：该互联口做 MSS 钳制 + 保证 ICMPv6 PTB 放行
+   b. 长期：与对端协商升级 MTU，或把该互联移出 SRv6 域（走网关）
+</code></pre>
+<p><strong>教训</strong>：<strong>MTU 清单要按"拓扑自动发现"生成，不能按"人工分类"生成</strong>——漏掉的永远是分类外的那条。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 8200</strong>：IPv6 报文格式与分片规则（中间节点不分片，是 MTU 问题的根源）。</li>
+<li><strong>RFC 8754</strong>：SRH 格式，8 字节固定头 + 16 字节/段的计算依据。</li>
+<li><strong>RFC 8986</strong>：<code>End</code> 及 PSP/USP/USD flavor，10.5 的拓扑隐藏手段。</li>
+<li><strong>RFC 9259</strong>：OAM，验证部署正确性的手段（第 9 章）。</li>
+<li><strong>RFC 6724 / RFC 4291</strong>：地址选择与格式，ULA（<code>fc00::/7</code>）的使用依据。</li>
+<li>交叉参考：第 3 章（locator 与行为）、第 5 章（泄露与汇总的 IGP 细节）、第 6 章（转置对 Address 空间的影响）、第 14/15 章（两家运营商的实际规划与算账）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="09-oam.html">← SRv6 Ping 与 Traceroute</a><a class="next" href="11-service-programming.html">服务编程 Service Programming →</a></nav>
     <footer class="foot">
@@ -235,14 +803,25 @@
   </main>
   <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
 <ul>
-<li><a href="#101-space-block-set-node">10.1 地址分层：Space → Block → Set → Node</a></li>
+<li><a href="#101-space-block-set-node">10.1 地址分层：Space → Block → Set → Node</a><ul>
+<li><a href="#1011">10.1.1 为什么这些"小规矩"值钱</a></li>
+<li><a href="#1012-set">10.1.2 容量实算：需要几个 Set</a></li>
+</ul>
+</li>
 <li><a href="#102-set">10.2 Set 与汇总</a></li>
-<li><a href="#103-loopback-locator">10.3 Loopback 与 Locator 的关系</a></li>
+<li><a href="#103-loopback-locator">10.3 Loopback 与 Locator</a></li>
 <li><a href="#104-mtu">10.4 MTU：最容易低估的一项</a></li>
 <li><a href="#105">10.5 安全边界</a></li>
 <li><a href="#106">10.6 无缝演进路径</a></li>
-<li><a href="#19000-mtu">实战案例：19,000 节点网的地址与 MTU 决策</a></li>
-<li><a href="#_1">本章小结</a></li>
+<li><a href="#107">10.7 部署检查清单</a></li>
+<li><a href="#108">10.8 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a19720-mtu">案例 A：19,720 节点网的地址与 MTU 决策</a></li>
+<li><a href="#bset">案例 B：Set 规划不足，扩容时被迫重编地址</a></li>
+<li><a href="#c-1500">案例 C：一条 1500 的互联链路，让整改全部回滚</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>

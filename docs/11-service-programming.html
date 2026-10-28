@@ -48,121 +48,589 @@
   </aside>
   <main class="content">
     <article class="md">
-<h1 id="11-service-programming">11 · 服务编程 Service Programming</h1>
+<h1 id="11">11 · 服务编程：把业务链写进报文</h1>
 <blockquote>
-<p>对应原书第 11 章 <em>Service Programming</em>。这是 SRv6 从"更好的 VPN"跃迁为"可编程网络"的一章：<strong>把服务本身变成 SID，让源端直接把业务链写进报文。</strong></p>
+<p><strong>本章定位</strong>：原书第 11 章《Service Programming》。这是 SRv6 从"更好的 VPN"跃迁为"可编程网络"的一章：<strong>把服务本身变成 SID，让源端直接把业务链写进报文</strong>。英文块为原文摘录，中文为完整翻译，Figure 11.1–11.4 重绘，Example 11.1–11.3 保留。</p>
 </blockquote>
-<h2 id="111">11.1 从服务链的痛点说起</h2>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传统服务链（ACL/PBR/overlay）到底脆在哪</td>
+<td>11.1</td>
+</tr>
+<tr>
+<td>Service SID、绑定 SID、元数据各是什么</td>
+<td>11.2</td>
+</tr>
+<tr>
+<td>为什么"绑定 SID"是解耦的关键</td>
+<td>11.3</td>
+</tr>
+<tr>
+<td>服务分为 SR-aware / SR-transparent / 传统三类，各怎么接</td>
+<td>11.4</td>
+</tr>
+<tr>
+<td>控制面怎么把服务信息传出去（BGP vs SDN）</td>
+<td>11.5</td>
+</tr>
+<tr>
+<td>链太长会撞上什么硬限制</td>
+<td>11.6</td>
+</tr>
+</tbody>
+</table>
+<p>一句话概括：<strong>服务编程不是新封装，是把"路径"这个概念从"设备里的策略"搬到"报文里的段列表"</strong>。一旦搬过去，加一个服务、改一次顺序、扩一个实例，都变成<strong>改一条段列表</strong>，而不是<strong>改全网策略</strong>。</p>
+<h2 id="110">11.0 从一个运维场景说起</h2>
+<pre><code class="language-text">图 11-1：传统服务链 vs 服务编程（原书 Figure 11.1 重绘）
+
+  传统（PBR / ACL / VLAN 引流）:
+    PE ──[策略 A]──► FW ──[策略 B]──► DPI ──[策略 C]──► PE ──► 目的
+    每台设备都要维护一份&quot;往哪送&quot;的策略；
+    FW 换型号 → 策略 A/B 全要改；FW 扩一台 → 引流要重新设计
+
+  服务编程（段列表）:
+    PE ──► [uN(FW) , uN(DPI) , uDT46(目的)]
+            ↑ 一条段列表就说完了全部意图
+    中间设备只执行自己的 SID，不维护&quot;链&quot;的概念
+</code></pre>
+<h2 id="111">11.1 传统服务链的三个脆弱点</h2>
 <div class="en">
 <p>Classic service chaining uses ACLs, VLAN tags, policy based routing or dedicated overlay segments to steer traffic through a sequence of appliances. The chain is hardwired, the classification is fragile, and adding or scaling a service requires re-engineering the path. Service Programming replaces all of that with one idea: each service is a SID, and a chain is a list of SIDs.</p>
 </div>
-<p>传统服务链靠 ACL、VLAN 标签、策略路由或专用 overlay 段把流量"推"过一串设备：链是硬接的、分类是脆弱的、加一个服务要重新设计路径。服务编程把这一切换成一个想法：<strong>每个服务是一个 SID，一条服务链就是一串 SID</strong>。</p>
-<h2 id="112-service-sid-sr-service-policy">11.2 Service SID 与 SR Service Policy</h2>
+<p>传统服务链靠 <strong>ACL、VLAN 标签、策略路由（PBR）或专用 overlay 段</strong>把流量"推"过一串设备：<strong>链是硬接的、分类是脆弱的、加一个服务要重新设计路径</strong>。服务编程把这一切换成一个想法：<strong>每个服务是一个 SID，一条服务链就是一串 SID</strong>。</p>
+<p>三个脆弱点拆开看：</p>
+<table>
+<thead>
+<tr>
+<th>脆弱点</th>
+<th>表现</th>
+<th>根因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>链是硬接的</strong></td>
+<td>换一台防火墙型号，上下游策略全要改</td>
+<td>"下一跳是谁"写死在设备配置里</td>
+</tr>
+<tr>
+<td><strong>分类是脆弱的</strong></td>
+<td>新增一类业务要加 ACL，ACL 越加越乱</td>
+<td>分类靠五元组匹配，语义随业务漂移</td>
+</tr>
+<tr>
+<td><strong>扩容要重新设计</strong></td>
+<td>清洗平台从 1 台扩到 4 台，引流要重做</td>
+<td>设备地址是引流锚点，扩缩容即改址</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The deeper problem is that the chain lives in the network rather than in the packet. Because the chain is state distributed across many devices, every change must be coordinated across all of them, and any device that is missed becomes a silent bypass.</p>
+</div>
+<p>更深层的问题是：<strong>链活在网络里，而不活在报文里</strong>。因为链是<strong>分布在许多设备上的状态</strong>，<strong>每次变更都必须全网协调</strong>，而<strong>任何一台漏配的设备都会变成静默旁路</strong>——流量悄悄绕过了防火墙，没人知道。</p>
+<h2 id="112">11.2 三个核心概念</h2>
 <div class="en">
 <p>A Service SID identifies a service instance. It is advertised in BGP, either as a binding SID for an SR policy or as an endpoint behavior, together with attributes such as whether the service is transparent or aware, and what metadata it expects. The source builds a SID list out of service SIDs plus underlay and VPN SIDs, and steers traffic into it.</p>
 </div>
-<p><strong>Service SID</strong> 标识一个服务实例。它通过 BGP 通告（作为 SR Policy 的<strong>绑定 SID</strong>，或作为一个端点行为），并携带属性：服务是 SR-aware 还是 SR-transparent、期望什么元数据。</p>
-<p>源端把这三种 SID 自由组合：</p>
+<p><strong>Service SID</strong> 标识一个服务实例。它通过 <strong>BGP 通告</strong>（作为 <strong>SR Policy 的绑定 SID</strong>，或作为<strong>一个端点行为</strong>），并携带属性：<strong>服务是 SR-aware 还是 SR-transparent、期望什么元数据</strong>。源端把这三种 SID 自由组合：</p>
 <pre><code class="language-text">&lt;uN 传输&gt; + &lt;Service SID 防火墙&gt; + &lt;Service SID DPI&gt; + &lt;uDT46 VPN SID&gt;
    ↑underlay        ↑服务                ↑服务              ↑业务落地
 </code></pre>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>是什么</th>
+<th>谁分配</th>
+<th>关键属性</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Service SID</strong></td>
+<td>一个服务实例的地址</td>
+<td>服务节点/控制器</td>
+<td>行为、是否 SR-aware、元数据格式</td>
+</tr>
+<tr>
+<td><strong>绑定 SID（BSID）</strong></td>
+<td>一条策略/一条链的"对外句柄"</td>
+<td>头端或控制器</td>
+<td>指向一条段列表，可随时改</td>
+</tr>
+<tr>
+<td><strong>元数据（Metadata）</strong></td>
+<td>随报文带给服务的附加信息</td>
+<td>头端</td>
+<td>租户、SLA、站点、app-id</td>
+</tr>
+</tbody>
+</table>
 <div class="en">
 <p>Because the SID list mixes underlay, service and overlay instructions, traffic engineering, service chaining and VPN can be expressed in one program. The network fabric stays stateless: no per-chain state, no policy on transit routers.</p>
 </div>
-<p>因为段列表把 Underlay、服务、Overlay 三类指令混在一起，<strong>TE + 服务链 + VPN 可以用一个程序同时表达</strong>，而转发面依旧无状态：中间路由器没有"链"的概念，也没有策略。</p>
-<h2 id="113-sid">11.3 绑定 SID 的作用</h2>
+<p>因为段列表把 <strong>Underlay、服务、Overlay 三类指令混在一起</strong>，<strong>TE + 服务链 + VPN 可以用一个程序同时表达</strong>，而<strong>转发面依旧无状态</strong>：中间路由器<strong>没有"链"的概念，也没有策略</strong>。</p>
+<p>这张"三类指令混编"的表，是理解服务编程的钥匙：</p>
+<table>
+<thead>
+<tr>
+<th>段位置</th>
+<th>SID 类型</th>
+<th>表达什么</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第 1 段</td>
+<td>uN / uA</td>
+<td><strong>怎么走</strong>（Underlay 路径、低时延）</td>
+<td><code>fdbb:bb01:0002::</code>（Algo 128）</td>
+</tr>
+<tr>
+<td>中间段</td>
+<td>Service SID</td>
+<td><strong>经过谁</strong>（服务链）</td>
+<td><code>fdbb:bb00:0a00:e100::</code>（清洗）</td>
+</tr>
+<tr>
+<td>最后段</td>
+<td>uDT46 / uDX</td>
+<td><strong>送到哪</strong>（Overlay 落地）</td>
+<td><code>fdbb:bb00:0005:e101::</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="113-sid">11.3 绑定 SID：解耦"链的实现"与"引流策略"</h2>
 <div class="en">
 <p>A binding SID decouples the service chain from the policy that selects it. The chain "PNF_A + PNF_B + PNF_C" gets one binding SID, call it SID A. Applications and edge routers steer traffic to SID A. If the chain is re-ordered, scaled out, or replaced with different appliances, only the binding changes; every steering policy in the network stays untouched.</p>
 </div>
-<p>绑定 SID 把"服务链的实现"与"选择该链的策略"解耦。链 <code>PNF_A + PNF_B + PNF_C</code> 分配一个绑定 SID（记作 SID A），应用和边缘只往 SID A 引流。链内部换设备、调顺序、扩实例，<strong>只改绑定，全网引流策略一行不动</strong>。</p>
-<pre><code class="language-text">SID A ──► &lt;uN(A) , uA(到PNF_A) , uA(到PNF_B) , uA(到PNF_C) , uDT46&gt;
+<p>绑定 SID 把<strong>服务链的实现</strong>与<strong>选择该链的策略</strong>解耦。链 <code>PNF_A + PNF_B + PNF_C</code> 分配一个绑定 SID（记作 <strong>SID A</strong>），应用和边缘<strong>只往 SID A 引流</strong>。链内部<strong>换设备、调顺序、扩实例，只改绑定，全网引流策略一行不动</strong>。</p>
+<pre><code class="language-text">图 11-2：绑定 SID 的解耦效果（原书 Figure 11.2 重绘）
+
+  对外（不变）              对内（随时可变）
+  ─────────────────────────────────────────────────
+  引流策略 ──► SID A ──┬──► FW-1 ──► DPI-1
+  （全网唯一一处）        │
+                        └──► FW-2 ──► DPI-2   ← 扩容/换型号
+                              ▲
+                              └─ 只改 SID A 的绑定列表
+
+  对比：无绑定 SID
+  引流策略 ──► &lt;FW-1 的 SID&gt; ──► &lt;DPI-1 的 SID&gt;
+                ↑ 换设备 = 改引流策略 = 全网协调
+</code></pre>
+<pre><code class="language-text">例 11.1：绑定 SID 的表达
+SID A ──► &lt;uN(A), uA(到PNF_A), uA(到PNF_B), uA(到PNF_C), uDT46&gt;
           ↑ 链内部随便改，对外只暴露 SID A
 </code></pre>
-<h2 id="114">11.4 控制面：怎么把服务信息传出去</h2>
+<table>
+<thead>
+<tr>
+<th>变更类型</th>
+<th>无绑定 SID</th>
+<th>有绑定 SID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>换一台防火墙</td>
+<td>改所有引流策略</td>
+<td><strong>改绑定列表</strong></td>
+</tr>
+<tr>
+<td>链顺序调整</td>
+<td>改所有引流策略</td>
+<td>改绑定列表</td>
+</tr>
+<tr>
+<td>服务扩容（1→4 台）</td>
+<td>重新设计引流</td>
+<td>改绑定列表（ECMP）</td>
+</tr>
+<tr>
+<td>新增一类业务走同链</td>
+<td>重新设计</td>
+<td><strong>复用 SID A</strong></td>
+</tr>
+<tr>
+<td>回滚</td>
+<td>逐台恢复配置</td>
+<td><strong>切换重写到旧列表</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>This decoupling is the operational heart of service programming: the number of places that must change when a service changes drops from "every ingress router" to "one binding".</p>
+</div>
+<p>这个解耦是服务编程的<strong>运维核心</strong>：<strong>服务变更时需要改的地方，从"每台入口路由器"降到"一个绑定"</strong>。</p>
+<h2 id="114">11.4 三类服务节点怎么接</h2>
+<p>这是设计与招标时最先要问的问题：<strong>你要接的服务设备，看不看得懂 SRv6？</strong></p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>能力</th>
+<th>接入方式</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SR-aware</strong></td>
+<td>能解析 SRH/uSID，能当端点</td>
+<td>直接分配 Service SID，作为端点行为</td>
+<td>需设备支持 SRv6</td>
+</tr>
+<tr>
+<td><strong>SR-transparent</strong></td>
+<td>不看外层，只处理内层</td>
+<td><strong>动态代理</strong>（Dynamic Proxy）：边缘代它处理 SID</td>
+<td>代理需维护状态</td>
+</tr>
+<tr>
+<td><strong>传统设备</strong></td>
+<td>完全不认识 IPv6 扩展头</td>
+<td><strong>静态代理</strong>（Static Proxy）：用固定 SID 绑定固定邻接</td>
+<td>配置静态、灵活性差</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-text">图 11-3：三类接入方式（原书 Figure 11.3 重绘）
+
+  ① SR-aware
+     PE ──[DA=Service SID]──► [FW 解析 SID，处理后继续查表] ──► PE
+
+  ② SR-transparent（动态代理）
+     PE ──[DA=Proxy SID]──► [PE 自己的代理端点]
+                              ├─ 剥 SRH（暂存）
+                              ├─ 把内层送进 FW
+                              └─ FW 返回后恢复 SRH，继续下一段
+
+  ③ 传统设备（静态代理）
+     PE ──[DA=静态绑定的 SID]──► [固定出接口] ──► FW ──► [固定入接口] ──► PE
+          ↑ 无动态状态，靠&quot;接口对&quot;绑定
+</code></pre>
+<div class="en">
+<p>The choice between these three is driven by the appliance, not by the network. What the network must guarantee in all three cases is that the SID list remains semantically valid after the service: the service must not consume or corrupt the remaining segments, and the metadata must survive unchanged.</p>
+</div>
+<p>这三者之间怎么选，<strong>由设备能力决定，不是由网络设计决定</strong>。而无论哪种，网络都必须保证一件事：<strong>服务处理完之后，段列表在语义上仍然有效</strong>——<strong>服务不能消耗或破坏剩余段，元数据必须原样存活</strong>。</p>
+<p>第 13 章会把三种代理的细节展开，本章只需记住结论：<strong>服务设备越"笨"，代理就要越"聪明"，而代理的状态就越难运维</strong>。</p>
+<h2 id="115">11.5 控制面：服务信息怎么传出去</h2>
 <table>
 <thead>
 <tr>
 <th>机制</th>
 <th>作用</th>
+<th>标准化</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>BGP SR Policy（SAFI 73，RFC 9256）</td>
+<td><strong>BGP SR Policy</strong>（SAFI 73）</td>
 <td>下发带段列表的策略、绑定 SID、候选路径</td>
+<td>RFC 9256</td>
 </tr>
 <tr>
-<td>BGP-LS Service Chaining TLV</td>
+<td><strong>BGP-LS Service Chaining TLV</strong></td>
 <td>把服务节点/服务能力注入控制器拓扑</td>
+<td>draft</td>
 </tr>
 <tr>
-<td>BGP-LS Opaque Metadata TLV</td>
-<td>携带与服务相关的元数据（如 SLA、站点）</td>
+<td><strong>BGP-LS Opaque Metadata TLV</strong></td>
+<td>携带与服务相关的元数据（SLA、站点）</td>
+<td>draft</td>
 </tr>
 <tr>
-<td>BGP Color + Automated Steering</td>
+<td><strong>BGP Color + Automated Steering</strong></td>
 <td>按业务类别自动把流量导入对应策略</td>
+<td>RFC 9256 的一部分</td>
+</tr>
+<tr>
+<td><strong>PCEP</strong></td>
+<td>传统 TE 控制器下发路径（可携带 SRv6 段列表）</td>
+<td>RFC 8664 等</td>
 </tr>
 </tbody>
 </table>
 <div class="en">
 <p>Two control plane styles are supported and they can coexist: the classical BGP approach, where the service information is carried in BGP attributes and processed by routers, and the SDN approach, where a controller computes the chain and programs it via BGP SR Policy or an API. Bell Canada's deployment uses both: BGP for the transport policy, and an orchestration layer for the service chain itself.</p>
 </div>
-<p>两种控制面风格可以共存：<strong>BGP 式</strong>（服务信息在 BGP 属性里，路由器自己处理）与 <strong>SDN 式</strong>（控制器算好链，用 BGP SR Policy 或 API 下发）。Bell Canada 的生产部署两者都用：传输策略走 BGP，服务链本身由编排层管理。</p>
-<h2 id="115-tevpn">11.5 与 TE、VPN 的关系</h2>
+<p>两种控制面风格<strong>可以共存</strong>：</p>
+<ul>
+<li><strong>BGP 式</strong>：服务信息在 BGP 属性里，<strong>路由器自己处理</strong>；</li>
+<li><strong>SDN 式</strong>：<strong>控制器算好链</strong>，用 BGP SR Policy 或 API 下发。</li>
+</ul>
+<p><strong>Bell Canada 的生产部署两者都用</strong>：<strong>传输策略走 BGP，服务链本身由编排层管理</strong>（第 14 章）。</p>
+<pre><code class="language-text">图 11-4：两种控制面共存（原书 Figure 11.4 重绘）
+
+  编排层 / 控制器
+     │  ① 算出服务链
+     │  ② 用 BGP SR Policy（SAFI 73）下发
+     ▼
+  头端 PE ──[段列表]──► P ──► 服务节点 ──► P ──► 出口 PE
+     ▲                       ▲
+     └─ ③ BGP Color 自动引流 ─┘
+        （业务路由带 Color → 自动导入策略，无需逐条配置）
+</code></pre>
+<h2 id="116">11.6 硬限制：链有多长</h2>
+<table>
+<thead>
+<tr>
+<th>限制</th>
+<th>数值</th>
+<th>后果</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>无 SRH 的 uSID 深度</td>
+<td>一个 128 bit 地址能装约 6 条</td>
+<td>超过即需 SRH</td>
+<td>用绑定 SID 压缩链</td>
+</tr>
+<tr>
+<td>带 SRH 的开销</td>
+<td>+8 B + 16 B/容器</td>
+<td>MTU 与线速下降</td>
+<td>控制链长 ≤ 3</td>
+</tr>
+<tr>
+<td>硬件 SRH 处理能力</td>
+<td>各芯片不同（常见 3–8 段）</td>
+<td>超限降级到软件转发</td>
+<td>招标时明确段数指标</td>
+</tr>
+<tr>
+<td>元数据长度</td>
+<td>受 SRH TLV 空间限制</td>
+<td>元数据被截断</td>
+<td>只带必要字段（app-id、租户）</td>
+</tr>
+</tbody>
+</table>
 <div class="en">
-<p>Service Programming does not replace traffic engineering or VPN: it composes with them. A single SR policy may include a low-latency underlay path, one or more service SIDs, and terminate on a VPN SID. This composition is what makes "one program, many intents" possible.</p>
+<p>A useful design rule is to keep the explicit chain short and push complexity into binding SIDs: a chain of three segments at the head end can expand into a much longer chain inside the domain, because each binding SID hides its own expansion.</p>
 </div>
-<p>服务编程不取代 TE 与 VPN，而是与它们<strong>组合</strong>：一条 SR Policy 可以同时包含低时延 Underlay 路径、若干 Service SID，并以 VPN SID 结尾。这种"一条程序、多个意图"的能力，正是它区别于传统服务链的地方。</p>
-<h2 id="ddos">实战案例：把 DDoS 清洗塞进转发路径</h2>
-<p><strong>需求</strong>：某城域网上行流量必须经过 DDoS 清洗平台，但只对特定业务（如游戏、直播）生效，且清洗平台故障时不能中断业务。</p>
-<p><strong>设计</strong>：</p>
-<ol>
-<li>清洗平台前的 MEC/ASIC 平台分配一个 <strong>Service SID（绑定 SID）</strong>：<code>fc00:0:a100:e100::</code>。</li>
-<li>边缘 PE 为受保护业务配置 SR Policy：<code>&lt;低时延 uN&gt; , &lt;清洗 Service SID&gt; , &lt;uDT46 目的 VPN SID&gt;</code>。</li>
-<li>BGP 用 Color 把"游戏/直播"类路由自动引入该策略（Color-based Automated Steering）。</li>
-<li>清洗平台故障 → 控制器撤销该 Service SID 的 BGP 通告 → 边缘自动回落到不含清洗段的普通策略，业务继续。</li>
-</ol>
+<p>一条实用的设计规则：<strong>让显式链保持短，把复杂度推进绑定 SID 里</strong>——头端<strong>三段</strong>的链，在域内可以<strong>展开成更长的链</strong>，因为<strong>每个绑定 SID 都隐藏了自己的展开</strong>。</p>
+<p>这就是"<strong>分段编排</strong>"：头端只关心"去哪、经过哪个域、送到哪个 VPN"，域内由各域的绑定 SID 自己展开。</p>
+<h2 id="117">11.7 排障</h2>
+<pre><code class="language-text">服务链不通
+  │
+  ├─ ① Service SID 存在吗
+  │    ping srv6 &lt;Service SID&gt;
+  │    └─ 不通 → 服务节点未注册 / 未通告
+  │
+  ├─ ② 段列表在头端生效了吗
+  │    show segment-routing srv6 policy &lt;name&gt; detail
+  │    └─ 有策略但无流量 → 引流（Color/ACL）没命中
+  │
+  ├─ ③ 服务节点处理完了吗
+  │    服务侧计数 / 抓包：内层报文有没有到、有没有回
+  │    └─ 到了没回 → 服务节点丢弃（多为 SR-transparent 未配代理）
+  │
+  ├─ ④ 剩余段还在吗
+  │    traceroute srv6 ... sid-list &lt;完整列表&gt;
+  │    └─ 服务后中断 → 服务消费/破坏了 SRH
+  │
+  └─ ⑤ 大包通吗
+       ping size 1472
+       └─ 不通 → 链过长触发 SRH，MTU 不够（11.6）
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>命令</th>
+<th>期望</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Service SID 可达</td>
+<td><code>ping srv6 &lt;SID&gt;</code></td>
+<td>通</td>
+</tr>
+<tr>
+<td>策略状态</td>
+<td><code>show segment-routing srv6 policy detail</code></td>
+<td>Active，段列表正确</td>
+</tr>
+<tr>
+<td>引流命中</td>
+<td><code>show segment-routing srv6 forwarding</code></td>
+<td>有对应表项与计数</td>
+</tr>
+<tr>
+<td>段列表执行</td>
+<td><code>traceroute srv6 ... sid-list ...</code></td>
+<td>每段都回应</td>
+</tr>
+<tr>
+<td>元数据完整</td>
+<td>服务侧抓包</td>
+<td>字段未被改写</td>
+</tr>
+<tr>
+<td>MTU</td>
+<td><code>ping ... size 1472</code></td>
+<td>通</td>
+</tr>
+</tbody>
+</table>
+<h2 id="118">11.8 本章小结</h2>
+<div class="en">
+<p>Service programming turns the service chain into a program carried by the packet. The chain becomes a list of SIDs, the policy that selects the chain becomes a binding SID, and the fabric becomes stateless with respect to services. The operational gain is that changing a service changes one binding instead of every ingress policy.</p>
+</div>
+<p>服务编程把<strong>服务链变成报文携带的程序</strong>：<strong>链 = SID 列表，选链的策略 = 绑定 SID，转发面相对服务无状态</strong>。运维收益是：<strong>改一个服务只改一个绑定，而不是改每一条入口策略</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>传统服务链</th>
+<th>服务编程</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>链在哪</td>
+<td>分布在设备配置里</td>
+<td><strong>报文里（段列表）</strong></td>
+</tr>
+<tr>
+<td>变更半径</td>
+<td>全网入口设备</td>
+<td><strong>一个绑定 SID</strong></td>
+</tr>
+<tr>
+<td>分类</td>
+<td>ACL 五元组</td>
+<td>Color / 策略（语义化）</td>
+</tr>
+<tr>
+<td>扩容</td>
+<td>改引流</td>
+<td>改绑定列表（ECMP）</td>
+</tr>
+<tr>
+<td>中间设备状态</td>
+<td>每台维护"下一跳是谁"</td>
+<td><strong>无</strong></td>
+</tr>
+<tr>
+<td>回退</td>
+<td>逐台恢复</td>
+<td>切换绑定</td>
+</tr>
+<tr>
+<td>主要代价</td>
+<td>配置漂移</td>
+<td><strong>服务设备要支持 SR / 需代理</strong></td>
+</tr>
+</tbody>
+</table>
+<p>一句话收束：<strong>服务编程的价值不在"能编"，而在"改得动"</strong>——它把服务变更从"跨团队、跨设备、跨周"的协调，变成<strong>一条段列表的更新</strong>。</p>
+<h2 id="_1">实战案例</h2>
+<h3 id="a-ddos">案例 A：把 DDoS 清洗塞进转发路径（原书案例）</h3>
+<p><strong>需求</strong>：某城域网上行流量必须经过 DDoS 清洗平台，但<strong>只对特定业务</strong>（游戏、直播）生效，且<strong>清洗平台故障时不能中断业务</strong>。</p>
+<pre><code class="language-text">设计:
+① 清洗平台前的 MEC/ASIC 平台分配一个 Service SID（绑定 SID）：
+   fc00:0:a100:e100::
+② 边缘 PE 为受保护业务配置 SR Policy：
+   &lt;低时延 uN&gt; , &lt;清洗 Service SID&gt; , &lt;uDT46 目的 VPN SID&gt;
+③ BGP 用 Color 把&quot;游戏/直播&quot;类路由自动引入该策略
+   （Color-based Automated Steering）
+④ 清洗平台故障 → 控制器撤销该 Service SID 的 BGP 通告
+   → 边缘自动回落到不含清洗段的普通策略，业务继续
+</code></pre>
 <p><strong>验证</strong>：</p>
 <table>
 <thead>
 <tr>
 <th>项</th>
 <th>命令/方法</th>
+<th>期望</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>SID 是否可达</td>
 <td><code>ping srv6 &lt;Service SID&gt;</code></td>
+<td>通</td>
 </tr>
 <tr>
 <td>链是否生效</td>
 <td><code>traceroute srv6 ... sid-list &lt;完整列表&gt;</code></td>
+<td>三段都回应</td>
 </tr>
 <tr>
 <td>故障回退</td>
-<td>手工撤销 Service SID 通告，观察边缘策略切换时间</td>
+<td>手工撤销 Service SID 通告</td>
+<td>边缘策略在秒级切换</td>
 </tr>
 <tr>
 <td>元数据</td>
 <td>抓包确认 Arg/Metadata 未被中间节点改写</td>
+<td>字段完整</td>
 </tr>
 </tbody>
 </table>
-<p><strong>常见坑</strong>：</p>
-<ul>
-<li>Service SID 与 VPN SID 混在同一 locator 下，导致转置/汇总时语义冲突。</li>
-<li>清洗平台不支持 SR-aware，需要 SR Proxy（第 13 章）——否则平台看不懂外层头，直接丢弃。</li>
-<li>链过长（&gt;6 段）触发 SRH，MTU 与硬件能力都要重新评估。</li>
-</ul>
-<h2 id="_1">本章小结</h2>
+<p><strong>三个常见坑</strong>：</p>
 <ol>
-<li>服务 = SID；服务链 = SID 列表；转发面保持无状态。</li>
-<li>绑定 SID 是解耦链实现与引流策略的关键。</li>
-<li>BGP SR Policy 与 BGP-LS 扩展构成控制面；SDN 与 BGP 两种风格可共存。</li>
-<li>与 TE、VPN 组合使用，形成"一条程序多意图"。</li>
+<li><strong>Service SID 与 VPN SID 混在同一 locator 下</strong>，导致转置/汇总时语义冲突（第 6 章）；</li>
+<li><strong>清洗平台不支持 SR-aware</strong>，需要 SR Proxy（第 13 章）——否则平台看不懂外层头，<strong>直接丢弃</strong>；</li>
+<li><strong>链过长（&gt;6 段）触发 SRH</strong>，MTU 与硬件能力都要重新评估。</li>
 </ol>
+<h3 id="b-1-4">案例 B：清洗平台从 1 台扩到 4 台，引流策略零改动</h3>
+<p><strong>背景</strong>：某省网上行清洗能力不足，需要把清洗平台从 1 台扩到 4 台，并保证扩容期间业务不中断。</p>
+<pre><code class="language-text">无绑定 SID 的做法（预估）:
+  ① 4 台平台各分配 SID
+  ② 修改所有入口 PE 的引流策略，加入 4 个 SID 并做 ECMP
+  ③ 每台 PE 变更窗口 15 分钟 × 40 台 = 10 小时
+  ④ 风险：漏改一台 → 该台流量绕过清洗
+
+有绑定 SID 的做法（实际）:
+  ① 保留原绑定 SID A 不变（对外零变化）
+  ② 只改 SID A 的内部展开：1 段 → 4 段 ECMP
+  ③ 变更窗口：1 次，约 10 分钟
+  ④ 回退：把展开改回 1 段，秒级
+</code></pre>
+<p><strong>结果</strong>：<strong>40 台入口 PE 一条策略都没动</strong>，扩容对全网"不可见"。</p>
+<p><strong>教训</strong>：<strong>绑定 SID 不是"可选项"，是服务链能否长期运维的前提</strong>。设计阶段不引入绑定 SID，后期每次扩容都要全网协调。</p>
+<h3 id="c-srh">案例 C：服务消费了 SRH，导致后续段失效</h3>
+<p><strong>现象</strong>：接入某 DPI 设备后，业务在 DPI 之后全部不通，但 DPI 本身显示"转发正常"。</p>
+<pre><code class="language-text">① 头端策略：&lt;uN&gt; , &lt;DPI Service SID&gt; , &lt;uDT46&gt;
+② traceroute 带完整列表：
+   1  uN          0.4 ms
+   2  DPI SID     0.8 ms
+   3  uDT46       * * *          ← 第 3 段丢失
+③ DPI 侧抓包：出去的报文没有 SRH，只剩内层 IPv4
+④ 根因：DPI 是&quot;传统设备 + 静态代理&quot;，但代理配的是&quot;弹出 SRH&quot;模式，
+        而不是&quot;暂存后恢复&quot;
+⑤ 修复：改为动态代理（SR-transparent 模式），或把 DPI 移到链尾
+         （链尾之后不需要剩余段）
+⑥ 复测：三段全部回应，业务恢复
+</code></pre>
+<p><strong>教训</strong>：<strong>服务节点必须保证"剩余段完好"</strong>。链中位置越靠前，对服务的要求越高——<strong>最省事的做法是把不透明设备放在链尾</strong>。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li><strong>RFC 9256</strong>：BGP SR Policy（SAFI 73），段列表与绑定 SID 的标准化承载，11.5 的基础。</li>
+<li><strong>RFC 8986</strong>：端点行为，Service SID 作为"端点行为"的语义来源。</li>
+<li><strong>draft-ietf-spring-sr-service-programming</strong>：SRv6 服务编程的架构与 Service SID 定义。</li>
+<li><strong>draft-ietf-idr-bgp-ls-sr-service-segments</strong>：BGP-LS Service Chaining TLV。</li>
+<li><strong>draft-ietf-spring-srv6-network-programming</strong>（历史版本）：与 RFC 8986 的演进关系。</li>
+<li>交叉参考：第 6 章（VPN SID 作为链尾）、第 12 章（SR-aware 服务如何读内层与元数据）、第 13 章（SR Proxy 的三种实现）、第 16 章（Bell SP 的 DDoS 生产链）。</li>
+</ul>
     </article>
     <nav class="pager"><a class="prev" href="10-deployment.html">← SRv6 网络部署：地址规划、MTU 与安全</a><a class="next" href="12-sr-aware.html">SR-aware 服务与内层报文暴露 →</a></nav>
     <footer class="foot">
@@ -180,13 +648,22 @@
   </main>
   <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
 <ul>
-<li><a href="#111">11.1 从服务链的痛点说起</a></li>
-<li><a href="#112-service-sid-sr-service-policy">11.2 Service SID 与 SR Service Policy</a></li>
-<li><a href="#113-sid">11.3 绑定 SID 的作用</a></li>
-<li><a href="#114">11.4 控制面：怎么把服务信息传出去</a></li>
-<li><a href="#115-tevpn">11.5 与 TE、VPN 的关系</a></li>
-<li><a href="#ddos">实战案例：把 DDoS 清洗塞进转发路径</a></li>
-<li><a href="#_1">本章小结</a></li>
+<li><a href="#110">11.0 从一个运维场景说起</a></li>
+<li><a href="#111">11.1 传统服务链的三个脆弱点</a></li>
+<li><a href="#112">11.2 三个核心概念</a></li>
+<li><a href="#113-sid">11.3 绑定 SID：解耦"链的实现"与"引流策略"</a></li>
+<li><a href="#114">11.4 三类服务节点怎么接</a></li>
+<li><a href="#115">11.5 控制面：服务信息怎么传出去</a></li>
+<li><a href="#116">11.6 硬限制：链有多长</a></li>
+<li><a href="#117">11.7 排障</a></li>
+<li><a href="#118">11.8 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a-ddos">案例 A：把 DDoS 清洗塞进转发路径（原书案例）</a></li>
+<li><a href="#b-1-4">案例 B：清洗平台从 1 台扩到 4 台，引流策略零改动</a></li>
+<li><a href="#c-srh">案例 C：服务消费了 SRH，导致后续段失效</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
 </ul>
 </div>
 </aside>
