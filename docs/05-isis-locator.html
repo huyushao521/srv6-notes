@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IS-IS 中 Locator 的泄露、重分发与汇总 · SRv6 精读</title>
+<meta name="description" content="IS-IS 中 Locator 的泄露、重分发与汇总 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html" class="active"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="05-is-is-locator">05 · IS-IS 中 Locator 的泄露、重分发与汇总</h1>
+<blockquote>
+<p>对应原书第 5 章 <em>IS-IS Locator Leaking, Redistribution and Summarization</em>。这是"多区域一定能通"的关键一章，也是现网 80% 的"跨区业务不通"故障的根因所在。</p>
+</blockquote>
+<h2 id="51">5.1 问题从哪来</h2>
+<div class="en">
+<p>IS-IS is a hierarchical protocol: Level-1 routers know only their own area, and they reach the rest of the network through the nearest Level-1/Level-2 router. A Level-2 router does not normally advertise Level-2 prefixes into a Level-1 area. As a result, an SRv6 locator originated in area A is, by default, not reachable from area B: the routers in area B have no route to it, and packets destined to its SIDs are dropped.</p>
+</div>
+<p>IS-IS 是分层协议：Level-1 路由器只知道本区域，靠最近的 L1/L2 路由器出区；L2 路由器默认<strong>不会</strong>把 L2 前缀通告进 L1 区域。于是：<strong>A 区产生的 SRv6 Locator，B 区默认根本不可达</strong>——B 区的路由器没有路由，打向该 SID 的报文被直接丢弃。</p>
+<p>这就是"PE 之间 IPv4 业务通、但 SRv6 封装后的外层 IPv6 不通"的经典现象：内层没事，外层 Locator 不可达。</p>
+<h2 id="52-leaking">5.2 泄露（Leaking）</h2>
+<div class="en">
+<p>Leaking means advertising a prefix from one level into another: typically from Level-2 into Level-1, so that intra-area routers can reach remote locators, and from Level-1 into Level-2, so that the backbone can reach the locators of all areas. Leaking is controlled by route policies, and it is the mechanism that makes locators reachable across the whole domain without a full mesh of adjacencies.</p>
+</div>
+<p>泄露就是把前缀从一个层级通告到另一个层级：</p>
+<ul>
+<li><strong>L2 → L1</strong>：让区内路由器能到达远端 locator。</li>
+<li><strong>L1 → L2</strong>：让骨干能到达各区域的 locator。</li>
+</ul>
+<p>泄露靠 route-policy 精确控制匹配（只放 locator 前缀，不放用户路由），这是它能规模化的前提。它也是"整个域内 locator 全可达、但不需要全互联邻接"的机制。</p>
+<pre><code class="language-text">router isis 1
+ address-family ipv6 unicast
+  advertise passive-only
+  !
+  redistribute isis 2 level-1 into level-2 route-policy LOC-ONLY
+  redistribute isis 2 level-2 into level-1 route-policy LOC-ONLY
+</code></pre>
+<div class="en">
+<p>When a prefix is leaked downward, the up/down bit is set in the advertisement. If a router ever receives a leaked prefix back in the up direction, it must ignore it: this simple rule prevents loops between levels.</p>
+</div>
+<p>前缀向下泄露时，通告里会置 <strong>up/down bit</strong>。如果某台路由器又在"向上"的方向收到同一条被泄露的前缀，必须忽略它——这一条简单规则就防止了层级之间的路由环路。</p>
+<h2 id="53-summarization">5.3 汇总（Summarization）</h2>
+<div class="en">
+<p>Summarization is where SRv6 pays off compared to MPLS. Because SIDs are IPv6 prefixes, 256 /48 locators can be summarized into a single /40, a gain of 256 to 1. Border routers advertise the summary into the core, and the core never needs to know the individual nodes. MPLS has no equivalent: label spaces cannot be summarized.</p>
+</div>
+<p>汇总正是 SRv6 相对 MPLS 的"分红"：SID 本质是 IPv6 前缀，<strong>256 个 /48 可以汇总成一个 /40，压缩比 256:1</strong>。区域边界路由器把汇总前缀通告进核心，核心完全不必知道区域内部有多少节点。MPLS 做不到——标签空间不可汇总。</p>
+<pre><code class="language-text">router isis 1
+ address-family ipv6 unicast
+  summary-prefix fdbb:bb00:0100::/40 level-2
+  summary-prefix fdbb:bb00:0200::/40 level-2
+</code></pre>
+<div class="en">
+<p>When a router originates a summary, it also installs a discard route for the summary prefix pointing to Null0. This guarantees that packets for components that are not actually present are dropped at the summarizing router rather than looping in the core. But it also creates a well-known failure mode: when the summarizing router loses reachability to a specific component, the discard route still attracts the traffic and silently black-holes it — this is exactly the problem that UPA solves in chapter 8.</p>
+</div>
+<p>产生汇总的路由器同时会装一条指向 <strong>Null0</strong> 的丢弃路由。这保证"汇总里有、实际不存在"的报文在汇总点被丢弃，而不是在核心兜圈子。但它也埋下一个著名故障模式：<strong>当汇总路由器丢失到某个具体分量的可达性时，Null0 仍在吸引流量，形成静默黑洞</strong>——这正是第 8 章 UPA 要解决的问题。</p>
+<h2 id="54">5.4 多实例重分发</h2>
+<div class="en">
+<p>Large networks are often split into several IGP instances, for example a core instance and a metro instance. Locators must be redistributed between them with a route policy that matches only the locator prefixes, so that the instances exchange reachability of SIDs without exchanging customer routes.</p>
+</div>
+<p>大型网络常拆成多个 IGP 实例（如 CORE 实例 + METRO 实例）。Locator 必须用 route-policy <strong>只匹配 locator 前缀</strong>在两个实例间重分发——让两个实例交换 SID 可达性，但不交换客户路由。混着重分发会带来路由震荡与规模爆炸。</p>
+<pre><code class="language-text">route-policy LOC-ONLY
+  if destination in (SRV6-LOCATORS) then
+    pass
+  else
+    drop
+  endif
+end-policy
+
+router isis CORE
+ address-family ipv6 unicast
+  redistribute isis METRO level-2 into level-2 route-policy LOC-ONLY
+</code></pre>
+<h2 id="_1">实战案例：三个跨区故障，一个知识点</h2>
+<p><strong>故障一：跨区业务不通，但两端 PE 的 IPv4 客户路由都正常。</strong></p>
+<ul>
+<li>现象：<code>ping</code> 客户地址通？不，实际是内层报文能生成但出不了区；抓包看到封装后的外层报文在区域边界被丢。</li>
+<li>定位：<code>show isis route &lt;远端 locator&gt;</code> 在区内路由器上无路由 → 说明 L2 的 locator 没有泄露进 L1。</li>
+<li>修复：配置 <code>redistribute ... level-2 into level-1</code>，并用 route-policy 只放 locator。</li>
+</ul>
+<p><strong>故障二：跨区能通但绕行，时延偏高。</strong></p>
+<ul>
+<li>定位：区内路由器通过最近 ABR 出区，而远端 locator 被所有 ABR 都泄露进来 → 走的是"最近出口"而非全局最优。</li>
+<li>修复：结合第 4 章的 Flex-Algo，或对特定业务使用 SR Policy 显式路径；同时在 ABR 上正确设置度量，避免泄露路由的度量被人为抬高。</li>
+</ul>
+<p><strong>故障三：某个二级区域整段失联，核心侧看到的是汇总路由仍然存在。</strong></p>
+<ul>
+<li>定位：汇总路由器上 <code>summary-prefix</code> 仍然生效，Null0 路由吸引流量；实际分量已不可达。</li>
+<li>修复：启用第 8 章 UPA，让汇总路由器在分量丢失时发 IGP Unreachable Prefix Announcement，触发上游 BGP PIC 切换。</li>
+</ul>
+<p><strong>配置检查清单</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>命令/要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>locator 是否被泄露</td>
+<td><code>show isis database verbose</code> 看 TLV 与 metric</td>
+</tr>
+<tr>
+<td>是否只泄露 locator</td>
+<td>route-policy 匹配 locator 汇总前缀</td>
+</tr>
+<tr>
+<td>up/down bit 是否生效</td>
+<td>防止跨层环路</td>
+</tr>
+<tr>
+<td>汇总是否有 Null0</td>
+<td><code>show route &lt;summary&gt;</code> 应指向 Null0</td>
+</tr>
+<tr>
+<td>汇总后是否还有明细</td>
+<td>边界路由器需保留明细用于 UPA</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">本章小结</h2>
+<ol>
+<li>默认情况下跨区 locator 不可达，必须泄露；泄露必须用策略收窄到 locator。</li>
+<li>up/down bit 是层级防环的关键。</li>
+<li>汇总是 SRv6 相对 MPLS 的结构性优势（256:1），代价是 Null0 黑洞风险。</li>
+<li>多实例场景只重分发 locator，不重分发客户路由。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="04-flex-algo.html">← 灵活算法 Flex-Algo</a><a class="next" href="06-l3vpn.html">SRv6 L3VPN 业务 →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#51">5.1 问题从哪来</a></li>
+<li><a href="#52-leaking">5.2 泄露（Leaking）</a></li>
+<li><a href="#53-summarization">5.3 汇总（Summarization）</a></li>
+<li><a href="#54">5.4 多实例重分发</a></li>
+<li><a href="#_1">实战案例：三个跨区故障，一个知识点</a></li>
+<li><a href="#_2">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

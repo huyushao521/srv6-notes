@@ -1,0 +1,8 @@
+# 中间产物与本地文件
+_txt/
+_t.py
+_toc.txt
+*.pdf
+.codebuddy/
+__pycache__/
+*.pyc

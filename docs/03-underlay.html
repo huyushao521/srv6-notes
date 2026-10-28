@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underlay 指令：Locator、End/End.X 与 TI-LFA · SRv6 精读</title>
+<meta name="description" content="Underlay 指令：Locator、End/End.X 与 TI-LFA · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html" class="active"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="03-underlay-locatorendendx-ti-lfa">03 · Underlay 指令：Locator、End/End.X 与 TI-LFA</h1>
+<blockquote>
+<p>对应原书第 3 章 <em>Underlay Instructions</em>。前一章讲"指令长什么样"，这一章讲<strong>域内到底有哪几条指令、怎么配、怎么通告、怎么被保护</strong>。</p>
+</blockquote>
+<h2 id="31-locator">3.1 Locator：一切的根</h2>
+<div class="en">
+<p>The locator is an IPv6 prefix, typically a /48, from which all SIDs of a node are derived. It must be routable within the SR domain, and it is advertised in the IGP just like any other IPv6 prefix. A node may have several locators — for different algorithms, different slices, or different service families.</p>
+</div>
+<p>Locator 是一段 IPv6 前缀（通常 /48），节点所有 SID 都从它派生。它在 SR 域内必须可路由，并且像普通 IPv6 前缀一样由 IGP 通告。一个节点可以有<strong>多个 Locator</strong>——分别对应不同算法、不同切片、不同业务族，这是 Flex-Algo 与网络切片的地址基础。</p>
+<pre><code class="language-text">segment-routing
+ srv6
+  locator MAIN
+   micro-segment behavior unode psp-usd
+   prefix fc00:0:7::/48
+  !
+ !
+!
+router isis 1
+ address-family ipv6 unicast
+  segment-routing srv6
+   locator MAIN
+</code></pre>
+<div class="en">
+<p>The locator is advertised as part of the SRv6 Locator TLV in IS-IS (RFC 9352) or OSPF (RFC 9513). Receiving routers process it like IPv6 prefix reachability: they compute the shortest path to it and install it in the FIB. The locator advertisement provides reachability; the individual SIDs instantiated on that locator are carried in sub-TLVs and are used by remote nodes for repair path computation and for building SR policies.</p>
+</div>
+<p>Locator 通过 IS-IS 的 <strong>SRv6 Locator TLV</strong>（RFC 9352）或 OSPF 的对应 TLV（RFC 9513）通告；接收方按 IPv6 前缀可达性处理：算最短路径、装 FIB。<strong>通告 Locator 只解决"可达"，"这个 Locator 上有哪些 SID"则由子 TLV 携带</strong>，远端节点用它做 TI-LFA 修复路径计算和策略构造。</p>
+<div class="en">
+<p>Some SIDs are intentionally not advertised with a routable locator, for security or scale reasons. Such a local SID only works if a preceding instruction brings the packet to that node first, which is why non-routable locators always appear at the end of a program.</p>
+</div>
+<p>出于安全或规模考虑，有些 SID <strong>故意不</strong>配可路由 Locator。这类本地 SID 只有在前面有指令把包先送到该节点时才有效——所以不可路由 locator 永远出现在程序末尾。</p>
+<h2 id="32-end-un">3.2 End / uN：前缀段行为</h2>
+<div class="en">
+<p>The End behavior, called uN in the micro-segment variant, is the fundamental prefix segment instruction: the packet has reached the node identified by the locator, and the active segment pointer must move forward. With uSID, this is implemented as a 16-bit left shift of the container.</p>
+</div>
+<p>End（uSID 变体叫 <strong>uN</strong>）是最基础的前缀段指令：报文已经到达 locator 所指节点，活动段指针需要前移。uSID 下它就是容器左移 16 bit。</p>
+<div class="en">
+<p>Two optional flavors exist. Penultimate Segment Popping (PSP) triggers when an endpoint decrements Segments Left from one to zero: it deletes the SRH from the packet, which simplifies processing at the final destination and hides the SID list from an untrusted node. Ultimate Segment Decapsulation (USD) removes the whole SRv6 encapsulation at the last segment, so that the final node receives a plain payload.</p>
+</div>
+<p>两个可选 flavor：</p>
+<ul>
+<li><strong>PSP</strong>（倒数第二段弹出）：当端点把 <code>Segments Left</code> 由 1 减到 0 时，顺手删掉整条 SRH。好处是让末端少解析头部，并且<strong>对不可信的末端隐藏 SID list</strong>。</li>
+<li><strong>USD</strong>（最后一段解封装）：最后一段执行完，把整个 SRv6 封装都剥掉，末端只收到裸净荷。</li>
+</ul>
+<p>生产环境基本都开 <code>psp-usd</code>：既省带宽，又避免把路径暴露给末端。</p>
+<h2 id="33-endx-ua">3.3 End.X / uA：邻接段行为</h2>
+<div class="en">
+<p>The End.X behavior, or uA, forwards the packet out of a specific interface, or a specific set of interfaces, regardless of the shortest path. It is the building block for explicit traffic engineering paths, for TI-LFA repair paths, and for steering traffic into a particular plane or slice.</p>
+</div>
+<p>End.X（<strong>uA</strong>）把报文从<strong>指定的一条或一组链路</strong>发出去，无视最短路径。它是显式 TE 路径、TI-LFA 修复路径、以及"把流量压进某个平面/切片"的基础积木。</p>
+<pre><code class="language-text">interface HundredGigE0/0/0/1
+ description to-PE2
+router isis 1
+ interface HundredGigE0/0/0/1
+  address-family ipv6 unicast
+   segment-routing srv6
+    adjacency-segment
+</code></pre>
+<div class="en">
+<p>For point-to-point adjacencies, the End.X SID is advertised in a sub-TLV under the adjacency TLV. On broadcast networks, a LAN End.X TLV is required instead, because several neighbors share the same link and the advertisement must identify which neighbor the SID points to.</p>
+</div>
+<p>点对点邻接的 End.X 挂在邻接 TLV 下的 <strong>SRv6 End.X SID 子 TLV</strong>（IS-IS 的 22/23/222/223/141）。广播网必须用 <strong>SRv6 LAN End.X TLV</strong>，因为同一网段上有多台邻居，通告里要带邻居 System-ID 才能指明这个 SID 指向谁。两者都带 128 bit SID + 16 bit 行为码点（含 flavor 位）。</p>
+<h2 id="34-ti-lfa-sid-list">3.4 TI-LFA：把故障恢复压进 SID list</h2>
+<div class="en">
+<p>TI-LFA computes, at the point of local repair, a backup path that does not depend on the topology after the failure, and encodes it as a segment list pushed onto the packet. For prefix protection the repair list is typically the uN of a PQ node followed by the uN of the destination; for adjacency protection it is the uA of the protected neighbor followed by the destination, which implements directed forwarding.</p>
+</div>
+<p>TI-LFA 在<strong>本地修复点（PLR）</strong>计算一条<strong>不依赖故障后拓扑</strong>的备份路径，并把它编码成压入报文的段列表。</p>
+<ul>
+<li><strong>保护前缀</strong>：修复列表通常是 <code>&lt;PQ 节点的 uN, 目的 uN&gt;</code>。</li>
+<li><strong>保护邻接</strong>：修复列表是 <code>&lt;被保护邻居的 uA, 目的 uN&gt;</code>，即"定向转发"。</li>
+</ul>
+<div class="en">
+<p>The P-space contains the nodes reachable from the PLR without crossing the failure; the Q-space contains the nodes from which the destination is reachable without crossing the failure, and whose path back to the source avoids the failure. A node in both spaces is a PQ node. If no PQ node exists, the repair path is expressed as a P node followed by a few uA instructions that steer the packet around the failure.</p>
+</div>
+<ul>
+<li><strong>P 空间</strong>：从 PLR 出发、不经过故障即可到达的节点集合。</li>
+<li><strong>Q 空间</strong>：从该节点到目的不经过故障，且<strong>回程到源也不经过故障</strong>的节点集合。</li>
+<li>交集即 <strong>PQ 节点</strong>。若不存在 PQ，就把修复路径写成"&lt;某 P 节点&gt; + 若干 uA 绕行指令"。</li>
+</ul>
+<pre><code class="language-text">保护前缀（有 PQ）:   &lt;PQ-uN&gt;        , &lt;目的-uN&gt;      → 2 条，无 SRH
+保护前缀（无 PQ）:   &lt;P-uN&gt; , &lt;uA&gt; , &lt;uA&gt; , &lt;目的-uN&gt; → 仍常在 6 条以内
+保护邻接（定向转发）: &lt;邻居-uA&gt;      , &lt;目的-uN&gt;
+</code></pre>
+<p><strong>为什么运营商先上 TI-LFA</strong>：它是 SR 里收益最直接的功能——<strong>亚 50 ms</strong> 恢复，不需要 RSVP-TE，不需要每流状态，且 uSID 场景下修复列表通常只有 2~3 条，连 SRH 都不用压。</p>
+<h2 id="35">3.5 报文示例：单链路故障下的修复</h2>
+<p>拓扑：<code>PE1 — P1 — P2 — PE3</code>，另有 <code>P1 — P3 — P2</code> 作为旁路。P1 到 P2 的直连链路故障。</p>
+<pre><code class="language-text">正常工作：DA = fc00:0:3::            （PE3 的 uN）
+故障瞬间（P1 为 PLR）：DA = fc00:0:9:0003::
+                          └ P3 的 uN ┘└ PE3 的 uN ┘
+</code></pre>
+<p>P1 命中自己的 /48 表项（<code>fc00:0:9::/48</code> 是邻居 P3 的 locator 时，只需普通转发；若修复路径要求"从某条特定链路出"，则前面的段换成 P3 的 uN、后面跟一个 uA）。P3 执行 uN 位移，DA 变成 <code>fc00:0:3::</code>，沿最短路径送到 PE3。整个过程<strong>报文没有被丢弃，也没有等待 IGP 收敛</strong>。</p>
+<h2 id="50-ms">实战案例：环形城域网的 50 ms 保护与微环</h2>
+<p><strong>场景</strong>：城域环形网 8 个节点，跑 SRv6 uSID + TI-LFA，要求链路故障业务中断 &lt; 50 ms。</p>
+<p><strong>落地配置要点</strong>：</p>
+<pre><code class="language-text">router isis 1
+ interface HundredGigE0/0/0/1
+  address-family ipv6 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+</code></pre>
+<p><strong>验证步骤</strong>：</p>
+<ol>
+<li><code>show isis fast-reroute ti-lfa</code> 确认每个前缀都有 backup 路径与修复列表。</li>
+<li>抓包看故障瞬间的修复列表是否与预期一致（通常 <code>&lt;PQ-uN, 目的-uN&gt;</code>）。</li>
+<li>拔纤测试：业务丢包应 &lt; 50 ms；若达到数百毫秒，说明 TI-LFA 没生效，退回了普通 SPF 收敛。</li>
+<li>检查是否出现微环（microloop）：收敛期间两台相邻节点互相认为对方是"更优下一跳"。SR 场景可用 UPA（第 8 章）或分段收敛手段抑制。</li>
+</ol>
+<p><strong>常见坑</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>根因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>部分前缀没有 backup</td>
+<td>Locator 未参与 TI-LFA 计算，或缺 SID Structure 子 TLV</td>
+</tr>
+<tr>
+<td>修复路径绕远但通</td>
+<td>PQ 不存在，退化为 P + uA 列表，属正常</td>
+</tr>
+<tr>
+<td>故障后短暂黑洞</td>
+<td>修复列表指向的 uA 所在链路也被同一故障影响</td>
+</tr>
+<tr>
+<td>双向都断</td>
+<td>保护只做了单向（TI-LFA 是本地行为，需两端都开）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">本章小结</h2>
+<ol>
+<li>Locator 是 SID 之根，/48 起步，可多实例；通告的是可达性，子 TLV 通告的是 SID 本身。</li>
+<li>End/uN 只做一件事：位移；PSP/USD 是省带宽与隐藏路径的优化。</li>
+<li>End.X/uA 是显式路径与修复路径的积木；广播网要用 LAN End.X。</li>
+<li>TI-LFA = P/Q/PQ 空间 + 修复列表，uSID 下通常 2~3 条指令、无需 SRH。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="02-fundamentals.html">← SRv6 基础：SID、uSID 与 SRH</a><a class="next" href="04-flex-algo.html">灵活算法 Flex-Algo →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#31-locator">3.1 Locator：一切的根</a></li>
+<li><a href="#32-end-un">3.2 End / uN：前缀段行为</a></li>
+<li><a href="#33-endx-ua">3.3 End.X / uA：邻接段行为</a></li>
+<li><a href="#34-ti-lfa-sid-list">3.4 TI-LFA：把故障恢复压进 SID list</a></li>
+<li><a href="#35">3.5 报文示例：单链路故障下的修复</a></li>
+<li><a href="#50-ms">实战案例：环形城域网的 50 ms 保护与微环</a></li>
+<li><a href="#_1">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

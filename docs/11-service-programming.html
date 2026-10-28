@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>服务编程 Service Programming · SRv6 精读</title>
+<meta name="description" content="服务编程 Service Programming · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html" class="active"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="11-service-programming">11 · 服务编程 Service Programming</h1>
+<blockquote>
+<p>对应原书第 11 章 <em>Service Programming</em>。这是 SRv6 从"更好的 VPN"跃迁为"可编程网络"的一章：<strong>把服务本身变成 SID，让源端直接把业务链写进报文。</strong></p>
+</blockquote>
+<h2 id="111">11.1 从服务链的痛点说起</h2>
+<div class="en">
+<p>Classic service chaining uses ACLs, VLAN tags, policy based routing or dedicated overlay segments to steer traffic through a sequence of appliances. The chain is hardwired, the classification is fragile, and adding or scaling a service requires re-engineering the path. Service Programming replaces all of that with one idea: each service is a SID, and a chain is a list of SIDs.</p>
+</div>
+<p>传统服务链靠 ACL、VLAN 标签、策略路由或专用 overlay 段把流量"推"过一串设备：链是硬接的、分类是脆弱的、加一个服务要重新设计路径。服务编程把这一切换成一个想法：<strong>每个服务是一个 SID，一条服务链就是一串 SID</strong>。</p>
+<h2 id="112-service-sid-sr-service-policy">11.2 Service SID 与 SR Service Policy</h2>
+<div class="en">
+<p>A Service SID identifies a service instance. It is advertised in BGP, either as a binding SID for an SR policy or as an endpoint behavior, together with attributes such as whether the service is transparent or aware, and what metadata it expects. The source builds a SID list out of service SIDs plus underlay and VPN SIDs, and steers traffic into it.</p>
+</div>
+<p><strong>Service SID</strong> 标识一个服务实例。它通过 BGP 通告（作为 SR Policy 的<strong>绑定 SID</strong>，或作为一个端点行为），并携带属性：服务是 SR-aware 还是 SR-transparent、期望什么元数据。</p>
+<p>源端把这三种 SID 自由组合：</p>
+<pre><code class="language-text">&lt;uN 传输&gt; + &lt;Service SID 防火墙&gt; + &lt;Service SID DPI&gt; + &lt;uDT46 VPN SID&gt;
+   ↑underlay        ↑服务                ↑服务              ↑业务落地
+</code></pre>
+<div class="en">
+<p>Because the SID list mixes underlay, service and overlay instructions, traffic engineering, service chaining and VPN can be expressed in one program. The network fabric stays stateless: no per-chain state, no policy on transit routers.</p>
+</div>
+<p>因为段列表把 Underlay、服务、Overlay 三类指令混在一起，<strong>TE + 服务链 + VPN 可以用一个程序同时表达</strong>，而转发面依旧无状态：中间路由器没有"链"的概念，也没有策略。</p>
+<h2 id="113-sid">11.3 绑定 SID 的作用</h2>
+<div class="en">
+<p>A binding SID decouples the service chain from the policy that selects it. The chain "PNF_A + PNF_B + PNF_C" gets one binding SID, call it SID A. Applications and edge routers steer traffic to SID A. If the chain is re-ordered, scaled out, or replaced with different appliances, only the binding changes; every steering policy in the network stays untouched.</p>
+</div>
+<p>绑定 SID 把"服务链的实现"与"选择该链的策略"解耦。链 <code>PNF_A + PNF_B + PNF_C</code> 分配一个绑定 SID（记作 SID A），应用和边缘只往 SID A 引流。链内部换设备、调顺序、扩实例，<strong>只改绑定，全网引流策略一行不动</strong>。</p>
+<pre><code class="language-text">SID A ──► &lt;uN(A) , uA(到PNF_A) , uA(到PNF_B) , uA(到PNF_C) , uDT46&gt;
+          ↑ 链内部随便改，对外只暴露 SID A
+</code></pre>
+<h2 id="114">11.4 控制面：怎么把服务信息传出去</h2>
+<table>
+<thead>
+<tr>
+<th>机制</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BGP SR Policy（SAFI 73，RFC 9256）</td>
+<td>下发带段列表的策略、绑定 SID、候选路径</td>
+</tr>
+<tr>
+<td>BGP-LS Service Chaining TLV</td>
+<td>把服务节点/服务能力注入控制器拓扑</td>
+</tr>
+<tr>
+<td>BGP-LS Opaque Metadata TLV</td>
+<td>携带与服务相关的元数据（如 SLA、站点）</td>
+</tr>
+<tr>
+<td>BGP Color + Automated Steering</td>
+<td>按业务类别自动把流量导入对应策略</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>Two control plane styles are supported and they can coexist: the classical BGP approach, where the service information is carried in BGP attributes and processed by routers, and the SDN approach, where a controller computes the chain and programs it via BGP SR Policy or an API. Bell Canada's deployment uses both: BGP for the transport policy, and an orchestration layer for the service chain itself.</p>
+</div>
+<p>两种控制面风格可以共存：<strong>BGP 式</strong>（服务信息在 BGP 属性里，路由器自己处理）与 <strong>SDN 式</strong>（控制器算好链，用 BGP SR Policy 或 API 下发）。Bell Canada 的生产部署两者都用：传输策略走 BGP，服务链本身由编排层管理。</p>
+<h2 id="115-tevpn">11.5 与 TE、VPN 的关系</h2>
+<div class="en">
+<p>Service Programming does not replace traffic engineering or VPN: it composes with them. A single SR policy may include a low-latency underlay path, one or more service SIDs, and terminate on a VPN SID. This composition is what makes "one program, many intents" possible.</p>
+</div>
+<p>服务编程不取代 TE 与 VPN，而是与它们<strong>组合</strong>：一条 SR Policy 可以同时包含低时延 Underlay 路径、若干 Service SID，并以 VPN SID 结尾。这种"一条程序、多个意图"的能力，正是它区别于传统服务链的地方。</p>
+<h2 id="ddos">实战案例：把 DDoS 清洗塞进转发路径</h2>
+<p><strong>需求</strong>：某城域网上行流量必须经过 DDoS 清洗平台，但只对特定业务（如游戏、直播）生效，且清洗平台故障时不能中断业务。</p>
+<p><strong>设计</strong>：</p>
+<ol>
+<li>清洗平台前的 MEC/ASIC 平台分配一个 <strong>Service SID（绑定 SID）</strong>：<code>fc00:0:a100:e100::</code>。</li>
+<li>边缘 PE 为受保护业务配置 SR Policy：<code>&lt;低时延 uN&gt; , &lt;清洗 Service SID&gt; , &lt;uDT46 目的 VPN SID&gt;</code>。</li>
+<li>BGP 用 Color 把"游戏/直播"类路由自动引入该策略（Color-based Automated Steering）。</li>
+<li>清洗平台故障 → 控制器撤销该 Service SID 的 BGP 通告 → 边缘自动回落到不含清洗段的普通策略，业务继续。</li>
+</ol>
+<p><strong>验证</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>命令/方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SID 是否可达</td>
+<td><code>ping srv6 &lt;Service SID&gt;</code></td>
+</tr>
+<tr>
+<td>链是否生效</td>
+<td><code>traceroute srv6 ... sid-list &lt;完整列表&gt;</code></td>
+</tr>
+<tr>
+<td>故障回退</td>
+<td>手工撤销 Service SID 通告，观察边缘策略切换时间</td>
+</tr>
+<tr>
+<td>元数据</td>
+<td>抓包确认 Arg/Metadata 未被中间节点改写</td>
+</tr>
+</tbody>
+</table>
+<p><strong>常见坑</strong>：</p>
+<ul>
+<li>Service SID 与 VPN SID 混在同一 locator 下，导致转置/汇总时语义冲突。</li>
+<li>清洗平台不支持 SR-aware，需要 SR Proxy（第 13 章）——否则平台看不懂外层头，直接丢弃。</li>
+<li>链过长（&gt;6 段）触发 SRH，MTU 与硬件能力都要重新评估。</li>
+</ul>
+<h2 id="_1">本章小结</h2>
+<ol>
+<li>服务 = SID；服务链 = SID 列表；转发面保持无状态。</li>
+<li>绑定 SID 是解耦链实现与引流策略的关键。</li>
+<li>BGP SR Policy 与 BGP-LS 扩展构成控制面；SDN 与 BGP 两种风格可共存。</li>
+<li>与 TE、VPN 组合使用，形成"一条程序多意图"。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="10-deployment.html">← SRv6 网络部署：地址规划、MTU 与安全</a><a class="next" href="12-sr-aware.html">SR-aware 服务与内层报文暴露 →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#111">11.1 从服务链的痛点说起</a></li>
+<li><a href="#112-service-sid-sr-service-policy">11.2 Service SID 与 SR Service Policy</a></li>
+<li><a href="#113-sid">11.3 绑定 SID 的作用</a></li>
+<li><a href="#114">11.4 控制面：怎么把服务信息传出去</a></li>
+<li><a href="#115-tevpn">11.5 与 TE、VPN 的关系</a></li>
+<li><a href="#ddos">实战案例：把 DDoS 清洗塞进转发路径</a></li>
+<li><a href="#_1">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

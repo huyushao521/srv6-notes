@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SRv6 L3VPN 业务 · SRv6 精读</title>
+<meta name="description" content="SRv6 L3VPN 业务 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html" class="active"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="06-srv6-l3vpn">06 · SRv6 L3VPN</h1>
+<blockquote>
+<p>对应原书第 6 章 <em>SRv6 L3VPN</em>。这是运营商把 SRv6 变成收入的第一站：<strong>用 uSID 替掉 per-VRF 的 VPN 标签</strong>，把 MP-BGP VPNv4/VPNv6 原封不动地平移到 IPv6 数据面。</p>
+</blockquote>
+<h2 id="61">6.1 三种封装业务行为</h2>
+<div class="en">
+<p>An L3VPN service in SRv6 is implemented by endpoint behaviors that decapsulate the packet and forward it in a particular VRF. End.DT4 looks up the inner IPv4 packet in the VRF table, End.DT6 does the same for IPv6, and End.DT46 handles both families. In the micro-segment encoding these are called uDT4, uDT6 and uDT46 — the last two hex digits of the SID identify the VRF.</p>
+</div>
+<p>SRv6 里的 L3VPN 由"解封装 + 在指定 VRF 查表转发"这一类端点行为实现：</p>
+<table>
+<thead>
+<tr>
+<th>行为</th>
+<th>处理内层</th>
+<th>uSID 别名</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>End.DT4</td>
+<td>IPv4 查 VRF 表</td>
+<td>uDT4</td>
+<td>IPv4 VPN</td>
+</tr>
+<tr>
+<td>End.DT6</td>
+<td>IPv6 查 VRF 表</td>
+<td>uDT6</td>
+<td>IPv6 VPN</td>
+</tr>
+<tr>
+<td>End.DT46</td>
+<td>按内层版本分别查表</td>
+<td>uDT46</td>
+<td>双栈 VPN（最常用）</td>
+</tr>
+<tr>
+<td>End.DX4</td>
+<td>从指定接口发出（不查 VRF）</td>
+<td>uDX4</td>
+<td>PE-CE 直连、无 VRF</td>
+</tr>
+<tr>
+<td>End.DX6</td>
+<td>同上（IPv6）</td>
+<td>uDX6</td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>End.DX4 and End.DX6 do not consult a VRF table at all: they strip the outer header and send the packet out of a specific interface. They are used when the egress PE is directly connected to the customer edge and no lookup is required, which saves both a table and a lookup.</p>
+</div>
+<p><code>End.DX4/DX6</code> 完全不查 VRF 表：剥掉外层头后直接从<strong>指定接口</strong>发出去。用在出口 PE 与 CE 直连、无需查表的场景，省一张表、省一次查找。</p>
+<h2 id="62-sid">6.2 SID 分配模式</h2>
+<div class="en">
+<p>There are two common allocation models. With per-VRF allocation, each VRF on the PE gets one SID from the locator; the SID identifies the VRF. With per-CE allocation, each CE-facing attachment gets its own SID, which is useful when the PE has many VRFs or when the same VRF is attached to several CEs and you want to distinguish them.</p>
+</div>
+<p>两种主流分配：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>粒度</th>
+<th>优点</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>per-VRF</strong></td>
+<td>每 VRF 一个 SID</td>
+<td>简单、表项少</td>
+<td>VRF 多时消耗 locator 空间</td>
+</tr>
+<tr>
+<td><strong>per-CE / per-interface</strong></td>
+<td>每个 CE 接入点一个 SID</td>
+<td>可精确定向到某条接入链路</td>
+<td>SID 数量随接入点增长</td>
+</tr>
+</tbody>
+</table>
+<p>多数运营商用 per-VRF；只有需要"从特定 PE-CE 链路出"时（例如差异化回程）才用 per-CE 的 <code>End.DX</code>。</p>
+<h2 id="63-bgp-sid">6.3 BGP 如何携带 SID</h2>
+<div class="en">
+<p>The VPN route is advertised exactly as before, with an MP-BGP VPNv4 or VPNv6 update carrying the route target and the RD. What is new is the BGP Prefix-SID attribute: RFC 9252 defines the SRv6 L3 Service TLV, which carries the endpoint behavior and the SID itself. The ingress PE receives the route, learns the SID from the attribute, and pushes it as the last instruction of the program.</p>
+</div>
+<p>VPN 路由的通告方式<strong>完全没变</strong>：还是 MP-BGP VPNv4/VPNv6，还是 RT + RD。新增的是 <strong>BGP Prefix-SID 属性</strong>——RFC 9252 定义的 SRv6 L3 Service TLV，里面携带端点行为与 SID 本身。入口 PE 收到路由，从属性里学到 SID，把它作为程序的最后一条指令压进去。</p>
+<pre><code class="language-text">VPNv4 update:
+  RD: 100:1   Prefix: 10.1.1.0/24   RT: 100:1
+  Prefix-SID (SRv6 L3 Service TLV):
+     Behavior = End.DT46
+     SID      = fc00:0:5:e001::
+</code></pre>
+<div class="en">
+<p>Because the SID is carried in BGP and not in the IGP, the core does not need to know about VRFs at all. This is the BGP-free core principle: P routers only forward on locators, and all VPN state lives at the edge.</p>
+</div>
+<p>SID 走 BGP 而<strong>不走 IGP</strong>，所以核心完全不需要知道 VRF 的存在——这就是 <strong>BGP-free core</strong>：P 路由器只按 locator 转发，所有 VPN 状态都在边缘。</p>
+<h2 id="64-sid-transposition">6.4 SID 转置（Transposition）</h2>
+<div class="en">
+<p>The transposition mechanism separates the SID into a routable part and a service part: the egress advertises a locator plus an argument that encodes the VPN identifier, so that many VPNs can share one locator space and even one function. It saves SID space and keeps the advertised locator stable when services are added, at the cost of a slightly more complex dataplane.</p>
+</div>
+<p>转置机制把 SID 拆成"可路由部分 + 业务部分"：出口 PE 通告 locator + 一段编码 VPN 标识的 argument，于是<strong>多个 VPN 可以共享同一个 locator 空间、甚至同一个 function</strong>。好处是省 SID、且新增业务时通告的 locator 不变；代价是数据面处理稍复杂。阿里在超大规格场景里正是用 WLIB + 这类机制解决 8000 个本地 SID 不够用的问题。</p>
+<h2 id="65">6.5 完整转发过程</h2>
+<pre><code class="language-text">PE1（入）:
+  1. CE1 的 IPv4 报文到达 PE1 的 VRF-100 接口
+  2. 查 VPN 路由 10.1.1.0/24 → 下一跳 PE3，SID = fc00:0:5:e001::
+  3. 压外层：SA=PE1 locator, DA=fc00:0:5:e001::, NH=4(IPv4)
+  4. 按 DA 转发（P 路由器只看 locator）
+
+PE3（出）:
+  5. DA 命中本地 uDT46 SID → 剥外层
+  6. 内层 IPv4 在 VRF-100 查表 → 出 CE 接口
+</code></pre>
+<div class="en">
+<p>Notice that only two instructions are needed in the common case: the destination PE's locator is encoded in the SID itself, so no additional uN is required. The whole program fits in the destination address and no SRH is pushed. This is why L3VPN is the workload where uSID saves the most overhead.</p>
+</div>
+<p>注意常见场景只需<strong>一条指令</strong>：目的 PE 的 locator 已经包含在 SID 里，不需要额外的 uN。整个程序就在目的地址中，<strong>不压 SRH</strong>。这就是 L3VPN 在 uSID 下开销最小的原因（对比 MPLS 需要两层标签 + 外层传输标签）。</p>
+<h2 id="mpls-l3vpn-srv6-l3vpn">实战案例：从 MPLS L3VPN 平滑迁移到 SRv6 L3VPN</h2>
+<p><strong>背景</strong>：某运营商 300 台 PE，几千个 VRF，现网 MPLS L3VPN，计划分三批迁移。</p>
+<p><strong>迁移策略</strong>：</p>
+<ol>
+<li><strong>共存期</strong>：PE 同时支持 MPLS 与 SRv6，同一条 VPN 路由通过 BGP 携带两种封装信息（MPLS 标签 + SRv6 SID）。入口 PE 按"下一跳能力"选择封装，域边界设备做互通。</li>
+<li><strong>按区域收口</strong>：先在一个区域内部全 SRv6，区域间仍走 MPLS；验证业务、性能、故障恢复后再推下一个区域。</li>
+<li><strong>切默认</strong>：区域全 SRv6 后，把"优先 SRv6 封装"设为默认，MPLS 仅作回退。</li>
+<li><strong>清理</strong>：全网 SRv6 后删除 LDP、BGP 3107、互通网关。</li>
+</ol>
+<p><strong>验证清单</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SID 学习正确</td>
+<td><code>show bgp vpnv4 unicast &lt;prefix&gt;</code> 看 Prefix-SID 属性</td>
+</tr>
+<tr>
+<td>转发表项</td>
+<td><code>show segment-routing srv6 sid</code> / <code>show cef vrf</code></td>
+</tr>
+<tr>
+<td>双栈业务</td>
+<td>DT46 同时验证 IPv4/IPv6 内层</td>
+</tr>
+<tr>
+<td>MTU</td>
+<td>迁移后封装变小（无 SRH），但 TI-LFA 期间会变大，需预留</td>
+</tr>
+<tr>
+<td>故障切换</td>
+<td>拔纤验证 TI-LFA + BGP PIC 组合行为</td>
+</tr>
+</tbody>
+</table>
+<p><strong>典型故障</strong>：迁移后部分站点业务通、部分不通 → 多半是出口 PE 的 SID 从 locator 分配时与其他业务冲突，或某个 VRF 没配 SID；用 <code>show segment-routing srv6 locator</code> 与 BGP 属性对照即可定位。</p>
+<h2 id="_1">本章小结</h2>
+<ol>
+<li>L3VPN = <code>End.DT4/DT6/DT46</code>（uDT*）；无 VRF 时用 <code>End.DX4/DX6</code>。</li>
+<li>SID 分配按需选 per-VRF 或 per-CE；per-VRF 最常用。</li>
+<li>SID 由 BGP Prefix-SID（RFC 9252）携带，核心保持 BGP-free。</li>
+<li>常见场景单条指令即可完成，无 SRH，开销小于 MPLS。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="05-isis-locator.html">← IS-IS 中 Locator 的泄露、重分发与汇总</a><a class="next" href="07-l2vpn.html">SRv6 L2VPN（EVPN）业务 →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#61">6.1 三种封装业务行为</a></li>
+<li><a href="#62-sid">6.2 SID 分配模式</a></li>
+<li><a href="#63-bgp-sid">6.3 BGP 如何携带 SID</a></li>
+<li><a href="#64-sid-transposition">6.4 SID 转置（Transposition）</a></li>
+<li><a href="#65">6.5 完整转发过程</a></li>
+<li><a href="#mpls-l3vpn-srv6-l3vpn">实战案例：从 MPLS L3VPN 平滑迁移到 SRv6 L3VPN</a></li>
+<li><a href="#_1">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

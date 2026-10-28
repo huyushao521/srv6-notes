@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>如何读这本书 · SRv6 精读</title>
+<meta name="description" content="如何读这本书 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html" class="active"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<div class="hero">
+<h1>SRv6 分章精读</h1>
+<p>以《Segment Routing Part III: SRv6》(Clarence Filsfils 等，2024，370 页) 为主线，逐章拆解原理、报文、配置与真实运营商落地案例。</p>
+</div>
+
+<h2 id="_1">这本书讲什么</h2>
+<p>《Segment Routing Part III》是 SR 三部曲的第三部，专注 <strong>SRv6（Segment Routing over IPv6）</strong>。它的核心主张只有一句话：</p>
+<blockquote>
+<p>IP 本来就应该是自足的。IPv4 时代我们不得不用 MPLS 做 VPN/TE、用 VXLAN 做二层延伸、用熵标签解决负载分担；IPv6 + SRv6 把这些"补丁层"全部收回到 IP 自身。</p>
+</blockquote>
+<p>全书 17 章可以分成五块：</p>
+<table>
+<thead>
+<tr>
+<th>板块</th>
+<th>章节</th>
+<th>你要拿到的东西</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>观念与基础</td>
+<td>1–2</td>
+<td>为什么 SRv6 值得替换 MPLS；SID/uSID/SRH 到底怎么处理</td>
+</tr>
+<tr>
+<td>Underlay 路由</td>
+<td>3–5</td>
+<td>Locator、End/End.X、TI-LFA、Flex-Algo、IS-IS 多区域与汇总</td>
+</tr>
+<tr>
+<td>业务与运维</td>
+<td>6–9</td>
+<td>L3VPN、L2VPN(EVPN)、UPA、Ping/Traceroute</td>
+</tr>
+<tr>
+<td>规划与落地</td>
+<td>10–13</td>
+<td>地址规划、MTU、安全、服务编程、SR-aware 与 SR Proxy</td>
+</tr>
+<tr>
+<td>真实案例</td>
+<td>14–17</td>
+<td>Bell Canada 两张网、阿里巴巴核心网，以及 IPv6 必备知识</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">三条阅读路线</h2>
+<p><strong>① 零基础通读（推荐）</strong>
+<code>01 → 02 → 03 → 06 → 10</code> 先建立"地址 + 报文 + 业务 + 规划"闭环，再回头补 04/05/07/08/09。</p>
+<p><strong>② 运维排障视角</strong>
+<code>02（报文处理）→ 09（Ping/Traceroute）→ 08（UPA）→ 05（多区域泄露/汇总）</code>，专治"能 ping 通 PE 但业务不通""跨区绕行""汇总后黑洞"。</p>
+<p><strong>③ 架构设计与投标视角</strong>
+<code>01 → 06 → 10 → 14 → 15 → 16</code>，直接看两家运营商怎么把地址切成 Block/Set/Node，怎么算容量、怎么降 OPEX。</p>
+<h2 id="_3">章节地图</h2>
+<div class="cards">
+<div class="card"><a href="01-introduction.html">01 SRv6 导论</a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
+<div class="card"><a href="02-fundamentals.html">02 SRv6 基础</a><p>LOC:FUNCT:ARG、shift-and-forward、SRH 格式与三种节点角色</p></div>
+<div class="card"><a href="03-underlay.html">03 Underlay 指令</a><p>Locator 配置/通告、End 与 flavor、End.X、TI-LFA 保护</p></div>
+<div class="card"><a href="04-flex-algo.html">04 Flex-Algo</a><p>按算法分片：min-cost / min-delay / 排除链路，独立地址块</p></div>
+<div class="card"><a href="05-isis-locator.html">05 IS-IS 泄露与汇总</a><p>Level-1/2 泄露、多实例重分发、summary-prefix 与黑洞防护</p></div>
+<div class="card"><a href="06-l3vpn.html">06 SRv6 L3VPN</a><p>uDT/uDX、SID 分配模式、BGP Prefix-SID、SID 转置、BGP-free core</p></div>
+<div class="card"><a href="07-l2vpn.html">07 SRv6 L2VPN</a><p>uDX2/uDX2V/uDT2M、E-Line/E-LAN、多归、WLIB</p></div>
+<div class="card"><a href="08-upa.html">08 UPA</a><p>汇总 + BGP PIC 场景下的静默丢包问题与解法</p></div>
+<div class="card"><a href="09-oam.html">09 Ping/Traceroute</a><p>带 SID list 的探测、O-flag、ECMP 下的路径校验</p></div>
+<div class="card"><a href="10-deployment.html">10 部署规划</a><p>地址层级、Set/Node 分配、MTU、SR Domain 加固、无缝演进</p></div>
+<div class="card"><a href="11-service-programming.html">11 服务编程</a><p>Service SID、SR Service Policy、BSID、BGP-LS SC/OM TLV</p></div>
+<div class="card"><a href="12-sr-aware.html">12 SR-aware 服务</a><p>内层报文暴露、SERA 防火墙、SR-Snort、Metadata</p></div>
+<div class="card"><a href="13-sr-proxy.html">13 SR Proxy</a><p>静态/动态/伪装三种代理，让老设备进链</p></div>
+<div class="card"><a href="14-case-bell.html">14 案例 Bell</a><p>19,000 节点、81 个区域、ULA 地址怎么切</p></div>
+<div class="card"><a href="15-case-alibaba.html">15 案例阿里</a><p>UNI/NNI 双块、Anycast、两级 TE、WLIB</p></div>
+<div class="card"><a href="16-case-bell-sp.html">16 案例 Bell SP</a><p>生产环境 DDOS 服务链，真实 IOS XR 配置</p></div>
+<div class="card"><a href="17-ipv6-essentials.html">17 IPv6 必备</a><p>扩展头、Flow Label、MTU/PMTUD，读 SRv6 的底子</p></div>
+</div>
+
+<h2 id="_4">阅读约定</h2>
+<ul>
+<li>章节页里的地址沿用书中约定：<code>fc00:0:N::/48</code> 表示节点 N 的 Locator，<code>::X::</code>、<code>::eeee::</code> 表示 Function。</li>
+<li>uSID 容器写作 <code>fc00:0000:NNNN:MMMM::</code>，一个 16 bit 段 = 一条微指令。</li>
+<li>每个章节末尾都有 <strong>实战案例</strong> 小节：要么是书中运营商原案，要么是对应的工程落地场景（含排障要点）。</li>
+<li>书中伪代码引用 RFC 8986 / RFC 8754 / RFC 9252 / RFC 9256 / draft-ietf-spring-srv6-srh-compression。</li>
+</ul>
+<blockquote>
+<p>本站是学习笔记，非官方译本。引用原书观点已标注章节号，便于对照阅读。发现疑义以 RFC 原文为准。</p>
+</blockquote>
+    </article>
+    <nav class="pager"><span></span><a class="next" href="01-introduction.html">SRv6 导论：为什么是 SRv6 →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#_1">这本书讲什么</a></li>
+<li><a href="#_2">三条阅读路线</a></li>
+<li><a href="#_3">章节地图</a></li>
+<li><a href="#_4">阅读约定</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SRv6 基础：SID、uSID 与 SRH · SRv6 精读</title>
+<meta name="description" content="SRv6 基础：SID、uSID 与 SRH · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html" class="active"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="02-srv6-sidusid-srh">02 · SRv6 基础：SID、uSID 与 SRH</h1>
+<blockquote>
+<p>对应原书第 2 章 <em>SRv6 Fundamentals</em>。这是全书地基：<strong>SID 的格式、uSID 的位移转发、SRH 的结构、三种节点角色</strong>。建议把 2.6 的报文示例手推一遍。</p>
+</blockquote>
+<h2 id="21">2.1 源路由三十秒</h2>
+<div class="en">
+<p>Segment Routing is a source routing architecture: the source node encodes an ordered list of segments in the packet header, and each transit node simply executes the instruction it is pointed at. The state of the path is carried in the packet, not stored in the network. A segment is an instruction; a SID is the identifier of a segment, expressed as an IPv6 address.</p>
+</div>
+<p>SR 是源路由架构：源节点把<strong>有序段列表</strong>编码进报文头，每台中间节点只执行"当前指向的那条指令"。<strong>路径状态在报文里，不在网络里</strong>。段是一条指令，SID 是段的标识，在 SRv6 里就是一个 IPv6 地址。</p>
+<table>
+<thead>
+<tr>
+<th>段类型</th>
+<th>指令</th>
+<th>SRv6 行为</th>
+<th>uSID 别名</th>
+<th>MPLS 对应</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prefix Segment</td>
+<td>沿 ECMP 最短路径到该前缀</td>
+<td>End</td>
+<td><strong>uN</strong></td>
+<td>Node/Prefix-SID</td>
+</tr>
+<tr>
+<td>Adjacency Segment</td>
+<td>从指定链路出去</td>
+<td>End.X</td>
+<td><strong>uA</strong></td>
+<td>Adj-SID</td>
+</tr>
+<tr>
+<td>VPN Segment</td>
+<td>解封装 + 在 VRF 内转发</td>
+<td>End.DT4/6/46</td>
+<td><strong>uDT*</strong></td>
+<td>per-VRF 标签</td>
+</tr>
+</tbody>
+</table>
+<h2 id="22-sid-locfunctarg">2.2 SID 的解剖：LOC:FUNCT:ARG</h2>
+<div class="en">
+<p>A SID is structured as Locator, Function and Argument. The locator identifies the node that instantiates the SID and is advertised in the IGP; the function is an opaque identifier of a local behavior; the argument is an optional parameter used by some behaviors. The sum of the three fields cannot exceed 128 bits, and the remaining bits are padded with zeros.</p>
+</div>
+<p>SID = <code>LOC:FUNCT:ARG</code>。<strong>Locator</strong> 标识实例化该 SID 的节点，由 IGP 通告、全网可路由；<strong>Function</strong> 是本地行为的不透明 ID；<strong>Argument</strong> 是某些行为才用的可选参数。三者之和不超过 128 bit，不够就补零。</p>
+<pre><code class="language-text">|&lt;---- Locator (L) ----&gt;|&lt;-- Function (F) --&gt;|&lt;-- Arg (A) --&gt;|
+        fc00:0:7                    e001              (opt)
+</code></pre>
+<p>节点为本机 SID 建 FIB 表项；收到报文对 DA 做最长前缀匹配，命中本机 SID 就执行对应行为。</p>
+<h2 id="23-usid">2.3 uSID 容器</h2>
+<div class="en">
+<p>A uSID container is a 128-bit address made of a 32-bit block followed by up to six 16-bit uSIDs. All uSIDs in one container belong to the same block. When fewer than six instructions are needed, the remaining positions are filled with zeros, marking the end of the container.</p>
+</div>
+<p>一个 uSID 容器是 128 bit 地址：<strong>32 bit Block + 最多 6 个 16 bit uSID</strong>。同一容器内所有 uSID 必须属于同一个 Block。不足 6 条时，剩余位置填 <code>0000</code>，表示容器结束。</p>
+<pre><code class="language-text">| Block 32b |  uSID1  |  uSID2  |  uSID3  | 0000 | 0000 | 0000 |
+  fc00:0000    0002      0003      0004    (End of Container)
+</code></pre>
+<h2 id="24">2.4 位移转发：一条指令的全部实现</h2>
+<div class="en">
+<p>When a node receives a packet whose destination address matches its own uN, it executes a shift: the whole container after the block is shifted left by 16 bits and a zero is inserted on the right. The shifted-out uSID is discarded, because that instruction has just been executed. The result is used as the new destination address for the next lookup.</p>
+</div>
+<p>节点收到报文，若目的地址命中自己的 uN，就执行一次"位移"：Block 之后的整个容器<strong>左移 16 bit</strong>，右侧补零。被移出的那个 uSID 直接丢弃——因为这条指令刚刚执行完。位移结果作为新的 DA 去做下一次查表。</p>
+<pre><code class="language-text">前：fc00:0000:0002:0003:0004:0000:...
+后：fc00:0000:0003:0004:0000:0000:...
+              ↑ 左移 16 bit，0002 已出栈
+</code></pre>
+<div class="en">
+<p>Because forwarding uses longest prefix match, a node can install a /64 entry that matches both its uN and the following uA, and execute both instructions with a single lookup. The same property allows 16-bit and 32-bit uSIDs to be mixed within one program, which is how very large VPWS scale is achieved.</p>
+</div>
+<p>因为转发用最长前缀匹配，节点可以装一条 <strong>/64</strong> 表项，同时匹配"自己的 uN + 紧随其后的 uA"，<strong>一次查表执行两条指令</strong>。同样的性质让 16 bit 与 32 bit uSID 能在同一程序里混编——这正是超大规格 VPWS 的实现方式（见第 7 章）。</p>
+<h2 id="25-srh">2.5 SRH 的格式</h2>
+<div class="en">
+<p>When more than six uSIDs are required, a Segment Routing Header is pushed. It is a routing header of type 4, and it carries a list of 16-byte container SIDs stored in reverse order: entry zero is the last segment of the path. The Segments Left field indicates how many segments are still to be processed, and it equals Last Entry when the packet is originated.</p>
+</div>
+<p>超过 6 条指令时压入 SRH。它是一种 Routing Type = 4 的路由头，携带 16 字节容器 SID 列表，<strong>倒序存放</strong>：<code>Segment List[0]</code> 是路径的最后一跳。<code>Segments Left</code> 表示还有几段未处理，源端发出时 <code>SL = Last Entry = n-1</code>。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>长度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Next Header</td>
+<td>8b</td>
+<td>SRH 之后紧跟的头部（如 4 = IPv4）</td>
+</tr>
+<tr>
+<td>Hdr Ext Len</td>
+<td>8b</td>
+<td>以 8 字节为单位</td>
+</tr>
+<tr>
+<td>Routing Type</td>
+<td>8b</td>
+<td>固定 4</td>
+</tr>
+<tr>
+<td>Segments Left</td>
+<td>8b</td>
+<td>剩余段数</td>
+</tr>
+<tr>
+<td>Last Entry</td>
+<td>8b</td>
+<td>段列表末元素索引</td>
+</tr>
+<tr>
+<td>Flags</td>
+<td>8b</td>
+<td>bit 2 = O-flag（OAM，RFC 9259）</td>
+</tr>
+<tr>
+<td>Tag</td>
+<td>16b</td>
+<td>分组标记，SID 处理时不使用</td>
+</tr>
+<tr>
+<td>Segment List</td>
+<td>128b×n</td>
+<td>倒序段列表</td>
+</tr>
+<tr>
+<td>TLV</td>
+<td>变长</td>
+<td>仅定义 HMAC/Padding，暂无实现</td>
+</tr>
+</tbody>
+</table>
+<h2 id="26">2.6 三种节点角色</h2>
+<div class="en">
+<p>A source node originates the packet with a segment list. A transit node receives a packet whose destination address does not match any local segment: it forwards the packet as a normal IPv6 packet and must not inspect the SRH — per RFC 8200 only the node addressed by the destination may process a routing header. A segment endpoint receives a packet whose destination matches a local SID, executes that behavior, and moves the active segment to the next one.</p>
+</div>
+<p>源节点负责生成带段列表的报文；<strong>转发节点</strong>收到 DA 不匹配任何本地段的报文时，按普通 IPv6 转发，<strong>不得检查 SRH</strong>（RFC 8200：只有被目的地址寻址到的节点才能处理路由头）；<strong>端点节点</strong>收到 DA 命中本地 SID 的报文时，执行该行为并把活动段推进到下一条。</p>
+<blockquote>
+<p>这条规则有一个非常重要的推论：<strong>P 路由器不需要支持 SRv6</strong>，只要会转发 IPv6。这就是"无缝演进"的技术根源。</p>
+</blockquote>
+<h2 id="27">2.7 完整报文走一遍</h2>
+<p>拓扑 <code>1-2-3-4-5</code>，要求路径 <code>1→2→3→4→5</code>，节点 5 上有 L3VPN 业务 SID <code>fc00:0:5:eeee::</code>。</p>
+<p><strong>Node1（源）构造：</strong></p>
+<pre><code class="language-text">IPv6:  SA = fc00:0:1::1        DA = fc00:0:2::     NH = 43
+SRH :  Routing Type = 4, Segments Left = 3, Last Entry = 3
+       SL[0] = fc00:0:5:eeee::   ← 最后一段
+       SL[1] = fc00:0:4::
+       SL[2] = fc00:0:3::
+       SL[3] = fc00:0:2::        ← 第一段
+</code></pre>
+<div class="en">
+<p>An endpoint executing the End behavior follows a simple pseudo-code: if Segments Left is zero, stop processing the SRH and proceed to the next header; otherwise decrement the hop limit, decrement Segments Left, copy the segment list entry at the new index into the destination address, and submit the packet to the FIB for the new destination.</p>
+</div>
+<p>端点执行 End 行为的伪代码极简：若 <code>Segments Left == 0</code> 就不再处理 SRH，直接进入下一头部；否则跳数减一、<code>Segments Left</code> 减一、把新索引处的段拷进 DA，然后按新目的地址交给 FIB。</p>
+<pre><code class="language-text">Node2: SL 3→2, DA = fc00:0:3::
+Node3: SL 2→1, DA = fc00:0:4::
+Node4: SL 1→0, DA = fc00:0:5:eeee::
+Node5: SL==0 → 按 End.DT4 解封装，在 VRF 内查表转发
+</code></pre>
+<blockquote>
+<p>这个例子故意做了三件"不真实"的事：本不需要 SRH、用了非压缩 SRH、没开 PSP。作者是为了一次把 SRH 处理讲全。读完第 3 章要能自己解释为什么真实部署里这三件事通常都不发生。</p>
+</blockquote>
+<h2 id="28-flow-label">2.8 Flow Label：硬件友好的熵</h2>
+<div class="en">
+<p>The ingress PE hashes the customer packet — five-tuple, plus the GTP-U TEID in mobile networks — and writes the result into the 20-bit IPv6 Flow Label of the outer header. Transit nodes then load-balance on the source address, destination address and flow label, optionally with local factors such as router-id and incoming interface to avoid polarization. Unlike MPLS, no deep packet inspection and no entropy label are needed.</p>
+</div>
+<p>入口 PE 对客户报文做哈希（五元组；移动网再加 GTP-U TEID），结果写进外层 IPv6 头部的 <strong>20 bit Flow Label</strong>。中间节点按 <code>(SA, DA, FlowLabel)</code> 做负载分担，可再加入 router-id、入接口等本地因子防止极化。与 MPLS 不同，<strong>既不需要 DPI，也不需要熵标签</strong>。</p>
+<h2 id="_1">实战案例：一个卡顿现象，四个知识点</h2>
+<p><strong>现象</strong>：某省网城域出口改 SRv6 后，A 局到 B 局的视频业务偶发 200~800 ms 卡顿，普通 HTTP 正常。</p>
+<p><strong>逐层定位</strong>：</p>
+<ol>
+<li><strong>看封装形态</strong>。该业务只需 2 条指令（uN + uDT4），理论上不应有 SRH。抓包发现带 SRH——说明引流用了非压缩策略，包头变大；链路 MTU 恰好 1500，大包被丢，视频分片重传造成卡顿。改用 uSID 压缩（如 <code>ub6-insert-reduced</code>）后消失。</li>
+<li><strong>验 Flow Label</strong>。同一条视频流的所有包 Flow Label 应一致；若某个 ECMP 成员完全没流量，说明 P 节点仍在按内层哈希，或哈希因子过多导致极化。</li>
+<li><strong>验 Transit 不越权</strong>。抓包确认 P 节点没有修改 <code>Segments Left</code>；若有，说明某台 P 误配了相同 SID，发生了"越界执行"。</li>
+<li><strong>验最后一跳</strong>。开 <code>psp-usd</code> 后，倒数第二跳应已删除 SRH，最后一跳只看到裸内层报文（对末端隐藏 SID list）。</li>
+</ol>
+<p>一个现象，对应 <code>2.4 压缩收益</code>、<code>2.5 SRH 字段</code>、<code>2.6 Transit 只按 DA 转发</code>、<code>2.8 Flow Label 熵</code> 四个知识点——这就是手推报文的价值。</p>
+<h2 id="_2">本章小结</h2>
+<ol>
+<li>SID = <code>LOC:FUNCT:ARG</code>；Locator 全网路由，Function 本地解释。</li>
+<li>uSID 容器 = <code>32b Block + 6×16b</code>，核心指令只有一条：shift-and-forward。</li>
+<li>SRH 仅在 &gt;6 条指令或需要 flag/TLV 时出现，段列表倒序。</li>
+<li>三种角色：Source 造程序、Transit 只看 DA、Endpoint 执行并推进指针。</li>
+<li>Flow Label 是"删掉 DPI 与熵标签"的技术前提。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="01-introduction.html">← SRv6 导论：为什么是 SRv6</a><a class="next" href="03-underlay.html">Underlay 指令：Locator、End/End.X 与 TI-LFA →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#21">2.1 源路由三十秒</a></li>
+<li><a href="#22-sid-locfunctarg">2.2 SID 的解剖：LOC:FUNCT:ARG</a></li>
+<li><a href="#23-usid">2.3 uSID 容器</a></li>
+<li><a href="#24">2.4 位移转发：一条指令的全部实现</a></li>
+<li><a href="#25-srh">2.5 SRH 的格式</a></li>
+<li><a href="#26">2.6 三种节点角色</a></li>
+<li><a href="#27">2.7 完整报文走一遍</a></li>
+<li><a href="#28-flow-label">2.8 Flow Label：硬件友好的熵</a></li>
+<li><a href="#_1">实战案例：一个卡顿现象，四个知识点</a></li>
+<li><a href="#_2">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

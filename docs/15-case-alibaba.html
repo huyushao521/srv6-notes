@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>案例：阿里巴巴核心网 SRv6 设计 · SRv6 精读</title>
+<meta name="description" content="案例：阿里巴巴核心网 SRv6 设计 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html" class="active"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="15-srv6">15 · 案例：阿里巴巴核心网 SRv6 设计</h1>
+<blockquote>
+<p>对应原书第 15 章，与阿里核心网团队合作撰写。如果说 Bell 案例教你<strong>地址怎么分</strong>，阿里案例教你<strong>业务怎么编排</strong>：双 Block、Anycast、两级 TE、WLIB。</p>
+</blockquote>
+<h2 id="151">15.1 设计目标：服务化核心网</h2>
+<div class="en">
+<p>Alibaba's architectural goal is to make the newly built core network service-oriented. Two keywords drive the design: network slicing and endpoint-network synergy, both based on SRv6. Different virtual slices are created inside the core to meet SLA requirements on latency and bandwidth, and each transmission service is bound to a slice.</p>
+</div>
+<p>阿里的目标是把新建核心网做成<strong>服务化</strong>的，两个关键词都以 SRv6 为基础：</p>
+<ul>
+<li><strong>网络切片</strong>：核心内建多张虚拟切片，满足不同的时延/带宽 SLA，每种传输业务绑定到某张切片。</li>
+<li><strong>端网协同</strong>（endpoint-network synergy）：把"选哪条路"的权利交给更懂业务的端点。</li>
+</ul>
+<div class="en">
+<p>Endpoints — switches, VXLAN gateways, Linux hosts or containers — use a one-way IP-in-IPv6 tunnel to access a slice. The tunnel destination is a routable address in the access network, which is normally a plain dual-stack network without SRv6 support, while on the edge device the same address has the semantics of an End.DT46 SID associated with a VRF.</p>
+</div>
+<p><strong>端点</strong>（交换机、VXLAN 网关、Linux 主机、容器）用一条<strong>单向 IP-in-IPv6 隧道</strong>接入切片。巧妙之处在于：这个隧道目的地址在接入网里就是一个<strong>可路由的普通地址</strong>（接入网是纯双栈、完全不支持 SRv6），而在边缘设备上它同时是<strong>绑定某个 VRF 的 End.DT46 SID</strong>。一个地址，两种语义，接入网无需任何改造。</p>
+<h2 id="152">15.2 网络结构</h2>
+<div class="en">
+<p>Edge clusters provide a UNI facing the DC and an NNI facing the core network. All edge nodes in a cluster are assigned the same SRv6 anycast locator, known as the UNI anycast locator, in addition to the unique locator of each node. The network offers three classes of service to the DC, represented by three VRFs, each with an explicit per-VRF End.DT46 SID allocated from the UNI anycast block.</p>
+</div>
+<ul>
+<li>边缘集群同时提供面向 DC 的 <strong>UNI</strong> 与面向核心的 <strong>NNI</strong>。</li>
+<li>集群内<strong>所有边缘节点共享同一个 anycast locator</strong>（UNI anycast），每个节点另有自己的唯一 locator。</li>
+<li>对 DC 提供三档服务（金/银/铜），对应三个 VRF；每个 VRF 从 anycast Block 里分配一个 <strong>per-VRF 的 End.DT46 SID</strong>，在集群内所有节点上<strong>配置同一份</strong>。</li>
+</ul>
+<p>于是 DC 侧网关只需把报文封装到"对应等级的 anycast End.DT46 SID"，边缘集群就会<strong>逐流负载分担</strong>到任意一台成员，不需要 DC 侧知道有几台边缘。</p>
+<div class="en">
+<p>The anycast design carries a known risk: if one member of the edge cluster fails to receive a prefix from the DC, it still advertises the anycast End.DT46 SIDs for the three VRFs, and traffic for that prefix may be steered to it and dropped. Alibaba mitigates this by additionally advertising the service prefixes as unicast routes with a unicast nexthop and the End.DT46 SID of the primary VRF, and leaking them between VRFs on the receiving edge node.</p>
+</div>
+<p>Anycast 的风险书中写得很直白：<strong>集群内某台成员没收到 DC 的某个前缀，但它仍然通告 anycast SID</strong>，于是发往该前缀的流量被引到它身上并被丢弃。阿里的缓解办法：额外用<strong>单播 nexthop + VRF0 的 End.DT46 SID</strong> 通告业务前缀，并在接收侧边缘节点上做 VRF 间泄露——用单播路由压制 anycast 的"盲目吸引"。</p>
+<h2 id="153">15.3 核心内传输：两级引流</h2>
+<div class="en">
+<p>The core consists of several independent planes for redundancy and scalability. BGP is the routing protocol: single-hop eBGP between edge and core, iBGP inside the core. SRv6 uN and uA SIDs are explicitly allocated and configured, and are not advertised in the IGP; IS-IS only provides loopback reachability for the iBGP sessions.</p>
+</div>
+<p>核心由多个<strong>独立平面</strong>组成（冗余 + 扩展性）。协议是 BGP：边缘↔核心 eBGP 单跳，核心内 iBGP。注意一个非常"阿里"的选择：<strong>uN/uA SID 显式分配并配置，但不在 IGP 里通告</strong>；IS-IS 只负责 Loopback 可达性，用于建 iBGP 会话。</p>
+<div class="en">
+<p>Two levels of traffic steering are used. At the first level, edge nodes steer traffic to one or several planes in the core, using weighted ECMP when multiple planes are used. At the second level, core nodes steer the traffic inside the plane along the path that provides the required characteristics, using SR policies installed by an SDN controller with explicit SID lists.</p>
+</div>
+<p>两级引流：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>在哪做</th>
+<th>手段</th>
+<th>SID 列表长度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>第一级</td>
+<td>边缘节点</td>
+<td>SR Policy（每平面一条候选路径）+ 加权 ECMP</td>
+<td>2 条：<code>&lt;uA 进平面&gt; , &lt;远端集群 anycast uN&gt;</code></td>
+</tr>
+<tr>
+<td>第二级</td>
+<td>入口侧核心节点</td>
+<td>SR Policy（显式列表）</td>
+<td>平面内路径</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>The first level policies are instantiated on demand, only when the default load balancing across planes must be overridden for some reason. The second level resolves most of the TE problems on its own. Since the number of core nodes is much smaller than the number of edge nodes, this two-level design greatly reduces the number of SR policies to maintain.</p>
+</div>
+<p>第一级策略<strong>按需实例化</strong>（默认就靠 anycast + ECMP 跨平面分担，只有需要覆盖默认行为时才下发）；第二级自己解决大部分 TE 问题。因为核心节点数远少于边缘节点数，这个设计把需要维护的 SR Policy 数量压下来——<strong>这是全书里最值得抄的一个架构决策</strong>。</p>
+<div class="en">
+<p>The second level works by advertising the anycast End.DT46 SIDs as IPv6 transport routes with a /80 prefix into the core, using BGP and carrying the color extended community of the class of service. The core node attached to the ingress edge installs this route and steers it into an SR policy using BGP automated steering.</p>
+</div>
+<p>第二级的实现有点"绕"但很巧：</p>
+<ol>
+<li>出口边缘把各 VRF 的 anycast End.DT46 SID <strong>当作 IPv6 传输路由</strong>（/80）用 BGP 通告进核心，并带<strong>表示服务等级的 color 扩展团体</strong>。</li>
+<li>与出口相连的核心节点把它重通告进 iBGP，并把自己设为 nexthop。</li>
+<li>与入口相连的核心节点安装该路由，用 <strong>BGP 自动引流（Automated Steering）</strong>把它导入一条指向"出口侧核心节点"的 SR Policy。</li>
+</ol>
+<p>于是"服务等级"这一语义，从 DC 侧的封装一路传到了核心内的路径选择。</p>
+<h2 id="154-wlib">15.4 地址结构：为什么用 WLIB</h2>
+<div class="en">
+<p>Alibaba uses only algorithm 0 locators and does not use Flex-Algo. They wanted to encode both the TE class and the tenant ID inside the local SID structure, so they adopted the Wide Local Identifier Block (WLIB) for local SID allocation. The choice was driven by the desired SID structure, not by scaling requirements.</p>
+</div>
+<p>阿里<strong>只用 Algo 0，不用 Flex-Algo</strong>（TE 全交给 SR Policy）。他们希望把 <strong>TE class 与 tenant ID 编进本地 SID 结构</strong>，于是采用 <strong>WLIB（32 bit 本地 uSID）</strong>——注意：<strong>动机是"想要这个结构"，不是"地址不够用"</strong>。</p>
+<pre><code class="language-text">PPPP:PPBB:SSSN:FFFF:EEEE::/80
+  │      │    │    │    └─ 32 bit 本地标识（服务/租户等）
+  │      │    │    └────── 32 bit WLIB Function
+  │      │    └─────────── 16 bit uSID
+  │      └──────────────── Block（UNI=00，NNI=01）
+  └─────────────────────── SRv6 Space（fd00:cc）
+</code></pre>
+<div class="en">
+<p>The SRv6 space is fd00:cc, the block ID is 00 for the UNI block and 01 for the NNI block. Because the addressing structure carries service semantics, the network can express tenant and TE class without any additional signaling, and the forwarding hardware only needs a single lookup.</p>
+</div>
+<p>Space 用 <code>fd00:cc</code>，UNI Block ID = <code>00</code>，NNI Block ID = <code>01</code>。因为地址结构自带业务语义，网络<strong>不需要任何额外信令</strong>就能表达"租户 + 服务等级"，硬件也只需一次查表。</p>
+<h2 id="sid-igp">实战案例：为什么"不把 SID 放进 IGP"是对的</h2>
+<p><strong>背景</strong>：大多数运营商把 locator 放 IGP 通告，靠 IGP 算最短路。阿里反其道：SID 显式配置、不进 IGP，IS-IS 只管 Loopback。</p>
+<p><strong>三个理由（可迁移到你自己的设计）</strong>：</p>
+<ol>
+<li><strong>规模</strong>：核心节点数远少于边缘，IGP 里只需要 Loopback 前缀，SID 表由控制器/配置保证一致，IGP 负担最小。</li>
+<li><strong>可控</strong>：路径由 SR Policy 决定，不受 IGP 度量变化影响，TE 意图稳定。</li>
+<li><strong>解耦</strong>：SID 规划与 IGP 拓扑解耦，改地址不动协议、改拓扑不动地址。</li>
+</ol>
+<p><strong>代价</strong>：失去 IGP 自动收敛带来的保护，必须自己做<strong>一致性校验</strong>（谁配置错了 SID，网络不会自动纠正，只会静默不通）。这类网络必须配套：</p>
+<table>
+<thead>
+<tr>
+<th>配套</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SID 台账/自动生成</td>
+<td>防人工配错</td>
+</tr>
+<tr>
+<td>端到端探测（第 9 章）</td>
+<td>主动发现 SID 不可达</td>
+</tr>
+<tr>
+<td>控制器下发 + 校验</td>
+<td>保证全网 SID 语义一致</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">本章小结</h2>
+<ol>
+<li>双 Block（UNI/NNI）+ Anycast locator，让 DC 侧对边缘集群"无感知"。</li>
+<li>两级 TE：边缘选平面、核心选路径，策略数量被压到最少。</li>
+<li>Anycast 有黑洞风险，用单播路由 + VRF 泄露压制。</li>
+<li>WLIB 的动机是"结构表达业务语义"，不是地址不够。</li>
+<li>SID 不进 IGP 换取可控性，代价是必须自建一致性与探测体系。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="14-case-bell.html">← 案例：Bell Canada 的 SRv6 地址规划</a><a class="next" href="16-case-bell-sp.html">案例：Bell Canada 服务编程落地 →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#151">15.1 设计目标：服务化核心网</a></li>
+<li><a href="#152">15.2 网络结构</a></li>
+<li><a href="#153">15.3 核心内传输：两级引流</a></li>
+<li><a href="#154-wlib">15.4 地址结构：为什么用 WLIB</a></li>
+<li><a href="#sid-igp">实战案例：为什么"不把 SID 放进 IGP"是对的</a></li>
+<li><a href="#_1">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

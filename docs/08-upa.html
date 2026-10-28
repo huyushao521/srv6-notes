@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>不可达前缀通告 UPA · SRv6 精读</title>
+<meta name="description" content="不可达前缀通告 UPA · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html" class="active"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="08-upa">08 · 不可达前缀通告 UPA</h1>
+<blockquote>
+<p>对应原书第 8 章 <em>Unreachable Prefix Announcement (UPA)</em>。这是全书最短、却最"救命"的一章：<strong>它解决汇总 + BGP PIC 组合下最隐蔽的静默黑洞。</strong></p>
+</blockquote>
+<h2 id="81">8.1 故障长什么样</h2>
+<div class="en">
+<p>Consider a PE that advertises a summary route for a large block of prefixes, and an upstream PE that uses BGP PIC edge protection with a backup path. When the downstream PE loses one specific prefix inside the summary, the summary route itself does not change: it is still originated by the summarizing router. The upstream PE therefore keeps sending traffic for the lost prefix toward a router that can no longer deliver it, and the packet is silently dropped.</p>
+</div>
+<p>设想一台 PE 为一大段前缀通告汇总路由，上游 PE 使用 BGP PIC edge 备份路径。当下游 PE 丢失汇总内的<strong>某一个具体前缀</strong>时，汇总路由本身没有任何变化——它仍由汇总路由器产生。于是上游继续把该前缀的流量发给一台已经无法投递的路由器，报文被<strong>静默丢弃</strong>。</p>
+<div class="en">
+<p>The failure is invisible to BGP: the BGP session is up, the next hop is reachable, and the summary route is present. Only the data plane knows, and only by dropping packets. This is one of the most expensive failure modes in a large network, because it can last for minutes with no alarm.</p>
+</div>
+<p>对 BGP 来说这个故障是"看不见"的：会话正常、下一跳可达、汇总路由在表中。只有数据面知道，而它的表达方式就是丢包。这种故障在大网里代价极高——可能持续几分钟而没有任何告警。</p>
+<h2 id="82-upa">8.2 UPA 怎么解决</h2>
+<div class="en">
+<p>UPA is an IGP signaling mechanism. When a router loses reachability to a prefix that it had previously advertised, or that is covered by a summary it originates, it sends an explicit IGP announcement stating that the prefix is unreachable. Upstream routers react immediately instead of waiting for a BGP timeout, and PIC can switch to the backup path.</p>
+</div>
+<p>UPA 是一种 <strong>IGP 信令机制</strong>：当路由器丢失到某前缀的可达性（或该前缀被它自己产生的汇总覆盖）时，它发一条<strong>显式的 IGP 通告，声明该前缀不可达</strong>。上游路由器立即反应，而不必等 BGP 超时，PIC 也就有机会切到备份路径。</p>
+<pre><code class="language-text">正常:        [PE3] ==(iBGP 10.1.1.0/24, NH=PE3)==&gt; [PE1]  → 数据走 PE3
+故障:        [PE3] 失去 10.1.1.0/24
+             PE3 --IGP UPA(10.1.1.0/24 unreachable)--&gt; [ABR]
+             [ABR] 立即撤销/压低该前缀 → 上游 PIC 切到备份 PE
+</code></pre>
+<div class="en">
+<p>The announcement carries the specific prefix, not the summary, so the summarization benefit is preserved: the core still only carries the aggregate, and UPA is only used as a fast negative signal for the affected component.</p>
+</div>
+<p>关键在于：UPA 携带的是<strong>具体前缀</strong>，不是汇总。所以汇总带来的规模收益完全保留——核心仍然只装聚合路由，UPA 只是为受影响的分量提供一个"快速负面信号"。</p>
+<h2 id="83">8.3 与其他机制的分工</h2>
+<table>
+<thead>
+<tr>
+<th>机制</th>
+<th>解决什么</th>
+<th>生效时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TI-LFA</td>
+<td>链路/节点故障的转发面保护</td>
+<td>&lt; 50 ms</td>
+</tr>
+<tr>
+<td>BGP PIC core</td>
+<td>下一跳不可达时的备份路径</td>
+<td>亚秒</td>
+</tr>
+<tr>
+<td>BGP PIC edge</td>
+<td>边缘 PE 故障时的备份</td>
+<td>亚秒</td>
+</tr>
+<tr>
+<td>汇总 + Null0</td>
+<td>抑制"汇总内有、实际没有"的流量外泄</td>
+<td>立即（但会黑洞）</td>
+</tr>
+<tr>
+<td><strong>UPA</strong></td>
+<td><strong>让 PIC 知道"汇总内某分量没了"</strong></td>
+<td>立即</td>
+</tr>
+</tbody>
+</table>
+<div class="en">
+<p>Without UPA, PIC edge and summarization fight each other: summarization hides the failure that PIC needs to see. With UPA, both can coexist, which is why operators who summarize aggressively also deploy UPA as a mandatory companion.</p>
+</div>
+<p>没有 UPA 时，PIC edge 与汇总互相打架：<strong>汇总恰好隐藏了 PIC 需要看到的故障</strong>。有了 UPA，两者可以共存——所以激进做汇总的运营商都把 UPA 当作强制配套。</p>
+<h2 id="_1">实战案例：一分钟的静默丢包</h2>
+<p><strong>现象</strong>：核心到某地市的双 PE 冗余，协议全绿、监控无告警，但该地市 10.1.1.0/24 网段业务中断约 70 秒后自行恢复。</p>
+<p><strong>复盘</strong>：</p>
+<ol>
+<li>逻辑拓扑：地市 PE3 与 PE4 双归核心，PE3 为主用。核心侧对地市汇总为 <code>fdbb:bb00:0100::/40</code> 与 <code>10.1.0.0/16</code>。</li>
+<li>故障：PE3 上到某台汇聚的链路中断，导致 <code>10.1.1.0/24</code> 在 PE3 上不可达，但 PE3 仍通告 <code>10.1.0.0/16</code> 汇总。</li>
+<li>结果：核心 ABR 的 BGP 路由不变，流量继续压向 PE3，PE3 的 Null0 静默丢弃。直到 IGP 重收敛后 PE4 的明细路由胜出，业务才恢复。</li>
+<li>修正：在 PE3/PE4 与 ABR 上启用 UPA，并在 route-policy 里保证"分量丢失即发 UPA"；实测切换时间从 70 秒降到亚秒级。</li>
+</ol>
+<p><strong>上线检查</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IGP 是否支持 UPA</td>
+<td>IOS XR 需在 IS-IS 地址族下开启</td>
+</tr>
+<tr>
+<td>是否只对 locator/汇总分量发</td>
+<td>避免 UPA 泛洪导致 IGP 抖动</td>
+</tr>
+<tr>
+<td>与 BGP PIC 是否联动</td>
+<td>确认 <code>bgp pic</code> 在 ABR 上生效</td>
+</tr>
+<tr>
+<td>汇总边界是否保留明细</td>
+<td>UPA 需要知道分量状态</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_2">本章小结</h2>
+<ol>
+<li>汇总 + PIC 的组合会产生"协议全绿、数据黑洞"的隐蔽故障。</li>
+<li>UPA 用 IGP 显式通告"某分量不可达"，把故障信息从数据面搬到控制面。</li>
+<li>它不破坏汇总的规模收益，只是补上 PIC 缺失的那条负向信号。</li>
+<li>激进汇总的网络必须把 UPA 作为强制配套。</li>
+</ol>
+    </article>
+    <nav class="pager"><a class="prev" href="07-l2vpn.html">← SRv6 L2VPN（EVPN）业务</a><a class="next" href="09-oam.html">SRv6 Ping 与 Traceroute →</a></nav>
+    <footer class="foot">
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#81">8.1 故障长什么样</a></li>
+<li><a href="#82-upa">8.2 UPA 怎么解决</a></li>
+<li><a href="#83">8.3 与其他机制的分工</a></li>
+<li><a href="#_1">实战案例：一分钟的静默丢包</a></li>
+<li><a href="#_2">本章小结</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
