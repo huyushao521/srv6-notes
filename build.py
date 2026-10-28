@@ -184,9 +184,9 @@ def render(active, prev_page, next_page):
 
 
 def main():
-    if os.path.isdir(OUT):
-        shutil.rmtree(OUT)
-    os.makedirs(OUT)
+    # 增量输出：不删除 docs 目录（Windows 下目录可能被预览服务占用），
+    # 同名文件直接覆盖，最后清理已不存在于 PAGES 的孤儿页面。
+    os.makedirs(OUT, exist_ok=True)
     os.makedirs(os.path.join(OUT, "assets"), exist_ok=True)
     shutil.copy(os.path.join(ROOT, "assets", "style.css"), os.path.join(OUT, "assets", "style.css"))
     shutil.copy(os.path.join(ROOT, "assets", "app.js"), os.path.join(OUT, "assets", "app.js"))
@@ -196,6 +196,15 @@ def main():
         next_page = PAGES[i + 1] if i + 1 < len(PAGES) else None
         size = render(slug, prev_page, next_page)
         print("%-24s %6d bytes body" % (slug, size))
+
+    keep = {"%s.html" % p[0] for p in PAGES}
+    for name in os.listdir(OUT):
+        if name.endswith(".html") and name not in keep:
+            try:
+                os.remove(os.path.join(OUT, name))
+                print("removed orphan:", name)
+            except OSError as exc:
+                print("skip orphan %s (%s)" % (name, exc))
 
     open(os.path.join(OUT, ".nojekyll"), "w").close()
     print("done ->", OUT)

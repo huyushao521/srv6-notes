@@ -39,7 +39,7 @@
 <div class="card"><a href="02-fundamentals.html">02 SRv6 基础 <span class="done">已精读</span></a><p>LOC:FUNCT:ARG、shift-and-forward、SRH 格式与三种节点角色</p></div>
 <div class="card"><a href="03-underlay.html">03 Underlay 指令 <span class="done">已精读</span></a><p>Locator 配置/通告、End 与 flavor、End.X、TI-LFA 保护</p></div>
 <div class="card"><a href="04-flex-algo.html">04 Flex-Algo <span class="done">已精读</span></a><p>按算法分片：min-cost / min-delay / 排除链路，独立地址块</p></div>
-<div class="card"><a href="05-isis-locator.html">05 IS-IS 泄露与汇总</a><p>Level-1/2 泄露、多实例重分发、summary-prefix 与黑洞防护</p></div>
+<div class="card"><a href="05-isis-locator.html">05 IS-IS 泄露与汇总 <span class="done">已精读</span></a><p>Level-1/2 泄露与 down 位、多实例重分发、summary-prefix 与分层保护</p></div>
 <div class="card"><a href="06-l3vpn.html">06 SRv6 L3VPN</a><p>uDT/uDX、SID 分配模式、BGP Prefix-SID、SID 转置、BGP-free core</p></div>
 <div class="card"><a href="07-l2vpn.html">07 SRv6 L2VPN</a><p>uDX2/uDX2V/uDT2M、E-Line/E-LAN、多归、WLIB</p></div>
 <div class="card"><a href="08-upa.html">08 UPA</a><p>汇总 + BGP PIC 场景下的静默丢包问题与解法</p></div>
