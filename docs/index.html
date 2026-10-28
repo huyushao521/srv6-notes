@@ -45,12 +45,15 @@
 <div class="nav-group"><div class="nav-title">附录</div><ul>
 <li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
 </ul></div>
+<div class="nav-group"><div class="nav-title">补章</div><ul>
+<li><a href="18-srv6-te.html"><b>18</b> 补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP</a></li>
+</ul></div>
   </aside>
   <main class="content">
     <article class="md">
 <div class="hero">
 <h1>SRv6 分章精读</h1>
-<p>以《Segment Routing Part III: SRv6》(Clarence Filsfils 等，2024，370 页) 为主线，逐章拆解原理、报文、配置与真实运营商落地案例。</p>
+<p>以《Segment Routing Part III: SRv6》(Clarence Filsfils 等，2024，370 页) 为主线，逐章拆解原理、报文、配置与真实运营商落地案例；另附《SRv6 Network Programming: Ushering in a New Era of IP Networks》(Zhenbin Li 等，2021) 第 4 章的 SRv6 TE 补章。</p>
 </div>
 
 <h2 id="_1">这本书讲什么</h2>
@@ -58,7 +61,7 @@
 <blockquote>
 <p>IP 本来就应该是自足的。IPv4 时代我们不得不用 MPLS 做 VPN/TE、用 VXLAN 做二层延伸、用熵标签解决负载分担；IPv6 + SRv6 把这些"补丁层"全部收回到 IP 自身。</p>
 </blockquote>
-<p>全书 17 章可以分成五块：</p>
+<p>主线 17 章可以分成五块，另加 1 个补章：</p>
 <table>
 <thead>
 <tr>
@@ -93,18 +96,26 @@
 <td>14–17</td>
 <td>Bell Canada 两张网、阿里巴巴核心网，以及 IPv6 必备知识</td>
 </tr>
+<tr>
+<td><strong>补章 · TE</strong></td>
+<td><strong>18</strong></td>
+<td>SRv6 Policy 模型、BGP-LS/PCEP 下发、BSID·Color·DSCP 引流、SBFD 与三层保护</td>
+</tr>
 </tbody>
 </table>
+<blockquote>
+<p>第 18 章取自另一本书（Zhenbin Li 等著，2021）第 4 章。主线讲"段怎么表达路径"，补章讲"路径由谁算、怎么下发、断了怎么发现"——两本合起来，SRv6 的转发面与控制面才算闭环。</p>
+</blockquote>
 <h2 id="_2">三条阅读路线</h2>
 <p><strong>① 零基础通读（推荐）</strong>
 <code>01 → 02 → 03 → 06 → 10</code> 先建立"地址 + 报文 + 业务 + 规划"闭环，再回头补 04/05/07/08/09。</p>
 <p><strong>② 运维排障视角</strong>
 <code>02（报文处理）→ 09（Ping/Traceroute）→ 08（UPA）→ 05（多区域泄露/汇总）</code>，专治"能 ping 通 PE 但业务不通""跨区绕行""汇总后黑洞"。</p>
 <p><strong>③ 架构设计与投标视角</strong>
-<code>01 → 06 → 10 → 14 → 15 → 16</code>，直接看两家运营商怎么把地址切成 Block/Set/Node，怎么算容量、怎么降 OPEX。</p>
+<code>01 → 06 → 10 → 14 → 15 → 16 → 18</code>，直接看两家运营商怎么把地址切成 Block/Set/Node，怎么算容量、怎么降 OPEX，以及 TE 的算路/下发/监控三件事怎么串起来。</p>
 <h2 id="_3">章节地图</h2>
 <blockquote>
-<p>全书 17 章均带 <span class="done">已精读</span> 标记：每章已按原书段落<strong>逐段中英对照</strong>重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附<strong>实战案例</strong>（含排障分支与期望值表）和<strong>延伸阅读</strong>（RFC 编号与交叉章节）。</p>
+<p>主线 17 章 + 补章 18 均带 <span class="done">已精读</span> 标记：每章已按原书段落<strong>逐段中英对照</strong>重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附<strong>实战案例</strong>（含排障分支与期望值表）和<strong>延伸阅读</strong>（RFC 编号与交叉章节）。</p>
 </blockquote>
 <div class="cards">
 <div class="card"><a href="01-introduction.html">01 SRv6 导论 <span class="done">已精读</span></a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
@@ -124,6 +135,7 @@
 <div class="card"><a href="15-case-alibaba.html">15 案例阿里 <span class="done">已精读</span></a><p>UNI/NNI 双块、Anycast、两级 TE、WLIB</p></div>
 <div class="card"><a href="16-case-bell-sp.html">16 案例 Bell SP <span class="done">已精读</span></a><p>生产环境 DDOS 服务链，真实 IOS XR 配置</p></div>
 <div class="card"><a href="17-ipv6-essentials.html">17 IPv6 必备 <span class="done">已精读</span></a><p>扩展头、Flow Label、MTU/PMTUD，读 SRv6 的底子</p></div>
+<div class="card"><a href="18-srv6-te.html">18 补章 · SRv6 TE <span class="done">已精读</span></a><p>SRv6 Policy 模型、BGP-LS 与 PCEP 扩展、BSID/Color/DSCP 引流、SBFD 与三层保护</p></div>
 </div>
 
 <h2 id="_4">阅读约定</h2>
@@ -132,6 +144,7 @@
 <li>uSID 容器写作 <code>fc00:0000:NNNN:MMMM::</code>，一个 16 bit 段 = 一条微指令。</li>
 <li>每个章节末尾都有 <strong>实战案例</strong> 小节：要么是书中运营商原案，要么是对应的工程落地场景（含排障要点）。</li>
 <li>书中伪代码引用 RFC 8986 / RFC 8754 / RFC 9252 / RFC 9256 / draft-ietf-spring-srv6-srh-compression。</li>
+<li>第 18 章为补章，英文摘录来自另一本书第 4 章（原文 OCR 断词已按原句还原），SID 取值沿用本站 <code>fc00:0:N</code> 约定，示例编号与该书原文不同。</li>
 </ul>
 <blockquote>
 <p>本站是学习笔记，非官方译本。引用原书观点已标注章节号，便于对照阅读。发现疑义以 RFC 原文为准。</p>

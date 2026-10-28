@@ -35,6 +35,7 @@ PAGES = [
     ("15-case-alibaba", "15", "案例：阿里巴巴核心网 SRv6 设计", "case"),
     ("16-case-bell-sp", "16", "案例：Bell Canada 服务编程落地", "case"),
     ("17-ipv6-essentials", "17", "IPv6 必备知识", "appendix"),
+    ("18-srv6-te", "18", "补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP", "extra"),
 ]
 
 GROUPS = [
@@ -44,6 +45,7 @@ GROUPS = [
     ("deploy", "规划与落地"),
     ("case", "真实案例"),
     ("appendix", "附录"),
+    ("extra", "补章"),
 ]
 
 TEMPLATE = """<!DOCTYPE html>
