@@ -9,7 +9,7 @@
 
 > IP 本来就应该是自足的。IPv4 时代我们不得不用 MPLS 做 VPN/TE、用 VXLAN 做二层延伸、用熵标签解决负载分担；IPv6 + SRv6 把这些"补丁层"全部收回到 IP 自身。
 
-主线 17 章可以分成五块，另加 3 个补章：
+主线 17 章可以分成五块，另加 8 个补章（18–25）：
 
 | 板块 | 章节 | 你要拿到的东西 |
 |---|---|---|
@@ -21,6 +21,11 @@
 | **补章 · TE** | **18** | SRv6 Policy 模型、BGP-LS/PCEP 下发、BSID·Color·DSCP 引流、SBFD 与三层保护 |
 | **补章 · 压缩** | **19** | SRH 字节账、3216 槽位、NEXT/REPLACE-CSID 对比、压缩对 OAM 与 ACL 的反向影响 |
 | **补章 · 移动** | **20** | End.MAP、End.M.GTP6.D/.Di/.E、UL/DL 走位、切片与 TE 衔接 |
+| **补章 · 迁移** | **21** | SR-MPLS 与 SRv6 双栈共存、跨域 VPN 三种拼法、回退设计 |
+| **补章 · 切片** | **22** | 三种隔离度、四件工具协同、时延预算拆解、确定性边界 |
+| **补章 · 安全** | **23** | 五个数据面攻击面、边界过滤清单、PCEP/BGP-LS 加固 |
+| **补章 · 可观测** | **24** | 三层监控模型、IOAM、BSID 计数探针、"慢 3 ms"三步定位 |
+| **附录 · 速查** | **25** | SID 行为表、地址规划规矩、RFC 索引、症状→章节索引 |
 
 > 第 18 章取自另一本书（Zhenbin Li 等著，2021）第 4 章。主线讲"段怎么表达路径"，补章讲"路径由谁算、怎么下发、断了怎么发现"——两本合起来，SRv6 的转发面与控制面才算闭环。
 
@@ -37,7 +42,7 @@
 
 ## 章节地图
 
-> 主线 17 章 + 补章 18–20 均带 <span class="done">已精读</span> 标记：每章已按原书段落**逐段中英对照**重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附**实战案例**（含排障分支与期望值表）和**延伸阅读**（RFC 编号与交叉章节）。补章 19/20 的英文块取自 RFC 8754 / 8986 / 9433 的规范性语句。
+> 主线 17 章 + 补章 18–25 均带 <span class="done">已精读</span> 标记：每章已按原书段落**逐段中英对照**重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附**实战案例**（含排障分支与期望值表）和**延伸阅读**（RFC 编号与交叉章节）。补章 19/20 的英文块取自 RFC 8754 / 8986 / 9433 的规范性语句。
 
 <div class="cards">
 <div class="card"><a href="01-introduction.html">01 SRv6 导论 <span class="done">已精读</span></a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
@@ -60,6 +65,11 @@
 <div class="card"><a href="18-srv6-te.html">18 补章 · SRv6 TE <span class="done">已精读</span></a><p>SRv6 Policy 模型、BGP-LS 与 PCEP 扩展、BSID/Color/DSCP 引流、SBFD 与三层保护</p></div>
 <div class="card"><a href="19-srv6-compression.html">19 补章 · 头压缩工程化 <span class="done">已精读</span></a><p>SRH 字节账、3216 槽位边界、NEXT-CSID 与 REPLACE-CSID、压缩打翻的 OAM 与 ACL</p></div>
 <div class="card"><a href="20-srv6-mobile.html">20 补章 · SRv6 承载 5G <span class="done">已精读</span></a><p>End.MAP 映射表、End.M.GTP6.D/.Di/.E、UL/DL 七步走位、切片与 TE 衔接</p></div>
+<div class="card"><a href="21-mpls-to-srv6.html">21 补章 · MPLS 到 SRv6 迁移 <span class="done">已精读</span></a><p>概念映射表、双栈 SID 空间、跨域 VPN 三种拼法、四种回退层次</p></div>
+<div class="card"><a href="22-slicing-determinism.html">22 补章 · 切片与确定性 <span class="done">已精读</span></a><p>三种隔离度、四件工具协同、把 20 ms 拆到每跳、确定性网络的边界</p></div>
+<div class="card"><a href="23-srv6-security.html">23 补章 · 安全与加固 <span class="done">已精读</span></a><p>五个数据面攻击面、边界过滤清单、压缩造成的检测盲区、PCEP 风险</p></div>
+<div class="card"><a href="24-observability.html">24 补章 · 可观测性 <span class="done">已精读</span></a><p>三层监控、BSID 计数探针、IOAM 取舍、"慢 3 ms"三步定位法</p></div>
+<div class="card"><a href="25-quick-reference.html">25 附录 · 速查手册 <span class="done">已精读</span></a><p>SID 行为表、四条地址硬规矩、RFC 索引、症状到章节的直查表</p></div>
 </div>
 
 ## 阅读约定

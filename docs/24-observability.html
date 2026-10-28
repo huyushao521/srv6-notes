@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>补章 · 可观测性：IOAM、Telemetry 与策略状态 · SRv6 精读</title>
+<meta name="description" content="补章 · 可观测性：IOAM、Telemetry 与策略状态 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">补章</div><ul>
+<li><a href="18-srv6-te.html"><b>18</b> 补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP</a></li>
+<li><a href="19-srv6-compression.html"><b>19</b> 补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID</a></li>
+<li><a href="20-srv6-mobile.html"><b>20</b> 补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</a></li>
+<li><a href="21-mpls-to-srv6.html"><b>21</b> 补章 · SR-MPLS 到 SRv6 的共存与迁移</a></li>
+<li><a href="22-slicing-determinism.html"><b>22</b> 补章 · 网络切片与确定性承载</a></li>
+<li><a href="23-srv6-security.html"><b>23</b> 补章 · 攻击面与控制面加固</a></li>
+<li><a href="24-observability.html" class="active"><b>24</b> 补章 · 可观测性：IOAM、Telemetry 与策略状态</a></li>
+<li><a href="25-quick-reference.html"><b>25</b> 补章 · 速查手册：SID 行为、RFC 与排障命令</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="24-ioamtelemetry">24 · 可观测性：IOAM、Telemetry 与策略状态</h1>
+<blockquote>
+<p><strong>本章定位</strong>：补章。第 9 章讲了 Ping/Traceroute，第 18 章讲了 SBFD。但这些都只回答"通不通"。运营最难的问题不是"通不通"，而是<strong>"为什么这条路径今天比昨天慢了 3 ms"</strong>。这一章讲怎么把"无信令隧道"的盲区变成可测量的数据。</p>
+<p>一句话概括：<strong>SRv6 省掉了逐跳信令，代价是省掉了逐跳的"心跳"</strong>——能补上的只有两样东西：带内遥测和策略状态。</p>
+</blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>三层可观测性分别看什么</td>
+<td>24.1</td>
+</tr>
+<tr>
+<td>IOAM 怎么把测量信息塞进报文</td>
+<td>24.2</td>
+</tr>
+<tr>
+<td>Telemetry 与 SNMP 轮询的本质差别</td>
+<td>24.3</td>
+</tr>
+<tr>
+<td>SR Policy 有哪些状态值得盯</td>
+<td>24.4</td>
+</tr>
+<tr>
+<td>一次"慢 3 ms"的三步定位法</td>
+<td>24.5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="240">24.0 三层模型</h2>
+<pre><code class="language-text">图 24-1：可观测性的三层
+
+  业务层  ── 业务 SLA：时延 / 丢包 / 抖动（按 VRF、按切片）
+     ▲        来源：探针、IOAM、应用侧埋点
+     │
+  路径层  ── SR Policy 状态：up/down、候选路径、BSID 计数、SBFD
+     ▲        来源：设备 YANG / PCEP 上报
+     │
+  设备层  ── 接口与队列：流量、丢包、队列深度、CPU
+               来源：Telemetry / SNMP
+</code></pre>
+<p>三层的<strong>时间尺度不同</strong>，这是设计监控时的核心：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>采样周期</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>设备层</td>
+<td>10 s（Telemetry 可到 1 s）</td>
+<td>容量与故障发现</td>
+</tr>
+<tr>
+<td>路径层</td>
+<td>1 s（SBFD 更快）</td>
+<td>路径切换与劣化</td>
+</tr>
+<tr>
+<td>业务层</td>
+<td>分钟级</td>
+<td>SLA 结算与投诉举证</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>常见错误：<strong>用设备层指标解释业务投诉</strong>。接口没丢包不代表业务不慢——队列深度、路径绕远、ECMP 哈希偏移都能让设备层看起来"健康"。</p>
+</blockquote>
+<h2 id="241">24.1 设备层：把"看起来健康"变成可判定</h2>
+<div class="en">
+<p>Streaming telemetry provides a continuous stream of operational data from the network device to the collector, with a much lower latency than periodic polling.</p>
+</div>
+<p>流式遥测从设备向采集器<strong>持续推送</strong>运行数据，时延远低于周期性轮询。</p>
+<p>与 SNMP 轮询的差别不是"快一点"，而是<strong>能不能看到瞬时峰值</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>SNMP 轮询（5 min）</th>
+<th>流式 Telemetry（10 s 或更快）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>微突发</td>
+<td>看不到</td>
+<td>可见</td>
+</tr>
+<tr>
+<td>队列深度</td>
+<td>只能看均值</td>
+<td>可见峰值</td>
+</tr>
+<tr>
+<td>计数器精度</td>
+<td>采样丢失</td>
+<td>连续</td>
+</tr>
+<tr>
+<td>对设备压力</td>
+<td>集中式轮询，CPU 尖峰</td>
+<td>推送，压力平滑</td>
+</tr>
+</tbody>
+</table>
+<p>必须采集的五个指标：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>为什么关键</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接口丢包（出方向）</td>
+<td>唯一能反映"队列溢出"的指标</td>
+</tr>
+<tr>
+<td>队列深度峰值</td>
+<td>抖动的直接来源（22.4）</td>
+</tr>
+<tr>
+<td>接口利用率 P95</td>
+<td>容量规划基线</td>
+</tr>
+<tr>
+<td>SRv6 转发异常计数（如无效 DA）</td>
+<td>压缩/映射错配的第一现场</td>
+</tr>
+<tr>
+<td>控制面会话数（BGP/PCEP）</td>
+<td>控制面被攻破的信号（23.4）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="242-sr-policy">24.2 路径层：SR Policy 状态是新的"隧道状态"</h2>
+<p>MPLS TE 时代，隧道状态由 RSVP 信令维持，<code>show mpls traffic-eng tunnels</code> 一眼就知道。SRv6 没有信令，<strong>必须自己去看 Policy 状态</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>状态项</th>
+<th>含义</th>
+<th>异常判读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Policy operational state</td>
+<td>up / down</td>
+<td>down 说明候选路径不可用</td>
+</tr>
+<tr>
+<td>候选路径状态</td>
+<td>active / inactive</td>
+<td>全部 inactive = 没有可用段列表</td>
+</tr>
+<tr>
+<td>BSID 绑定</td>
+<td>已绑定 / 冲突</td>
+<td>冲突会造成流量错走</td>
+</tr>
+<tr>
+<td>SBFD 状态</td>
+<td>up / down</td>
+<td>down 但 Policy up = <strong>转发面黑洞</strong>（18.8）</td>
+</tr>
+<tr>
+<td>段列表可达性</td>
+<td>每段是否在 IGP/BGP-LS 中可见</td>
+<td>单段不可达 = 路径半断</td>
+</tr>
+</tbody>
+</table>
+<p>两个高频陷阱：</p>
+<ol>
+<li><strong>Policy up 但业务不通</strong>：这是 18.8 的主题，SBFD 是唯一可靠的补充。</li>
+<li><strong>Policy 频繁 flap</strong>：不是设备问题，多半是算路度量抖动（22.7 案例 C 的粘性问题）。</li>
+</ol>
+<h3 id="2421-bsid">24.2.1 BSID 计数：最便宜的"业务探针"</h3>
+<p>BSID 的转发计数是<strong>零成本业务探针</strong>：只要看 BSID 的包/字节计数，就知道这条策略上有没有真实流量。</p>
+<pre><code class="language-text">show segment-routing traffic-eng policy name PE2-URLLC detail
+! 关注：BSID、policy state、candidate path、binding sid 计数
+</code></pre>
+<p>用它做三件事：</p>
+<table>
+<thead>
+<tr>
+<th>用途</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>确认引流生效</td>
+<td>配了 color 之后，BSID 计数从 0 变正</td>
+</tr>
+<tr>
+<td>发现静默切换</td>
+<td>BSID 计数陡降 = 流量切走了</td>
+</tr>
+<tr>
+<td>容量核算</td>
+<td>BSID 速率 × 时间 = 该切片承载量</td>
+</tr>
+</tbody>
+</table>
+<h2 id="243-ioam">24.3 业务层：IOAM 与探针</h2>
+<div class="en">
+<p>In-situ OAM records operational and telemetry information in the packet while the packet traverses a path, so that the information can be collected without sending additional probe packets.</p>
+</div>
+<p>带内 OAM（IOAM）在报文<strong>穿越路径的过程中</strong>把运行与遥测信息记录进报文本身，因此<strong>不需要额外发送探测包</strong>。</p>
+<h3 id="2431-ioam">24.3.1 IOAM 与探针的取舍</h3>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>精度</th>
+<th>开销</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主动探针（合成流量）</td>
+<td>路径级，非业务级</td>
+<td>额外流量</td>
+<td>SLA 举证、验收</td>
+</tr>
+<tr>
+<td>IOAM（带内）</td>
+<td>逐跳、逐业务流</td>
+<td>报文变大、需芯片支持</td>
+<td>疑难定位、劣化归因</td>
+</tr>
+<tr>
+<td>Telemetry（设备侧）</td>
+<td>设备级</td>
+<td>无报文开销</td>
+<td>日常监控</td>
+</tr>
+</tbody>
+</table>
+<p>现实建议：<strong>日常靠 Telemetry，验收靠探针，疑难靠 IOAM</strong>。三者不是替代关系。</p>
+<h3 id="2432-ioam">24.3.2 IOAM 的三个现实约束</h3>
+<ol>
+<li><strong>不是所有平台支持</strong>，且压缩域内支持更少（19.5.2）；</li>
+<li><strong>报文变长</strong>，要在 MTU 预算里留位置；</li>
+<li><strong>隐私与合规</strong>：逐跳记录可能带出路径细节，跨域时默认关闭。</li>
+</ol>
+<h2 id="244-3-ms">24.4 一次"慢 3 ms"的三步定位</h2>
+<pre><code class="language-text">图 24-2：三步定位法
+
+  Step 1  业务层：确认是全局慢还是部分慢
+          ├─ 全局慢  → 进 Step 2
+          └─ 部分慢  → 查 ECMP 哈希偏移 / 切片选错（走 24.5）
+
+  Step 2  路径层：看 Policy 是否切了候选路径
+          ├─ 切了    → 问&quot;为什么切&quot;（度量抖动、SBFD 误判）
+          └─ 没切    → 进 Step 3
+
+  Step 3  设备层：看队列深度与出向丢包
+          ├─ 队列高  → 加 shaper / 调优先级（22.6）
+          └─ 队列低  → 查物理（光功率、CRC、微突发）
+</code></pre>
+<p>配合的命令方向（示意，不同平台不同）：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>看什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>业务层</td>
+<td>探针 P99、抖动、丢包序列</td>
+</tr>
+<tr>
+<td>路径层</td>
+<td><code>show segment-routing traffic-eng policy detail</code>、SBFD 状态、BSID 计数趋势</td>
+</tr>
+<tr>
+<td>设备层</td>
+<td>接口 Telemetry：出向丢包、队列深度峰值、光功率</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>这条流程的价值不在命令，在<strong>顺序</strong>：先确认影响面，再看路径，最后看设备。反过来的话，你会在几十个接口计数器里迷路。</p>
+</blockquote>
+<h2 id="245-ecmp">24.5 部分慢：ECMP 与哈希偏移</h2>
+<p>"部分慢"是 SRv6 网络里最难查的一类：同一业务，一部分用户慢、一部分正常。</p>
+<table>
+<thead>
+<tr>
+<th>根因</th>
+<th>判据</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ECMP 哈希偏移</td>
+<td>慢的用户集合固定（同一 5 元组哈希）</td>
+<td>用 Flow Label 补熵（第 17 章）</td>
+</tr>
+<tr>
+<td>部分路径劣化</td>
+<td>逐路径探针，某条 SID 列表慢</td>
+<td>剔除该段/调整 Algo</td>
+</tr>
+<tr>
+<td>切片选错</td>
+<td>报文的 color/DSCP 未按预期映射</td>
+<td>查 BGP 扩展团体与策略匹配</td>
+</tr>
+<tr>
+<td>压缩与非压缩混排</td>
+<td>部分节点回退到 128 bit</td>
+<td>查 locator 格式（19.6）</td>
+</tr>
+</tbody>
+</table>
+<p>第一条最经典：<strong>DA 相同 → 哈希相同 → 全部流量挤一条路</strong>。SRv6 的 DA 在路径上是"有意相同"的（这正是压缩的前提），所以熵必须来自 Flow Label 或内层五元组。这是 SRv6 与 MPLS 在设计上的一个真实差异，迁移时务必确认（第 21 章）。</p>
+<h2 id="246">24.6 本章小结</h2>
+<table>
+<thead>
+<tr>
+<th>记住这一条</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>三层时间尺度不同，不能混看</td>
+<td>设备健康 ≠ 业务达标</td>
+</tr>
+<tr>
+<td>Policy 状态 + SBFD 才等于"路径活着"</td>
+<td>只有状态会骗人</td>
+</tr>
+<tr>
+<td>BSID 计数是零成本探针</td>
+<td>一个计数器顶一套探针</td>
+</tr>
+<tr>
+<td>压缩域内 OAM 能力下降</td>
+<td>要靠 Telemetry 补</td>
+</tr>
+<tr>
+<td>"部分慢"先怀疑哈希</td>
+<td>DA 相同是 SRv6 的常态</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">实战案例</h2>
+<h3 id="apolicy-up-30">案例 A：Policy 一直 up，业务丢了 30%</h3>
+<p><strong>现象</strong>：跨域专线丢包 30%，头端 Policy 状态 <code>up</code>，SBFD 未部署。</p>
+<p><strong>排障分支</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>期望</th>
+<th>实际</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Policy 状态</td>
+<td>up</td>
+<td>up</td>
+</tr>
+<tr>
+<td>SBFD</td>
+<td>配置了</td>
+<td><strong>未配置</strong></td>
+</tr>
+<tr>
+<td>段列表可达性</td>
+<td>全部可达</td>
+<td>中间某段 IGP 不可见</td>
+</tr>
+<tr>
+<td>BSID 计数</td>
+<td>稳定</td>
+<td>有值但速率波动 30%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：中间某跳的 locator 因 IGP 汇总被隐藏（第 5 章），头端仍按旧段列表压栈，该跳按"未命中"丢弃部分报文，且不产生 ICMP。</p>
+<p><strong>修复</strong>：开 SBFD（18.8.1）+ 对 Policy 的段列表做周期可达性校验。<strong>教训："策略 up"只代表"配置生效"，不代表"路径可用"。</strong></p>
+<h3 id="b">案例 B：升级后吞吐下降，接口计数正常</h3>
+<p><strong>现象</strong>：核心升级后整体吞吐降 15%，所有接口无丢包，CPU 正常。</p>
+<p><strong>期望值判定表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>升级前</th>
+<th>升级后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接口出向丢包</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>队列深度峰值</td>
+<td>30%</td>
+<td><strong>78%</strong></td>
+</tr>
+<tr>
+<td>平均包长</td>
+<td>900 B</td>
+<td>640 B</td>
+</tr>
+<tr>
+<td>结论</td>
+<td>—</td>
+<td>队列深度上升 → 时延上升 → TCP 降速</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：升级引入了默认的队列策略变更，同样带宽下队列更深，时延增大导致 TCP 拥塞窗口收缩。<strong>接口不丢包不等于没有问题</strong>——这就是必须采队列深度的原因。</p>
+<h3 id="c-9">案例 C：只有晚上 9 点慢</h3>
+<p><strong>现象</strong>：每天 21:00–23:00 部分用户慢，其他时段正常。</p>
+<p><strong>判据</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>时段</th>
+<th>BSID 速率</th>
+<th>队列峰值</th>
+<th>慢用户占比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:00</td>
+<td>1.2 G</td>
+<td>25%</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>21:30</td>
+<td>1.3 G</td>
+<td><strong>85%</strong></td>
+<td>35%</td>
+</tr>
+<tr>
+<td>22:30</td>
+<td>1.3 G</td>
+<td>60%</td>
+<td>12%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：晚间娱乐流量突增，与专线切片共用出接口队列，突发造成深度堆积；慢用户固定集合 = 哈希到同一路径。</p>
+<p><strong>修复</strong>：切片独立 shaper（22.6）+ Flow Label 补熵。<strong>教训：容量没变、路径没变，但"共存"变了——切片的资源隔离要在压力下验收。</strong></p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li>RFC 9197：IOAM 数据字段（带内遥测的编码）</li>
+<li>RFC 9326：IOAM 直接导出（DEX）</li>
+<li>RFC 6241 / RFC 7950：NETCONF 与 YANG（Telemetry 的数据模型基础）</li>
+<li>RFC 5880 / RFC 5881：BFD（SBFD 的基础，第 18 章）</li>
+<li>RFC 9256：SR Policy（状态与候选路径模型）</li>
+<li>交叉章节：第 9 章（Ping/Traceroute）、第 17 章（Flow Label 与熵）、第 18 章（SBFD 与 Policy 状态）、第 19 章（压缩域的 OAM 盲区）、第 22 章（切片压测与时延预算）</li>
+</ul>
+    </article>
+    <nav class="pager"><a class="prev" href="23-srv6-security.html">← 补章 · 攻击面与控制面加固</a><a class="next" href="25-quick-reference.html">补章 · 速查手册：SID 行为、RFC 与排障命令 →</a></nav>
+    <footer class="foot">
+      <div class="feedback">
+  <div class="fb-head"><span class="fb-title">留言与勘误</span><span class="fb-sub">留言与勘误功能由 GitHub Discussions 提供</span></div>
+  <p>发现错别字、术语译法或技术表述有问题，或者想补充案例与配置，都可以在这里开一条讨论；需要 GitHub 账号。</p>
+  <div class="fb-actions">
+    <a class="fb-btn primary" href="https://github.com/huyushao521/srv6-notes/discussions/new?category=general&title=%5B%E5%8B%98%E8%AF%AF/%E7%95%99%E8%A8%80%5D%2024%20%E8%A1%A5%E7%AB%A0%20%C2%B7%20%E5%8F%AF%E8%A7%82%E6%B5%8B%E6%80%A7%EF%BC%9AIOAM%E3%80%81Telemetry%20%E4%B8%8E%E7%AD%96%E7%95%A5%E7%8A%B6%E6%80%81&body=%2A%2A%E7%AB%A0%E8%8A%82%2A%2A%EF%BC%9Ahttps%3A//huyushao521.github.io/srv6-notes/24-observability.html%0A%0A%2A%2A%E4%BD%8D%E7%BD%AE%2A%2A%EF%BC%9A%EF%BC%88%E5%B0%8F%E8%8A%82%E6%A0%87%E9%A2%98%20/%20%E6%AE%B5%E8%90%BD%E9%A6%96%E5%8F%A5%20/%20%E5%8E%9F%E6%96%87%E5%BC%95%E7%94%A8%EF%BC%89%0A%0A%2A%2A%E9%97%AE%E9%A2%98%E7%B1%BB%E5%9E%8B%2A%2A%EF%BC%9A%E9%94%99%E5%88%AB%E5%AD%97%20%C2%B7%20%E6%9C%AF%E8%AF%AD%E8%AF%91%E6%B3%95%20%C2%B7%20%E6%8A%80%E6%9C%AF%E8%A1%A8%E8%BF%B0%20%C2%B7%20%E8%A1%A5%E5%85%85%E5%BB%BA%E8%AE%AE%0A%0A%2A%2A%E8%AF%B4%E6%98%8E%2A%2A%EF%BC%9A%0A%0A%2A%2A%E5%8F%82%E8%80%83%E4%BE%9D%E6%8D%AE%2A%2A%EF%BC%9A%EF%BC%88RFC%20%E7%BC%96%E5%8F%B7%E3%80%81%E5%8E%9F%E4%B9%A6%E7%AB%A0%E8%8A%82%E3%80%81%E8%AE%BE%E5%A4%87%E8%BE%93%E5%87%BA%EF%BC%89%0A" target="_blank" rel="noopener">报告勘误 / 留言</a>
+    <a class="fb-btn" href="https://github.com/huyushao521/srv6-notes/discussions" target="_blank" rel="noopener">浏览全部讨论</a>
+  </div>
+</div>
+
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#240">24.0 三层模型</a></li>
+<li><a href="#241">24.1 设备层：把"看起来健康"变成可判定</a></li>
+<li><a href="#242-sr-policy">24.2 路径层：SR Policy 状态是新的"隧道状态"</a><ul>
+<li><a href="#2421-bsid">24.2.1 BSID 计数：最便宜的"业务探针"</a></li>
+</ul>
+</li>
+<li><a href="#243-ioam">24.3 业务层：IOAM 与探针</a><ul>
+<li><a href="#2431-ioam">24.3.1 IOAM 与探针的取舍</a></li>
+<li><a href="#2432-ioam">24.3.2 IOAM 的三个现实约束</a></li>
+</ul>
+</li>
+<li><a href="#244-3-ms">24.4 一次"慢 3 ms"的三步定位</a></li>
+<li><a href="#245-ecmp">24.5 部分慢：ECMP 与哈希偏移</a></li>
+<li><a href="#246">24.6 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#apolicy-up-30">案例 A：Policy 一直 up，业务丢了 30%</a></li>
+<li><a href="#b">案例 B：升级后吞吐下降，接口计数正常</a></li>
+<li><a href="#c-9">案例 C：只有晚上 9 点慢</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

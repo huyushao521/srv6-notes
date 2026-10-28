@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>补章 · SR-MPLS 到 SRv6 的共存与迁移 · SRv6 精读</title>
+<meta name="description" content="补章 · SR-MPLS 到 SRv6 的共存与迁移 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">补章</div><ul>
+<li><a href="18-srv6-te.html"><b>18</b> 补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP</a></li>
+<li><a href="19-srv6-compression.html"><b>19</b> 补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID</a></li>
+<li><a href="20-srv6-mobile.html"><b>20</b> 补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</a></li>
+<li><a href="21-mpls-to-srv6.html" class="active"><b>21</b> 补章 · SR-MPLS 到 SRv6 的共存与迁移</a></li>
+<li><a href="22-slicing-determinism.html"><b>22</b> 补章 · 网络切片与确定性承载</a></li>
+<li><a href="23-srv6-security.html"><b>23</b> 补章 · 攻击面与控制面加固</a></li>
+<li><a href="24-observability.html"><b>24</b> 补章 · 可观测性：IOAM、Telemetry 与策略状态</a></li>
+<li><a href="25-quick-reference.html"><b>25</b> 补章 · 速查手册：SID 行为、RFC 与排障命令</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="21-sr-mpls-srv6">21 · SR-MPLS 到 SRv6 的共存与迁移</h1>
+<blockquote>
+<p><strong>本章定位</strong>：补章。前面 20 章默认你手上是一张"纯 SRv6 网"。现实是：<strong>没有运营商会一夜把 SR-MPLS 换掉</strong>，中间必然有三到五年的双轨期——同一台设备跑两套段路由，同一个 VPN 跨越两种封装，同一批运维同时看两套 OAM。这一章讲这三年怎么活。</p>
+<p>一句话概括：<strong>迁移的难点不在协议，在"两套平面必须在同一个故障域里共存"</strong>——任何一次割接，都要能在一分钟内退回去。</p>
+</blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SR-MPLS 与 SRv6 哪些概念能一一对应，哪些不能</td>
+<td>21.2.1</td>
+</tr>
+<tr>
+<td>双栈节点怎么同时跑两套 SID 空间</td>
+<td>21.2.2</td>
+</tr>
+<tr>
+<td>一个跨 MPLS/SRv6 的 L3VPN 怎么拼起来</td>
+<td>21.3</td>
+</tr>
+<tr>
+<td>先换核心还是先换边缘</td>
+<td>21.4</td>
+</tr>
+<tr>
+<td>割接失败，五分钟内怎么退回去</td>
+<td>21.5</td>
+</tr>
+<tr>
+<td>双轨期的监控为什么总会漏</td>
+<td>21.6</td>
+</tr>
+</tbody>
+</table>
+<h2 id="210">21.0 本章拓扑</h2>
+<pre><code class="language-text">图 21-1：典型双轨期（三个域，两种封装）
+
+   ┌── MPLS 域（存量，SR-MPLS）──┐   ┌── 双栈边界 ──┐   ┌── SRv6 域（新建）──┐
+   │                              │   │              │   │                      │
+   PE-A ── P1 ── P2 ── BR-1 ══════╪═══╪══ BR-2 ══════╪═══╪══ P5 ── PE-B         │
+   (SR-MPLS)                    │   │  (SRv6+MPLS) │   │   (纯 SRv6)           │
+   └──────────────────────────────┘   └──────────────┘   └──────────────────────┘
+        标签栈转发                        标签 ↔ SID 映射        DA 转发
+
+  SID / 标签约定：
+    MPLS 域：SRGB 16000-23999；PE-A 的 Node SID 16001
+    SRv6 域：Block fc00:0::/32；PE-B locator fc00:0:2::/48，End.DT4 fc00:0:2:e109::
+    边界：BR-2 同时有 label 16002 与 SID fc00:0:12:e000::
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>需要跑的平面</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PE-A</td>
+<td>仅 SR-MPLS</td>
+<td>存量业务不动</td>
+</tr>
+<tr>
+<td>P1 / P2</td>
+<td>仅 SR-MPLS</td>
+<td>越简单越好</td>
+</tr>
+<tr>
+<td>BR-1</td>
+<td>SR-MPLS</td>
+<td>域内最后一段标签栈</td>
+</tr>
+<tr>
+<td>BR-2</td>
+<td><strong>双栈</strong></td>
+<td>唯一做封装转换的节点，也是唯一的高风险点</td>
+</tr>
+<tr>
+<td>P5 / PE-B</td>
+<td>仅 SRv6</td>
+<td>新建业务</td>
+</tr>
+</tbody>
+</table>
+<h2 id="211-sr-mpls">21.1 为什么不能让 SR-MPLS "就地升级"</h2>
+<div class="en">
+<p>Segment Routing can be instantiated on the MPLS data plane or on the IPv6 data plane. The two instantiations share the same control plane concepts but use different forwarding instructions.</p>
+</div>
+<p>段路由可以实例化在 MPLS 数据面或 IPv6 数据面上。两种实例化共享同一套控制面概念，但<strong>转发指令不同</strong>。</p>
+<p>这句话是迁移设计的全部依据：<strong>控制面可以复用，转发面必须翻译</strong>。具体到落地上：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>能不能复用</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IGP 扩展（prefix-SID、adj-SID 概念）</td>
+<td>概念可复用，编码不同</td>
+<td>MPLS 用 Label 子 TLV，SRv6 用 Locator + End.X SID 子 TLV</td>
+</tr>
+<tr>
+<td>BGP VPN 路由</td>
+<td><strong>基本可复用</strong></td>
+<td>RD/RT 一致，只换封装属性</td>
+</tr>
+<tr>
+<td>SR Policy</td>
+<td>不可复用</td>
+<td>MPLS 段列表是标签栈，SRv6 是 SID 列表</td>
+</tr>
+<tr>
+<td>OAM</td>
+<td>不可复用</td>
+<td>MPLS LSP ping 与 SRv6 ping 是两套</td>
+</tr>
+<tr>
+<td>业务配置（VRF/AC）</td>
+<td>可复用</td>
+<td>与转发面无关</td>
+</tr>
+</tbody>
+</table>
+<p>结论：<strong>控制面先做，转发面后做；业务配置不动，封装逐个替换</strong>。</p>
+<h2 id="212">21.2 三种共存形态</h2>
+<h3 id="2121">21.2.1 概念映射表</h3>
+<table>
+<thead>
+<tr>
+<th>SR-MPLS</th>
+<th>SRv6</th>
+<th>能否一一对应</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Label（20 bit）</td>
+<td>SID（128 bit）</td>
+<td>语义对应，长度不对应</td>
+</tr>
+<tr>
+<td>SRGB（标签池）</td>
+<td>Block + Locator</td>
+<td>SRGB 是全局池，Block 是地址段</td>
+</tr>
+<tr>
+<td>Node SID</td>
+<td>End SID</td>
+<td>对应</td>
+</tr>
+<tr>
+<td>Adj-SID</td>
+<td>End.X SID</td>
+<td>对应</td>
+</tr>
+<tr>
+<td>LAN-Adj-SID</td>
+<td>LAN End.X SID</td>
+<td>对应</td>
+</tr>
+<tr>
+<td>Binding SID</td>
+<td>BSID</td>
+<td>对应（18.4）</td>
+</tr>
+<tr>
+<td>标签栈深</td>
+<td>容器数（19.3）</td>
+<td>MPLS 可压几百层，SRv6 受 6 段/容器限制</td>
+</tr>
+<tr>
+<td>PHP（倒数第二跳弹栈）</td>
+<td>PSP（倒数第二跳剥外层）</td>
+<td>对应</td>
+</tr>
+<tr>
+<td>显式空标签 3</td>
+<td>无对应</td>
+<td>SRv6 无"隐式空"概念</td>
+</tr>
+</tbody>
+</table>
+<p><strong>最容易被忽略的一行是标签栈深</strong>。MPLS 可以轻松压 10 层标签做跨域严格路径；SRv6 压 10 段就要 SRH，压缩后仍要 2 个容器。所以从 MPLS 迁过来的 TE 策略，<strong>段数必须重算</strong>，不能照搬。</p>
+<h3 id="2122-sid">21.2.2 双栈节点的两套 SID 空间</h3>
+<p>边界节点同时维护 <code>SRGB</code> 与 <code>Block</code>，互不干扰：</p>
+<pre><code class="language-text">segment-routing
+ mpls
+  global-block 16000 23999
+ !
+!
+segment-routing
+ srv6
+  locator BR2
+   micro-segment behavior unode psp-usd
+  !
+ !
+!
+</code></pre>
+<p>两条硬约束：</p>
+<ol>
+<li><strong>不能把 SRGB 的标签值直接当作 Block 的一部分</strong>"对齐一下好看"——两者语义不同，混用会导致 BGP-LS 上报的拓扑出现两份同一节点的 SID，控制器算路时随机选，故障极难复现。</li>
+<li><strong>双栈节点必须同时通告两套拓扑</strong>（BGP-LS 里表现为同一 Node 带两组属性），否则控制器在跨域算路时看不到它。</li>
+</ol>
+<h2 id="213-vpn">21.3 一个跨域 VPN 怎么拼起来</h2>
+<p>这是迁移期最典型的业务：总部在 MPLS 域，分支在 SRv6 域，要求互通。</p>
+<h3 id="2131-bgp-vpn">21.3.1 拼法一：BGP VPN 路由跨域传递（推荐）</h3>
+<pre><code class="language-text">图 21-2：VPNv4 路由跨越两种封装
+
+   PE-A（MPLS）                          PE-B（SRv6）
+      │                                      │
+      │ 1. VPNv4 路由 + Label 16001          │
+      ├────────────&gt; BR-2 ──────────────────&gt;│
+      │              2. 重写封装属性：        │
+      │                 Label → End.DT4 SID   │
+      │                （fc00:0:2:e109::）    │
+      │                                      │ 3. 本地 VRF 安装
+      │                                      │    下一跳 = SID
+</code></pre>
+<p>关键点：</p>
+<ul>
+<li><strong>RD/RT 完全不动</strong>，业务策略（import/export）零改动；</li>
+<li>只改<strong>下一跳的封装属性</strong>：从"压标签"变成"压 SID"；</li>
+<li>反向同理，BR-2 把 SRv6 侧来的 SID 换成标签再送进 MPLS 域。</li>
+</ul>
+<p>配置上就是边界节点做一次 route-policy 重写（IOS XR 示意）：</p>
+<pre><code class="language-text">route-policy MPLS2SRV6
+  if extcommunity rt matches-any (65000:100) then
+    set path-selection backup 1 install
+  endif
+end-policy
+!
+! 实际封装转换由平台内部完成：VPNv4 的 Label 字段
+! 在 SRv6 侧被解释为 End.DT4 SID，需要在边界显式映射
+</code></pre>
+<h3 id="2132-sid">21.3.2 拼法二：SID 映射表（草案方向）</h3>
+<div class="en">
+<p>The SRv6 SID and the MPLS label can be mapped to each other at the domain boundary, so that a packet can traverse both domains without changing the service encapsulation.</p>
+</div>
+<p>在域边界把 SRv6 SID 与 MPLS 标签<strong>互相映射</strong>，使报文跨越两个域时<strong>不必改变业务封装</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>业务侧完全无感</td>
+<td>边界要维护映射表（规模 = 跨域前缀数 × 域数）</td>
+</tr>
+<tr>
+<td>适合大规模跨域</td>
+<td>草案阶段，互通性需实测</td>
+</tr>
+<tr>
+<td>保持端到端语义</td>
+<td>映射表不同步会造成静默黑洞</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>这条路线目前以草案推进（SRv6-MPLS interworking），<strong>落地前必须做两家设备对接实测</strong>，不要按"标准已定"来设计。</p>
+</blockquote>
+<h3 id="2133-6pe6vpe">21.3.3 拼法三：6PE/6VPE 过渡（最保守）</h3>
+<p>如果只是"让 SRv6 域的业务能到 MPLS 域"，最保守的做法是不动 VPN，用 6PE/6VPE 把 IPv6 前缀带过去。代价是<strong>放弃端到端 SRv6 语义</strong>（到了 MPLS 域就退化成普通转发），收益是<strong>改造量接近于零</strong>。</p>
+<p>选型建议：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>选哪种</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>少量跨域业务，SLA 要求不高</td>
+<td>拼法三（6PE/6VPE）</td>
+</tr>
+<tr>
+<td>跨域业务多，要保留 TE</td>
+<td>拼法一（BGP 重写封装）+ 边界 SR Policy</td>
+</tr>
+<tr>
+<td>大规模、多运营商互通</td>
+<td>拼法二（映射表），先做小范围试点</td>
+</tr>
+</tbody>
+</table>
+<h2 id="214">21.4 替换顺序：先核心还是先边缘</h2>
+<p>两种主流打法，各有代价，<strong>不要混着用</strong>。</p>
+<h3 id="2141">21.4.1 打法一：核心先行</h3>
+<pre><code class="language-text">图 21-3：核心先行（由内向外）
+
+  Step 1  核心 P 节点换 SRv6（同时保留 MPLS 转发）
+  Step 2  核心跑通 SRv6 转发（业务仍走 MPLS）
+  Step 3  逐台 PE 升级为双栈
+  Step 4  新业务直接上 SRv6
+  Step 5  存量业务按 VRF 逐个切换封装
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心容量早释放（表项规模下降）</td>
+<td>双栈期最长，核心节点承担全部风险</td>
+</tr>
+<tr>
+<td>边缘改造可以慢慢来</td>
+<td>核心故障影响全网</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2142">21.4.2 打法二：边缘先行</h3>
+<pre><code class="language-text">图 21-4：边缘先行（由外向内）
+
+  Step 1  新建 / 扩容的 PE 直接上 SRv6（双栈）
+  Step 2  新增业务走 SRv6，老业务留在 MPLS
+  Step 3  边缘双栈比例达阈值（经验值 60%+）
+  Step 4  核心一次性切换
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>优点</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>存量业务零打扰</td>
+<td>双栈边缘多，运维复杂度前置</td>
+</tr>
+<tr>
+<td>可随时暂停</td>
+<td>核心切换仍是一次性动作，窗口要留足</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>选择依据不是技术，是<strong>业务分布</strong>：新业务占比高（云、政企、5G）选边缘先行；存量 IRR 业务为主（专线、语音）选核心先行。</p>
+</blockquote>
+<h2 id="215">21.5 回退设计：割接窗口里最重要的一页</h2>
+<p>任何一次 SRv6 割接，<strong>回退方案要和割接方案同日评审</strong>、同日演练。四个层次：</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>回退动作</th>
+<th>耗时</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>业务级</td>
+<td>VRF 的封装策略改回 MPLS</td>
+<td>分钟级</td>
+<td>单 VRF 中断数秒</td>
+</tr>
+<tr>
+<td>节点级</td>
+<td>双栈节点的 SRv6 locator 撤销通告</td>
+<td>秒级</td>
+<td>该节点流量回 MPLS</td>
+</tr>
+<tr>
+<td>域级</td>
+<td>边界停止 SID ↔ Label 映射</td>
+<td>秒级</td>
+<td>跨域业务回退</td>
+</tr>
+<tr>
+<td>全网级</td>
+<td>IGP 里去掉 SRv6 能力标识</td>
+<td>分钟级</td>
+<td>全网回 MPLS</td>
+</tr>
+</tbody>
+</table>
+<p>工程实践三条：</p>
+<ol>
+<li><strong>locator 的撤销必须比"配置删除"更快</strong>：先撤通告（秒级生效），再删配置。顺序反了会造成一段黑洞。</li>
+<li><strong>保留 MPLS 转发面至少 6 个月</strong>，即使业务已全部迁移。这是唯一能在事故中"一键回退"的保险。</li>
+<li><strong>回退演练要在低峰期做过一次</strong>，只写在文档里的回退方案等于没有。</li>
+</ol>
+<h2 id="216">21.6 双轨期运维的五个坑</h2>
+<table>
+<thead>
+<tr>
+<th>坑</th>
+<th>现象</th>
+<th>对策</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OAM 双套</td>
+<td>ping 通但业务不通，因为 ping 走的是另一套平面</td>
+<td>明确"SID ping 验 SID 平面，标签 ping 验标签平面"，巡检脚本分开</td>
+</tr>
+<tr>
+<td>ACL 双写</td>
+<td>新规则只写在一侧</td>
+<td>规则模板化，按"域"生成两套</td>
+</tr>
+<tr>
+<td>监控指标不同名</td>
+<td>同一链路两个系统两套计数器</td>
+<td>统一到 YANG 模型（第 24 章）</td>
+</tr>
+<tr>
+<td>容量账重复算</td>
+<td>双栈节点上 SRv6 与 MPLS 各占一份表项</td>
+<td>按"双栈=1.8 倍表项"规划</td>
+</tr>
+<tr>
+<td>BGP-LS 拓扑重影</td>
+<td>同一节点上报两份 SID</td>
+<td>控制器侧按 Router-ID 去重，保留两套属性</td>
+</tr>
+</tbody>
+</table>
+<p>最后一条最容易出事：<strong>控制器把双栈节点当成两个节点算路</strong>，结果算出一条"在 MPLS 域和 SRv6 域之间反复横跳"的路径。</p>
+<h2 id="217">21.7 本章小结</h2>
+<table>
+<thead>
+<tr>
+<th>记住这一条</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>控制面可复用，转发面必须翻译</td>
+<td>业务配置不动是迁移能成的前提</td>
+</tr>
+<tr>
+<td>标签栈深 ≠ 段列表长度</td>
+<td>老 TE 策略不能照搬，段数要重算</td>
+</tr>
+<tr>
+<td>双栈节点必须通告两套 SID，但控制器要会去重</td>
+<td>否则算路会出现"幽灵节点"</td>
+</tr>
+<tr>
+<td>边界是唯一转换点</td>
+<td>转换点越少，故障面越小</td>
+</tr>
+<tr>
+<td>回退方案与割接方案同时评审</td>
+<td>只写在文档里的回退等于没有</td>
+</tr>
+<tr>
+<td>MPLS 转发面至少保留 6 个月</td>
+<td>唯一的保险</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">实战案例</h2>
+<h3 id="a">案例 A：割接后总部到分支时通时不通</h3>
+<p><strong>现象</strong>：总部（MPLS 域）访问分支（SRv6 域），业务 30% 丢包，且丢包与时段无关。</p>
+<p><strong>排障分支</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>位置</th>
+<th>期望值</th>
+<th>实际值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>边界节点是否双栈通告</td>
+<td><code>show bgp link-state</code></td>
+<td>同节点两组属性</td>
+<td>两组都有</td>
+</tr>
+<tr>
+<td>控制器的拓扑节点数</td>
+<td>控制器</td>
+<td>与真实节点数一致</td>
+<td><strong>多出 1 个</strong></td>
+</tr>
+<tr>
+<td>算出的路径</td>
+<td>PCEP 日志</td>
+<td>单域内</td>
+<td>跨域往返一次</td>
+</tr>
+<tr>
+<td>边界 CPU</td>
+<td>SNMP</td>
+<td>&lt; 40%</td>
+<td>65%（映射表查两次）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：控制器未做 Router-ID 去重，把 BR-2 当成两个节点，算出"BR-2(MPLS) → BR-2(SRv6) → 回 BR-2(MPLS)"的路径，报文在边界节点被反复映射，部分包因 TTL 耗尽被丢。</p>
+<p><strong>修复</strong>：控制器加去重逻辑；边界节点同时配置 <code>router-id</code> 显式一致。<strong>教训：双栈期控制器版本要与设备能力同步升级。</strong></p>
+<h3 id="b">案例 B：迁移后语音业务单通</h3>
+<p><strong>现象</strong>：专线业务迁移到 SRv6 后，语音能拨通、单向无声。</p>
+<p><strong>期望值判定表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>MPLS 时代</th>
+<th>SRv6 后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>双向路径一致性</td>
+<td>同一标签栈来回</td>
+<td>去程 SRv6、回程 MPLS（<strong>不对称</strong>）</td>
+</tr>
+<tr>
+<td>MTU</td>
+<td>1500</td>
+<td>去程多 128 B SRH，超过某段 1500</td>
+</tr>
+<tr>
+<td>分片</td>
+<td>无</td>
+<td>去程大包被丢（不分片）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：去程走 SRv6（带 SRH），回程走 MPLS（无 SRH），单向 MTU 不足导致大包丢弃，语音的信令包（小）通过、媒体包（大）丢失。</p>
+<p><strong>修复</strong>：边界统一 MTU 预算（按 SRv6 侧算），或对语音开启压缩（第 19 章）。<strong>教训：单通问题先看"来回路径是否对称"，再看 MTU。</strong></p>
+<h3 id="c">案例 C：回退演练时回不去</h3>
+<p><strong>现象</strong>：割接演练中按文档执行回退，MPLS 业务恢复用了 12 分钟，超出 5 分钟目标。</p>
+<p><strong>判据</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>步</th>
+<th>文档预期</th>
+<th>实际</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>撤销 SRv6 locator 通告</td>
+<td>5 秒</td>
+<td>5 秒</td>
+</tr>
+<tr>
+<td>业务 VRF 恢复 MPLS 封装</td>
+<td>30 秒</td>
+<td>11 分钟</td>
+</tr>
+<tr>
+<td>结论</td>
+<td>—</td>
+<td>阻塞点在<strong>封装策略依赖 BGP 重新收敛</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：封装切换依赖 BGP VPN 路由的重刷新，未做"双下一跳预安装"（PIC）。<strong>修复</strong>：迁移前先开 BGP PIC，让两套封装同时预装在 FIB 里，回退时只切指针。</p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li>RFC 8402：Segment Routing 架构（控制面与数据面的分离）</li>
+<li>RFC 8660 / RFC 8662：SR-MPLS 在 IS-IS / OSPF 的扩展</li>
+<li>RFC 8986：SRv6 Network Programming（行为族，与 MPLS 的 Adj-SID 对照）</li>
+<li>draft-ietf-spring-srv6-mpls-interworking：SRv6 与 SR-MPLS 互通的 SID 映射（以 IETF 最新版本为准）</li>
+<li>RFC 4364：BGP/MPLS IP VPN（RD/RT 与封装属性）</li>
+<li>交叉章节：第 2 章（SID 与标签的语义对应）、第 6 章（End.DT4 与 VRF）、第 18 章（BSID 与跨域拼接）、第 19 章（压缩对 MTU 预算的影响）</li>
+</ul>
+    </article>
+    <nav class="pager"><a class="prev" href="20-srv6-mobile.html">← 补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</a><a class="next" href="22-slicing-determinism.html">补章 · 网络切片与确定性承载 →</a></nav>
+    <footer class="foot">
+      <div class="feedback">
+  <div class="fb-head"><span class="fb-title">留言与勘误</span><span class="fb-sub">留言与勘误功能由 GitHub Discussions 提供</span></div>
+  <p>发现错别字、术语译法或技术表述有问题，或者想补充案例与配置，都可以在这里开一条讨论；需要 GitHub 账号。</p>
+  <div class="fb-actions">
+    <a class="fb-btn primary" href="https://github.com/huyushao521/srv6-notes/discussions/new?category=general&title=%5B%E5%8B%98%E8%AF%AF/%E7%95%99%E8%A8%80%5D%2021%20%E8%A1%A5%E7%AB%A0%20%C2%B7%20SR-MPLS%20%E5%88%B0%20SRv6%20%E7%9A%84%E5%85%B1%E5%AD%98%E4%B8%8E%E8%BF%81%E7%A7%BB&body=%2A%2A%E7%AB%A0%E8%8A%82%2A%2A%EF%BC%9Ahttps%3A//huyushao521.github.io/srv6-notes/21-mpls-to-srv6.html%0A%0A%2A%2A%E4%BD%8D%E7%BD%AE%2A%2A%EF%BC%9A%EF%BC%88%E5%B0%8F%E8%8A%82%E6%A0%87%E9%A2%98%20/%20%E6%AE%B5%E8%90%BD%E9%A6%96%E5%8F%A5%20/%20%E5%8E%9F%E6%96%87%E5%BC%95%E7%94%A8%EF%BC%89%0A%0A%2A%2A%E9%97%AE%E9%A2%98%E7%B1%BB%E5%9E%8B%2A%2A%EF%BC%9A%E9%94%99%E5%88%AB%E5%AD%97%20%C2%B7%20%E6%9C%AF%E8%AF%AD%E8%AF%91%E6%B3%95%20%C2%B7%20%E6%8A%80%E6%9C%AF%E8%A1%A8%E8%BF%B0%20%C2%B7%20%E8%A1%A5%E5%85%85%E5%BB%BA%E8%AE%AE%0A%0A%2A%2A%E8%AF%B4%E6%98%8E%2A%2A%EF%BC%9A%0A%0A%2A%2A%E5%8F%82%E8%80%83%E4%BE%9D%E6%8D%AE%2A%2A%EF%BC%9A%EF%BC%88RFC%20%E7%BC%96%E5%8F%B7%E3%80%81%E5%8E%9F%E4%B9%A6%E7%AB%A0%E8%8A%82%E3%80%81%E8%AE%BE%E5%A4%87%E8%BE%93%E5%87%BA%EF%BC%89%0A" target="_blank" rel="noopener">报告勘误 / 留言</a>
+    <a class="fb-btn" href="https://github.com/huyushao521/srv6-notes/discussions" target="_blank" rel="noopener">浏览全部讨论</a>
+  </div>
+</div>
+
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#210">21.0 本章拓扑</a></li>
+<li><a href="#211-sr-mpls">21.1 为什么不能让 SR-MPLS "就地升级"</a></li>
+<li><a href="#212">21.2 三种共存形态</a><ul>
+<li><a href="#2121">21.2.1 概念映射表</a></li>
+<li><a href="#2122-sid">21.2.2 双栈节点的两套 SID 空间</a></li>
+</ul>
+</li>
+<li><a href="#213-vpn">21.3 一个跨域 VPN 怎么拼起来</a><ul>
+<li><a href="#2131-bgp-vpn">21.3.1 拼法一：BGP VPN 路由跨域传递（推荐）</a></li>
+<li><a href="#2132-sid">21.3.2 拼法二：SID 映射表（草案方向）</a></li>
+<li><a href="#2133-6pe6vpe">21.3.3 拼法三：6PE/6VPE 过渡（最保守）</a></li>
+</ul>
+</li>
+<li><a href="#214">21.4 替换顺序：先核心还是先边缘</a><ul>
+<li><a href="#2141">21.4.1 打法一：核心先行</a></li>
+<li><a href="#2142">21.4.2 打法二：边缘先行</a></li>
+</ul>
+</li>
+<li><a href="#215">21.5 回退设计：割接窗口里最重要的一页</a></li>
+<li><a href="#216">21.6 双轨期运维的五个坑</a></li>
+<li><a href="#217">21.7 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a">案例 A：割接后总部到分支时通时不通</a></li>
+<li><a href="#b">案例 B：迁移后语音业务单通</a></li>
+<li><a href="#c">案例 C：回退演练时回不去</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

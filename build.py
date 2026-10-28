@@ -38,6 +38,11 @@ PAGES = [
     ("18-srv6-te", "18", "补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP", "extra"),
     ("19-srv6-compression", "19", "补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID", "extra"),
     ("20-srv6-mobile", "20", "补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U", "extra"),
+    ("21-mpls-to-srv6", "21", "补章 · SR-MPLS 到 SRv6 的共存与迁移", "extra"),
+    ("22-slicing-determinism", "22", "补章 · 网络切片与确定性承载", "extra"),
+    ("23-srv6-security", "23", "补章 · 攻击面与控制面加固", "extra"),
+    ("24-observability", "24", "补章 · 可观测性：IOAM、Telemetry 与策略状态", "extra"),
+    ("25-quick-reference", "25", "补章 · 速查手册：SID 行为、RFC 与排障命令", "extra"),
 ]
 
 GROUPS = [

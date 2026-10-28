@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>补章 · 攻击面与控制面加固 · SRv6 精读</title>
+<meta name="description" content="补章 · 攻击面与控制面加固 · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">补章</div><ul>
+<li><a href="18-srv6-te.html"><b>18</b> 补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP</a></li>
+<li><a href="19-srv6-compression.html"><b>19</b> 补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID</a></li>
+<li><a href="20-srv6-mobile.html"><b>20</b> 补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</a></li>
+<li><a href="21-mpls-to-srv6.html"><b>21</b> 补章 · SR-MPLS 到 SRv6 的共存与迁移</a></li>
+<li><a href="22-slicing-determinism.html"><b>22</b> 补章 · 网络切片与确定性承载</a></li>
+<li><a href="23-srv6-security.html" class="active"><b>23</b> 补章 · 攻击面与控制面加固</a></li>
+<li><a href="24-observability.html"><b>24</b> 补章 · 可观测性：IOAM、Telemetry 与策略状态</a></li>
+<li><a href="25-quick-reference.html"><b>25</b> 补章 · 速查手册：SID 行为、RFC 与排障命令</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="23">23 · 攻击面与控制面加固</h1>
+<blockquote>
+<p><strong>本章定位</strong>：补章。第 10 章讲部署时给过一节"SR Domain 加固"，但只说了"边界要过滤"。这一章把它展开成可执行的清单：<strong>SRv6 到底多了哪些攻击面、每一面怎么封、封不住的地方怎么发现</strong>。</p>
+<p>一句话概括：<strong>SRv6 没有发明新的攻击类型，但它让"路径"变成了可写的字段</strong>——攻击者只要能让自己的包带上合法 SID，就能借你的网络走你想要的路。</p>
+</blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SRv6 比 MPLS 多了哪几个攻击面</td>
+<td>23.1</td>
+</tr>
+<tr>
+<td>边界到底该过滤什么，按 SID 还是按 Block</td>
+<td>23.2</td>
+</tr>
+<tr>
+<td>uSID 压缩为什么让检测变难</td>
+<td>23.1.3</td>
+</tr>
+<tr>
+<td>PCEP / BGP-LS 被攻破会发生什么</td>
+<td>23.3</td>
+</tr>
+<tr>
+<td>出事后从哪几个计数器看出来</td>
+<td>23.5</td>
+</tr>
+</tbody>
+</table>
+<h2 id="230">23.0 攻击面全景</h2>
+<pre><code class="language-text">图 23-1：SRv6 网的四个入口
+
+                    ┌─────────── 控制面 ───────────┐
+                    │  BGP-LS（拓扑）  PCEP（路径） │
+                    │  ← 被攻破：全网路径可被改写   │
+                    └──────────────┬───────────────┘
+                                   │
+   外部域 ──[1]──&gt; SR Domain 边界 ──┼── 内部 P 节点
+   (不可信)        过滤点           │
+                    └──────────────┴───────────────┘
+                    ┌─────────── 数据面 ───────────┐
+                    │ [2] 伪造 SRH  [3] SID 扫描    │
+                    │ [4] BSID 滥用 [5] 内层欺骗    │
+                    └──────────────────────────────┘
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>攻击面</th>
+<th>后果</th>
+<th>主要防线</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>外部包带内部 SID 进入</td>
+<td>借道转发、绕过策略</td>
+<td>边界按 Block 过滤</td>
+</tr>
+<tr>
+<td>2</td>
+<td>伪造 SRH / 段列表</td>
+<td>指定任意路径、绕过 ACL</td>
+<td>入口校验 + 不解封装不放行</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SID 扫描</td>
+<td>摸清拓扑、找可用行为</td>
+<td>不回 ICMP、限速、Anycast</td>
+</tr>
+<tr>
+<td>4</td>
+<td>BSID 滥用</td>
+<td>白嫖 TE 路径</td>
+<td>BSID 仅域内通告</td>
+</tr>
+<tr>
+<td>5</td>
+<td>内层报文欺骗</td>
+<td>打穿 VPN 边界</td>
+<td>uRPF + VRF 隔离</td>
+</tr>
+</tbody>
+</table>
+<h2 id="231">23.1 数据面的五个面</h2>
+<h3 id="2311-sid">23.1.1 面一：带内部 SID 的外部包</h3>
+<div class="en">
+<p>Packets that are destined to a SID of the SR domain but originate from outside the domain must be filtered at the domain boundary.</p>
+</div>
+<p>目的地址是域内 SID、但来源在域外的报文，<strong>必须在域边界被丢弃</strong>。</p>
+<p>这就是 RFC 8754 反复强调的"SR Domain 边界"概念。做法只有一条，且必须做：</p>
+<pre><code class="language-text">! 边界入口方向（示意）
+ipv6 access-list SRv6-INBOUND
+ 10 deny ipv6 any fc00:0::/32 any          ! 禁止外部包目的地址落在 Block 内
+ 20 permit ipv6 any any
+!
+interface HundredGigE0/0/0/0
+ ipv6 access-group SRv6-INBOUND ingress
+</code></pre>
+<p>三个容易漏的方向：</p>
+<table>
+<thead>
+<tr>
+<th>漏法</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>只做了 PE 侧入口，没做对等互联（IX/上游）</td>
+<td>上游注入的 SID 目的包直穿核心</td>
+</tr>
+<tr>
+<td>只做 ingress，没做 egress</td>
+<td>内部被攻陷的机器可向外发 SID 目的包做反射</td>
+</tr>
+<tr>
+<td>只封 Block，没封 BSID 池</td>
+<td>BSID 段被外部直接使用（23.1.4）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2312-srh">23.1.2 面二：伪造 SRH</h3>
+<p>SRH 本身没有认证字段。攻击者若能构造带 SRH 的包并送入域内，就能指定路径。防线不是"检测 SRH"，而是<strong>不让带 SRH 的包从边界进来</strong>：</p>
+<pre><code class="language-text">! 更严格的做法：边界不允许任何携带 SRH 的入向报文
+ipv6 access-list SRv6-NO-SRH
+ 10 deny ipv6 any any srh            ! 平台支持按扩展头匹配时使用
+ 20 permit ipv6 any any
+</code></pre>
+<p>平台不支持匹配扩展头时，退而求其次：<strong>边界按"目的地址必须是域外前缀"白名单</strong>，而不是黑名单。</p>
+<h3 id="2313-usid">23.1.3 面三：uSID 让检测变难</h3>
+<p>这是第 19 章的副作用，在安全上很致命：</p>
+<table>
+<thead>
+<tr>
+<th>特征</th>
+<th>未压缩（SRH）</th>
+<th>压缩（uSID）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>是否带 SRH</td>
+<td>带</td>
+<td>常常不带</td>
+</tr>
+<tr>
+<td>检测手段</td>
+<td>看 SRH 存在与否</td>
+<td><strong>无法从头部判断</strong></td>
+</tr>
+<tr>
+<td>路径信息</td>
+<td>明文可见</td>
+<td>编码在 DA 的 16 bit 段里</td>
+</tr>
+<tr>
+<td>防火墙可读性</td>
+<td>可读段列表</td>
+<td>只能读到 Block</td>
+</tr>
+</tbody>
+</table>
+<p>后果：如果安全设备依赖"有 SRH 就拦"，压缩后这个判据直接失效。<strong>务实的替代是把判据换成"DA 属于 Block 且来源不在域内"——与 23.1.1 合并成一条规则。</strong></p>
+<h3 id="2314-bsid">23.1.4 面四：BSID 滥用</h3>
+<p>BSID 是"隧道的名字"，谁能让包的目的地址等于 BSID，谁就能白嫖这条 TE 路径（含带宽预留）。</p>
+<table>
+<thead>
+<tr>
+<th>防线</th>
+<th>做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不向域外通告 BSID</td>
+<td>BGP-LS 的 BSID 属性只域内传递</td>
+</tr>
+<tr>
+<td>边界封 BSID 池</td>
+<td>与 Block 一起加进 ingress ACL</td>
+</tr>
+<tr>
+<td>BSID 池与 locator 分开规划</td>
+<td>便于单独写规则（10 章的地址规划）</td>
+</tr>
+<tr>
+<td>按 BSID 做速率限制</td>
+<td>头端对 BSID 目的流量限速</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2315-vpn">23.1.5 面五：内层欺骗打穿 VPN</h3>
+<p>SRv6 的 VPN 隔离靠"内层地址 + VRF"。若攻击者能构造"外层合法 SID + 内层伪造源地址"的包，就可能命中别人的 VRF（取决于实现是否有源校验）。</p>
+<p>防线三条，缺一不可：</p>
+<ol>
+<li><strong>VRF 内 uRPF</strong>（严格模式或宽松模式，按业务选）；</li>
+<li><strong>End.DT 行为前做内层源地址合法性检查</strong>（部分平台默认关闭，需显式开）；</li>
+<li><strong>对 CE 侧做前缀白名单</strong>（只允许该 VRF 声明的内层前缀）。</li>
+</ol>
+<h2 id="232">23.2 边界过滤清单（可直接抄）</h2>
+<table>
+<thead>
+<tr>
+<th>方向</th>
+<th>过滤内容</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>入向（对等互联）</td>
+<td>目的地址 ∈ 本域 Block</td>
+<td>deny</td>
+</tr>
+<tr>
+<td>入向（对等互联）</td>
+<td>目的地址 ∈ BSID 池</td>
+<td>deny</td>
+</tr>
+<tr>
+<td>入向（对等互联）</td>
+<td>携带 SRH</td>
+<td>deny（平台支持时）</td>
+</tr>
+<tr>
+<td>入向（CE 接入）</td>
+<td>源地址不在该 CE 声明前缀内</td>
+<td>deny</td>
+</tr>
+<tr>
+<td>出向（对 CE）</td>
+<td>目的地址 ∈ Block 或 BSID 池</td>
+<td>deny</td>
+</tr>
+<tr>
+<td>域内（P 节点之间）</td>
+<td>不做 SID 过滤（性能优先），靠边界</td>
+<td>permit</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>一句话：<strong>过滤只做在边界，核心不做</strong>。核心加 ACL 会直接把 SRv6 的"无状态转发"优势砍掉一半。</p>
+</blockquote>
+<h2 id="233">23.3 控制面：比数据面更值得担心</h2>
+<div class="en">
+<p>The PCE and the PCC must authenticate each other before any stateful PCEP message is exchanged, since a forged update can redirect traffic to any path chosen by the attacker.</p>
+</div>
+<p>PCE 与 PCC 在交换任何有状态 PCEP 消息之前<strong>必须相互认证</strong>，因为一条伪造的更新就能把流量重定向到攻击者选定的任意路径。</p>
+<p>数据面被攻破，影响一条路径；<strong>控制面被攻破，影响全网路径</strong>。</p>
+<table>
+<thead>
+<tr>
+<th>面</th>
+<th>攻击方式</th>
+<th>后果</th>
+<th>加固</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BGP-LS</td>
+<td>伪造 LSP / 注入假节点</td>
+<td>控制器算出通往黑洞的路径</td>
+<td>TCP-AO / MD5、邻居白名单、只收可信发言人</td>
+</tr>
+<tr>
+<td>PCEP</td>
+<td>未授权 PCUpd 下发策略</td>
+<td>头端被指到任意路径</td>
+<td>TCP-MD5 / TLS、会话白名单、delegation 权限</td>
+</tr>
+<tr>
+<td>控制器</td>
+<td>凭据泄露</td>
+<td>全网策略被改写</td>
+<td>RBAC、双人复核、变更审计</td>
+</tr>
+<tr>
+<td>gNMI/Telemetry</td>
+<td>未授权读取拓扑</td>
+<td>信息泄露</td>
+<td>TLS + 证书、只读账号</td>
+</tr>
+</tbody>
+</table>
+<p>PCEP 的风险最容易被低估：一个有 PCEP 会话的节点可以<strong>直接给头端下发任意 SID 列表</strong>，等于拥有该头端的转发控制权。</p>
+<pre><code class="language-text">! PCEP 加固示意
+pce
+ address ipv6 fc00:0:99::1
+ !
+!
+segment-routing
+ traffic-eng
+  pcep
+   ! 启用 TCP-MD5（关键字随版本变化）
+   !
+  !
+ !
+!
+</code></pre>
+<p>三条硬要求：</p>
+<ol>
+<li><strong>PCEP 会话只允许来自两个控制器 IP</strong>（主备），其他一律拒绝；</li>
+<li><strong>控制器与设备之间的证书/密钥走独立管理网</strong>，不走业务网；</li>
+<li><strong>策略变更留审计</strong>：谁在什么时候把哪条策略改成了什么。</li>
+</ol>
+<h2 id="234">23.4 出事后从哪看：五个计数器</h2>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>看什么</th>
+<th>判读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>边界 ACL 大量命中</td>
+<td>ingress ACL 计数</td>
+<td>有人在扫 SID 或误配</td>
+</tr>
+<tr>
+<td>域内出现奇怪路径</td>
+<td>节点 DA 缓存 / 转发计数</td>
+<td>有伪造 SRH 的包</td>
+</tr>
+<tr>
+<td>BSID 流量异常</td>
+<td>BSID 计数（一般按 Policy 统计）</td>
+<td>有人白嫖 TE 路径</td>
+</tr>
+<tr>
+<td>控制器算路异常</td>
+<td>BGP-LS 拓扑节点数</td>
+<td>有假节点注入</td>
+</tr>
+<tr>
+<td>策略被批量改写</td>
+<td>变更日志 / PCEP 会话数</td>
+<td>控制面被攻破</td>
+</tr>
+</tbody>
+</table>
+<h2 id="235">23.5 本章小结</h2>
+<table>
+<thead>
+<tr>
+<th>记住这一条</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>边界按 Block + BSID 池过滤，核心不过滤</td>
+<td>兼顾安全与性能</td>
+</tr>
+<tr>
+<td>压缩后"看 SRH"的判据失效</td>
+<td>换成"DA ∈ Block 且来源域外"</td>
+</tr>
+<tr>
+<td>控制面风险 &gt; 数据面风险</td>
+<td>一个 PCEP 会话等于转发控制权</td>
+</tr>
+<tr>
+<td>BSID 只在域内通告</td>
+<td>否则带宽白送</td>
+</tr>
+<tr>
+<td>内层欺骗靠 uRPF + 前缀白名单</td>
+<td>三层缺一不可</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">实战案例</h2>
+<h3 id="a-sid">案例 A：上游注入 SID 目的流量，核心成为放大器</h3>
+<p><strong>现象</strong>：核心链路某方向流量突增 40%，且目的地址集中在 locator 段；业务本身无异常。</p>
+<p><strong>排障分支</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>期望</th>
+<th>实际</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>边界 ingress ACL 是否存在</td>
+<td>有</td>
+<td><strong>无</strong>（只有 egress）</td>
+</tr>
+<tr>
+<td>异常流量的目的地址</td>
+<td>域外</td>
+<td>fc00:0:3::/48 内的 End.X</td>
+</tr>
+<tr>
+<td>源头</td>
+<td>域内</td>
+<td>上游某客户</td>
+</tr>
+<tr>
+<td>出口</td>
+<td>域内</td>
+<td>疑似反射到另一个域</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：边界只做了出向过滤，入向未封 Block，外部客户可用域内 End.X SID 让核心帮忙转发。</p>
+<p><strong>修复</strong>：补入向 ACL（23.2 清单第一行），并对上游做源地址校验。<strong>教训：ACL 只写一半等于没写。</strong></p>
+<h3 id="bpcep">案例 B：PCEP 会话被冒用，策略集体偏离</h3>
+<p><strong>现象</strong>：多条 SRv6 Policy 的 SID 列表同时变化，业务时延整体劣化，无配置变更记录。</p>
+<p><strong>期望值判定表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>期望</th>
+<th>实际</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PCEP 会话数</td>
+<td>2（主备）</td>
+<td>3</td>
+</tr>
+<tr>
+<td>新会话来源</td>
+<td>控制器管理地址</td>
+<td>一个业务网段地址</td>
+</tr>
+<tr>
+<td>会话认证</td>
+<td>MD5/TLS 开启</td>
+<td>未开启</td>
+</tr>
+<tr>
+<td>策略变更日志</td>
+<td>有记录</td>
+<td>无（来自非控制器源）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：PCEP 未开认证且允许任意源建会话，攻击者用一条 PCUpd 把多个头端的策略改到劣质路径。</p>
+<p><strong>修复</strong>：PCEP 会话白名单 + MD5/TLS + 变更审计。<strong>教训：PCEP 的开放程度按"等同 SSH"对待，不要按"内部协议"对待。</strong></p>
+<h3 id="c-ddos">案例 C：压缩上线后 DDoS 清洗失效</h3>
+<p><strong>现象</strong>：压缩域上线后，清洗中心的按 SID 分流规则失效，攻击流量直接打穿到目标。</p>
+<p><strong>判据</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>上线前</th>
+<th>上线后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>报文含 SRH</td>
+<td>是</td>
+<td>否（全压缩）</td>
+</tr>
+<tr>
+<td>清洗规则匹配字段</td>
+<td>SRH 段列表</td>
+<td>匹配不到</td>
+</tr>
+<tr>
+<td>DA 可见信息</td>
+<td>完整 SID 列表</td>
+<td>仅 Block + 微指令</td>
+</tr>
+</tbody>
+</table>
+<p><strong>修复</strong>：清洗策略改按 Block + 微指令区间 + Flow Label 组合分流；必要时在清洗中心前保留一段非压缩域作为"可观测边界"。<strong>教训：安全架构要跟着封装形态一起改，不能只改转发面。</strong></p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li>RFC 8754：SRH 与 SR Domain 概念（安全考虑章节）</li>
+<li>RFC 8986：SRv6 行为族（End.DT 的源校验要求）</li>
+<li>RFC 5440 / RFC 8231：PCEP 与有状态 PCEP（会话安全）</li>
+<li>RFC 7752：BGP-LS（拓扑注入风险）</li>
+<li>RFC 8704：SRv6 网络编程的安全考虑（部署建议）</li>
+<li>交叉章节：第 10 章（地址规划与 SR Domain 加固）、第 12 章（SR-aware 防火墙）、第 18 章（BSID 与 PCEP）、第 19 章（压缩造成的检测盲区）</li>
+</ul>
+    </article>
+    <nav class="pager"><a class="prev" href="22-slicing-determinism.html">← 补章 · 网络切片与确定性承载</a><a class="next" href="24-observability.html">补章 · 可观测性：IOAM、Telemetry 与策略状态 →</a></nav>
+    <footer class="foot">
+      <div class="feedback">
+  <div class="fb-head"><span class="fb-title">留言与勘误</span><span class="fb-sub">留言与勘误功能由 GitHub Discussions 提供</span></div>
+  <p>发现错别字、术语译法或技术表述有问题，或者想补充案例与配置，都可以在这里开一条讨论；需要 GitHub 账号。</p>
+  <div class="fb-actions">
+    <a class="fb-btn primary" href="https://github.com/huyushao521/srv6-notes/discussions/new?category=general&title=%5B%E5%8B%98%E8%AF%AF/%E7%95%99%E8%A8%80%5D%2023%20%E8%A1%A5%E7%AB%A0%20%C2%B7%20%E6%94%BB%E5%87%BB%E9%9D%A2%E4%B8%8E%E6%8E%A7%E5%88%B6%E9%9D%A2%E5%8A%A0%E5%9B%BA&body=%2A%2A%E7%AB%A0%E8%8A%82%2A%2A%EF%BC%9Ahttps%3A//huyushao521.github.io/srv6-notes/23-srv6-security.html%0A%0A%2A%2A%E4%BD%8D%E7%BD%AE%2A%2A%EF%BC%9A%EF%BC%88%E5%B0%8F%E8%8A%82%E6%A0%87%E9%A2%98%20/%20%E6%AE%B5%E8%90%BD%E9%A6%96%E5%8F%A5%20/%20%E5%8E%9F%E6%96%87%E5%BC%95%E7%94%A8%EF%BC%89%0A%0A%2A%2A%E9%97%AE%E9%A2%98%E7%B1%BB%E5%9E%8B%2A%2A%EF%BC%9A%E9%94%99%E5%88%AB%E5%AD%97%20%C2%B7%20%E6%9C%AF%E8%AF%AD%E8%AF%91%E6%B3%95%20%C2%B7%20%E6%8A%80%E6%9C%AF%E8%A1%A8%E8%BF%B0%20%C2%B7%20%E8%A1%A5%E5%85%85%E5%BB%BA%E8%AE%AE%0A%0A%2A%2A%E8%AF%B4%E6%98%8E%2A%2A%EF%BC%9A%0A%0A%2A%2A%E5%8F%82%E8%80%83%E4%BE%9D%E6%8D%AE%2A%2A%EF%BC%9A%EF%BC%88RFC%20%E7%BC%96%E5%8F%B7%E3%80%81%E5%8E%9F%E4%B9%A6%E7%AB%A0%E8%8A%82%E3%80%81%E8%AE%BE%E5%A4%87%E8%BE%93%E5%87%BA%EF%BC%89%0A" target="_blank" rel="noopener">报告勘误 / 留言</a>
+    <a class="fb-btn" href="https://github.com/huyushao521/srv6-notes/discussions" target="_blank" rel="noopener">浏览全部讨论</a>
+  </div>
+</div>
+
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#230">23.0 攻击面全景</a></li>
+<li><a href="#231">23.1 数据面的五个面</a><ul>
+<li><a href="#2311-sid">23.1.1 面一：带内部 SID 的外部包</a></li>
+<li><a href="#2312-srh">23.1.2 面二：伪造 SRH</a></li>
+<li><a href="#2313-usid">23.1.3 面三：uSID 让检测变难</a></li>
+<li><a href="#2314-bsid">23.1.4 面四：BSID 滥用</a></li>
+<li><a href="#2315-vpn">23.1.5 面五：内层欺骗打穿 VPN</a></li>
+</ul>
+</li>
+<li><a href="#232">23.2 边界过滤清单（可直接抄）</a></li>
+<li><a href="#233">23.3 控制面：比数据面更值得担心</a></li>
+<li><a href="#234">23.4 出事后从哪看：五个计数器</a></li>
+<li><a href="#235">23.5 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#a-sid">案例 A：上游注入 SID 目的流量，核心成为放大器</a></li>
+<li><a href="#bpcep">案例 B：PCEP 会话被冒用，策略集体偏离</a></li>
+<li><a href="#c-ddos">案例 C：压缩上线后 DDoS 清洗失效</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
