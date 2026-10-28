@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U · SRv6 精读</title>
+<meta name="description" content="补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U · SRv6 分章精读（基于 Segment Routing Part III）">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="nav-toggle" aria-label="目录">☰</button>
+  <a class="brand" href="index.html">SRv6 精读<span>Segment Routing over IPv6 · Part III</span></a>
+  <input id="q" class="search" type="search" placeholder="搜索章节…" autocomplete="off">
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-group"><div class="nav-title">入门</div><ul>
+<li><a href="index.html"><b>导读</b> 如何读这本书</a></li>
+<li><a href="01-introduction.html"><b>01</b> SRv6 导论：为什么是 SRv6</a></li>
+<li><a href="02-fundamentals.html"><b>02</b> SRv6 基础：SID、uSID 与 SRH</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">Underlay 路由</div><ul>
+<li><a href="03-underlay.html"><b>03</b> Underlay 指令：Locator、End/End.X 与 TI-LFA</a></li>
+<li><a href="04-flex-algo.html"><b>04</b> 灵活算法 Flex-Algo</a></li>
+<li><a href="05-isis-locator.html"><b>05</b> IS-IS 中 Locator 的泄露、重分发与汇总</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">业务与运维</div><ul>
+<li><a href="06-l3vpn.html"><b>06</b> SRv6 L3VPN 业务</a></li>
+<li><a href="07-l2vpn.html"><b>07</b> SRv6 L2VPN（EVPN）业务</a></li>
+<li><a href="08-upa.html"><b>08</b> 不可达前缀通告 UPA</a></li>
+<li><a href="09-oam.html"><b>09</b> SRv6 Ping 与 Traceroute</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">规划与落地</div><ul>
+<li><a href="10-deployment.html"><b>10</b> SRv6 网络部署：地址规划、MTU 与安全</a></li>
+<li><a href="11-service-programming.html"><b>11</b> 服务编程 Service Programming</a></li>
+<li><a href="12-sr-aware.html"><b>12</b> SR-aware 服务与内层报文暴露</a></li>
+<li><a href="13-sr-proxy.html"><b>13</b> 遗留应用的 SR Proxy</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">真实案例</div><ul>
+<li><a href="14-case-bell.html"><b>14</b> 案例：Bell Canada 的 SRv6 地址规划</a></li>
+<li><a href="15-case-alibaba.html"><b>15</b> 案例：阿里巴巴核心网 SRv6 设计</a></li>
+<li><a href="16-case-bell-sp.html"><b>16</b> 案例：Bell Canada 服务编程落地</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">附录</div><ul>
+<li><a href="17-ipv6-essentials.html"><b>17</b> IPv6 必备知识</a></li>
+</ul></div>
+<div class="nav-group"><div class="nav-title">补章</div><ul>
+<li><a href="18-srv6-te.html"><b>18</b> 补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP</a></li>
+<li><a href="19-srv6-compression.html"><b>19</b> 补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID</a></li>
+<li><a href="20-srv6-mobile.html" class="active"><b>20</b> 补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</a></li>
+</ul></div>
+  </aside>
+  <main class="content">
+    <article class="md">
+<h1 id="20-srv6-5g-endmap-gtp-u">20 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</h1>
+<blockquote>
+<p><strong>本章定位</strong>：补章。前 19 章讲的都是"网络自己用 SRv6"；这一章讲<strong>网络替别人搬流量</strong>——把 5G 移动用户面（GTP-U 隧道）整体搬到 SRv6 上。这是 SRv6 全球商用规模最大、也最容易被国内工程师低估的场景。原书主线（《Segment Routing Part III》）只在案例里一笔带过，本章按 RFC 9433（SRv6 for Mobile User Plane）补齐。</p>
+<p>一句话概括：<strong>GTP-U 的问题从来不是"隧道不够快"，而是"隧道太多、而且每一层都要建状态"</strong>；SRv6 在这件事上的价值，是把"每个 UE 一条隧道"换成"每个路径一条 SID 列表"。</p>
+</blockquote>
+<p><strong>本章要拿到的东西</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>对应小节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5G 用户面到底有几层封装，为什么要减</td>
+<td>20.1</td>
+</tr>
+<tr>
+<td>End.MAP 是什么，和 End.DT4 差在哪</td>
+<td>20.3</td>
+</tr>
+<tr>
+<td>下行为什么需要 <code>End.M.GTP6.D</code>，<code>.D.Di</code> 又是什么</td>
+<td>20.4</td>
+</tr>
+<tr>
+<td>上行 <code>End.M.GTP6.E</code> 与 <code>H.M.GTP4.D</code> 分别落在哪</td>
+<td>20.5</td>
+</tr>
+<tr>
+<td>一次完整的 UE 上线到上网，报文怎么走位</td>
+<td>20.6</td>
+</tr>
+<tr>
+<td>移动承载和切片、TE、EPC 演进怎么衔接</td>
+<td>20.7</td>
+</tr>
+</tbody>
+</table>
+<h2 id="200">20.0 本章拓扑</h2>
+<pre><code class="language-text">图 20-1：本章拓扑（5G SA 用户面，SRv6 传输网）
+
+      UE                gNB                  UPF-A                 UPF-B / DN
+       │                 │                      │                      │
+       │── 空口 ─────────│                      │                      │
+       │                 │── N3 (GTP-U) ───────&gt;│                      │
+       │                 │                      │── N9 (GTP-U) ───────&gt;│── N6 ── 互联网
+       │                 │                      │                      │
+       └────── 传输网（SRv6）───────────────────┴──────────────────────┘
+
+  SID 约定（沿用本站）：
+    gNB 侧传输节点   fc00:0:11::/48
+    UPF-A  locator    fc00:0:21::/48   End.MAP    fc00:0:21:e001::
+                                       End.M.GTP6.D fc00:0:21:e101::
+                                       End.M.GTP6.E fc00:0:21:e102::
+    UPF-B  locator    fc00:0:22::/48   End.DT6    fc00:0:22:e002::
+    DN 出口 BSID      fc00:0:21:d000::20
+
+  一个 UE 的标识（示意）：
+    UE IP        10.60.0.7
+    gNB GTP-U TEID 0x0000a1b2
+    UPF GTP-U TEID 0x0000c3d4
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>需要的能力</th>
+<th>不需要的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gNB（N3 侧）</td>
+<td>能发 GTP-U；能压 SRv6 头（或用 SR Proxy 兼容）</td>
+<td>知道 UPF 的 SID</td>
+</tr>
+<tr>
+<td>UPF-A</td>
+<td>End.MAP、GTP6.D、GTP6.E 行为</td>
+<td>逐 UE 的传输隧道</td>
+</tr>
+<tr>
+<td>传输网 P 节点</td>
+<td>纯 SRv6 转发</td>
+<td>任何 GTP 认知</td>
+</tr>
+<tr>
+<td>控制器</td>
+<td>UE 标识 → SID 映射表下发</td>
+<td>转发面配置</td>
+</tr>
+</tbody>
+</table>
+<h2 id="201-srv6">20.1 移动承载为什么盯上了 SRv6</h2>
+<div class="en">
+<p>This document defines a new SRv6 network programming model for the mobile user plane. It enables the mobile user plane to be programmed by SRv6 SIDs, so that the GTP-U tunnels are no longer required on every transport node.</p>
+</div>
+<p>RFC 9433 为移动用户面定义了一套新的 SRv6 网络编程模型，让用户面可以被 SRv6 SID 编程，从而使<strong>传输节点不再需要处理 GTP-U 隧道</strong>。</p>
+<h3 id="2011-gtp-u">20.1.1 GTP-U 的封装税</h3>
+<p>一个 5G 下行包，在传输网上长这样：</p>
+<pre><code class="language-text">图 20-2：经典 GTP-U 的封装层次
+
+  ┌───────────┬───────────┬──────────┬──────────────┬───────────┬──────────┐
+  │ 传输 IP   │  UDP      │  GTP-U   │  内层 IP      │  UDP/TCP  │  载荷    │
+  │ (IPv4/v6) │ 2152      │ TEID     │  (UE 的业务)  │           │          │
+  └───────────┴───────────┴──────────┴──────────────┴───────────┴──────────┘
+       20/40      8          8           20/40           8         ...
+</code></pre>
+<p>开销不是最关键的，关键是<strong>三层状态</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>状态</th>
+<th>谁维护</th>
+<th>问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传输层</td>
+<td>每对 (gNB, UPF) 的 IP 路径</td>
+<td>传输网</td>
+<td>路径不可编程，只能靠 IGP 最短路</td>
+</tr>
+<tr>
+<td>GTP 层</td>
+<td>每 UE 的 TEID</td>
+<td>UPF / gNB</td>
+<td>用户数 × 每用户状态，扩容线性增长</td>
+</tr>
+<tr>
+<td>业务层</td>
+<td>UE 的 IP 会话</td>
+<td>SMF</td>
+<td>与传输解耦不彻底</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2012-srv6">20.1.2 SRv6 换掉了什么</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>GTP-U over IP</th>
+<th>GTP-U over SRv6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传输路径</td>
+<td>IGP 最短路</td>
+<td>可指定（SR Policy，第 18 章）</td>
+</tr>
+<tr>
+<td>传输节点认知</td>
+<td>需识别 UDP 2152</td>
+<td>只看 IPv6 DA</td>
+</tr>
+<tr>
+<td>路径保护</td>
+<td>靠 IGP 收敛（秒级）</td>
+<td>TI-LFA（&lt;50 ms）+ SBFD</td>
+</tr>
+<tr>
+<td>切片</td>
+<td>靠 VLAN / 独立链路</td>
+<td>Flex-Algo + BSID（第 22 章）</td>
+</tr>
+<tr>
+<td>TE</td>
+<td>几乎无法做</td>
+<td>天然支持，可带宽预留</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>一句话：<strong>SRv6 没让 GTP-U 消失，只是让"传输"和"隧道"解耦了</strong>——传输网只搬 IPv6 包，GTP-U 的语义被压进 SID 里。</p>
+</blockquote>
+<h2 id="202">20.2 六个行为，一张表看完</h2>
+<p>RFC 9433 定义的移动用户面行为，全在这张表里：</p>
+<table>
+<thead>
+<tr>
+<th>行为</th>
+<th>全称含义</th>
+<th>用在哪</th>
+<th>关键动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>End.MAP</code></td>
+<td>按映射表做 SID 转换</td>
+<td>UPF 内部，UE 标识 → 远端 SID</td>
+<td>查表换 DA，不碰载荷</td>
+</tr>
+<tr>
+<td><code>End.M.GTP6.D</code></td>
+<td>下行，GTP6 到 SRv6</td>
+<td>UPF-A 收到 N3 的 GTP-U 后转 SRv6</td>
+<td>剥 GTP/UDP，压 SRH</td>
+</tr>
+<tr>
+<td><code>End.M.GTP6.D.Di</code></td>
+<td>下行，中间节点形态</td>
+<td>中间 UPF（不终结 GTP）</td>
+<td>改写 TEID 与 DA，<strong>不重封装</strong></td>
+</tr>
+<tr>
+<td><code>End.M.GTP6.E</code></td>
+<td>上行，SRv6 到 GTP6</td>
+<td>UPF 侧接 SRv6 转回 GTP-U</td>
+<td>压 GTP/UDP，出 N3</td>
+</tr>
+<tr>
+<td><code>H.M.GTP4.D</code></td>
+<td>下行，GTP4 到 SRv6（兼容 EPC）</td>
+<td>4G/5G 互操作</td>
+<td>内层 IPv4 的 GTP-U 转 SRv6</td>
+</tr>
+<tr>
+<td><code>End.M.GTP6.STD</code></td>
+<td>静态形态</td>
+<td>简单场景 / 测试</td>
+<td>固定映射，不查表</td>
+</tr>
+</tbody>
+</table>
+<p>两条判断口诀：</p>
+<ul>
+<li><strong><code>.D</code> 结尾 = 进 SRv6 域</strong>（往下走，Downlink），<code>.E</code> 结尾 = <strong>出 SRv6 域</strong>（往回走，Egress 到无线）。</li>
+<li><strong>带 <code>Di</code> = 中间节点形态</strong>：它不终结 GTP，只改 TEID 与 SID 往下送，省掉"解封装再封装"。</li>
+</ul>
+<h2 id="203-endmap">20.3 End.MAP：一张"名字到位置"的表</h2>
+<div class="en">
+<p>The End.MAP behavior is used to map a SID to another SID according to a locally configured mapping table. The packet is not decapsulated.</p>
+</div>
+<p><code>End.MAP</code> 按本地映射表把一个 SID 换成另一个 SID，<strong>报文不解封装</strong>。</p>
+<h3 id="2031-ue">20.3.1 它解决的是"UE 动、锚点不变"</h3>
+<p>移动网里两个东西经常对不上：</p>
+<ul>
+<li>UE 的<strong>会话锚点</strong>（UPF）要保持不变（不然 IP 变了，业务断了）；</li>
+<li>UE 的<strong>实际位置</strong>一直在动（切换 gNB、切换 UPF）。</li>
+</ul>
+<p>传统做法是把这层关系放在 GTP 的 TEID 里，靠 SMF 逐条改。<code>End.MAP</code> 的做法是把它变成一次<strong>查表换 DA</strong>：</p>
+<pre><code class="language-text">图 20-3：End.MAP 的一次执行
+
+  进包： DA = fc00:0:21:e001::（End.MAP）  内层 = UE 的业务包
+         SRH 里：Segment List[0] = 旧锚点 SID
+
+  查表： fc00:0:21:e001:: + 内层信息 → fc00:0:22:e002::（新锚点）
+
+  出包： DA = fc00:0:22:e002::
+         载荷一个字节没动，没有解封装、没有重新压栈
+
+  控制器改一行映射表 → 下一次转发立即生效
+</code></pre>
+<h3 id="2032-enddt4dt6">20.3.2 和 End.DT4/DT6 的区别</h3>
+<table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>End.DT4 / End.DT6（第 6 章）</th>
+<th>End.MAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用途</td>
+<td>VPN 查表转发到 CE</td>
+<td>移动网锚点重定向</td>
+</tr>
+<tr>
+<td>是否解封装</td>
+<td>是（剥外层，按 VRF 查内层）</td>
+<td><strong>否</strong>（整包往下送）</td>
+</tr>
+<tr>
+<td>依赖表</td>
+<td>VRF 路由表</td>
+<td>移动映射表（控制器下发）</td>
+</tr>
+<tr>
+<td>触发的业务</td>
+<td>L3VPN</td>
+<td>会话迁移、锚点变更、切片切换</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>混淆这两者是移动承载排障的第一号错误现象：<strong>"UPF 收到了包，但内层没进去"</strong>——那是 End.MAP 该做的事被配成了 End.DT6。</p>
+</blockquote>
+<h2 id="204-endmgtp6d-ddi">20.4 下行：End.M.GTP6.D 与 .D.Di</h2>
+<h3 id="2041-endmgtp6d-gtp-u-srv6">20.4.1 End.M.GTP6.D：把 GTP-U 换成 SRv6</h3>
+<div class="en">
+<p>The End.M.GTP6.D behavior is used to decapsulate the GTP-U packet and to encapsulate the payload into an SRv6 packet, using the SID list carried in the GTP-U extension header or derived from the TEID.</p>
+</div>
+<p><code>End.M.GTP6.D</code> 用于<strong>剥掉 GTP-U 封装</strong>，再把载荷装进 SRv6 报文；SID 列表可以来自 GTP-U 扩展头，也可以由 TEID 推导。</p>
+<pre><code class="language-text">图 20-4：下行封装转换（N3 → SRv6）
+
+  进（来自 gNB）：
+    IPv6(传输) / UDP(2152) / GTP-U(TEID=0xa1b2) / IPv6(UE 内层) / 业务
+                │
+                ▼  UPF-A 执行 End.M.GTP6.D
+  出：
+    IPv6(src=UPF-A, dst=fc00:0:22:e002::) / 业务
+        （GTP 与 UDP 全部剥掉，载荷直通；需要多跳时加 SRH）
+</code></pre>
+<p>三个必须记住的点：</p>
+<ol>
+<li><strong>不是"隧道套隧道"，是"剥掉一层"</strong>。所以 SRv6 承载的移动包比 GTP-U over IP 更短，MTU 反而更宽松。</li>
+<li><strong>TEID 变成"引子"</strong>。有些实现直接从 TEID 推导目的 SID（<code>End.M.GTP6.STD</code>），有些从 GTP-U 扩展头里读显式 SID 列表（更灵活，支持按业务选路径）。</li>
+<li><strong>SID 列表决定 QoS</strong>。同一个 UPF 的不同 UE 可以走不同 SID 列表——这就是移动网做切片、做差异化 SLA 的抓手（20.7）。</li>
+</ol>
+<h3 id="2042-endmgtp6ddi">20.4.2 End.M.GTP6.D.Di：中间节点不重封装</h3>
+<div class="en">
+<p>The End.M.GTP6.D.Di behavior is used at an intermediate UPF. It does not decapsulate the GTP-U packet; instead it updates the TEID and the Destination Address, then forwards the packet.</p>
+</div>
+<p><code>End.M.GTP6.D.Di</code> 用在<strong>中间 UPF</strong>：<strong>不剥 GTP-U</strong>，只更新 TEID 与 DA 就往下转。</p>
+<p>这解决了 5G 里的一个现实问题：核心网有 I-UPF（中间）/ A-UPF（锚点）两级，UE 移动时只有 I-UPF 变，A-UPF 不变。如果每一级都"剥了再封"，代价是两次完整解析：</p>
+<table>
+<thead>
+<tr>
+<th>做法</th>
+<th>每包动作</th>
+<th>时延</th>
+<th>实现复杂度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每级都终结 GTP（不用 Di）</td>
+<td>剥 GTP → 压 SRv6 → 到下一级再压回 GTP</td>
+<td>高</td>
+<td>高</td>
+</tr>
+<tr>
+<td>用 <code>.D.Di</code></td>
+<td>改 TEID + 改 DA，载荷不动</td>
+<td>低</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-text">图 20-5：两级 UPF 的下行对比
+
+  不用 Di：
+    gNB ──GTP──&gt; I-UPF ──SRv6──&gt; A-UPF ──GTP──&gt; DN
+                  剥+压          剥+压       （两处封装转换）
+
+  用 .D.Di：
+    gNB ──GTP──&gt; I-UPF ──(TEID/DA 改写)──&gt; A-UPF ──GTP──&gt; DN
+                  End.M.GTP6.D.Di      只在一处转换
+</code></pre>
+<p>排障要点：<code>.D.Di</code> 节点上<strong>看不到 GTP 层被终结</strong>（没有会话表增长），如果按"会话数"监控 I-UPF，会误判为"没有承载流量"。</p>
+<h2 id="205-endmgtp6e-hmgtp4d">20.5 上行：End.M.GTP6.E 与 H.M.GTP4.D</h2>
+<h3 id="2051-endmgtp6esrv6-gtp-u">20.5.1 End.M.GTP6.E：SRv6 转回 GTP-U</h3>
+<div class="en">
+<p>The End.M.GTP6.E behavior is used to encapsulate the SRv6 payload into a GTP-U packet, when the packet is sent toward the radio access network.</p>
+</div>
+<p><code>End.M.GTP6.E</code> 负责反向：把 SRv6 载荷重新装进 GTP-U，发往无线侧。</p>
+<pre><code class="language-text">图 20-6：上行封装转换（SRv6 → N3）
+
+  进（来自 DN 或对端 UPF）：
+    IPv6(dst = fc00:0:21:e102::) / IPv6(UE 内层) / 业务
+                │
+                ▼  UPF 执行 End.M.GTP6.E
+  出：
+    IPv6(传输) / UDP(2152) / GTP-U(TEID=0xa1b2) / IPv6(UE 内层) / 业务
+</code></pre>
+<p>关键：<strong>TEID 从哪来</strong>。三种来源，配置要对上：</p>
+<table>
+<thead>
+<tr>
+<th>来源</th>
+<th>配置方式</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SID 携带</td>
+<td>上行 SID 里编入 TEID（SID 结构中的 Arg 字段）</td>
+<td>主流，推荐</td>
+</tr>
+<tr>
+<td>本地表</td>
+<td>按 UE 地址查表</td>
+<td>兼容老 gNB</td>
+</tr>
+<tr>
+<td>静态映射</td>
+<td><code>End.M.GTP6.STD</code></td>
+<td>测试、固定场景</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2052-hmgtp4d4g">20.5.2 H.M.GTP4.D：4G 兼容的那一个</h3>
+<div class="en">
+<p>The H.M.GTP4.D behavior is used when the GTP-U payload carries an IPv4 packet, so that the packet can be forwarded into an SRv6 domain without changing the inner IPv4 header.</p>
+</div>
+<p><code>H.M.GTP4.D</code> 用于<strong>内层是 IPv4 的 GTP-U</strong> 转入 SRv6 域，且<strong>不改动内层 IPv4 头</strong>。典型场景是 EPC/5GC 互操作，或存量 4G 基站接入。</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>用哪个行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5G gNB（IPv6 内层）下行</td>
+<td><code>End.M.GTP6.D</code></td>
+</tr>
+<tr>
+<td>5G gNB 上行</td>
+<td><code>End.M.GTP6.E</code></td>
+</tr>
+<tr>
+<td>4G eNB / 双连接 下行</td>
+<td><code>H.M.GTP4.D</code></td>
+</tr>
+<tr>
+<td>中间 UPF</td>
+<td><code>End.M.GTP6.D.Di</code></td>
+</tr>
+<tr>
+<td>固定映射（测试）</td>
+<td><code>End.M.GTP6.STD</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>注意命名里的 6 和 4 指内层 IP 版本，不是传输网版本</strong>。传输网永远是 IPv6（SRv6 的前提）。这一点搞错，配置会全盘错位。</p>
+<h2 id="206-ue">20.6 一次完整走位：从 UE 上线到上网</h2>
+<pre><code class="language-text">图 20-7：UL/DL 全景（七步）
+
+  UE            gNB           I-UPF          A-UPF            DN
+   │             │              │              │               │
+   │ 1. PDU 会话建立（SMF 下发规则）             │               │
+   │             │              │              │               │
+   │ 2. UL ─────&gt;│              │              │               │
+   │             │── GTP-U ────&gt;│              │               │
+   │             │  TEID=0xa1b2 │              │               │
+   │             │              │ 3. .D.Di 改 TEID/DA ─────────&gt;│
+   │             │              │              │ 4. End.MAP    │
+   │             │              │              │    → 锚点 SID │
+   │             │              │              │ 5. 出 N6 ────&gt;│
+   │             │              │              │               │
+   │             │              │ 6. DL: 锚点 → End.M.GTP6.E    │
+   │             │&lt;── GTP-U ────│              │&lt;── 业务 ──────│
+   │ 7. 收到业务 │              │              │               │
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>步</th>
+<th>动作</th>
+<th>责任网元</th>
+<th>失败时的现象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>会话建立、下发 SID 与映射</td>
+<td>SMF / 控制器</td>
+<td>UE 有 IP 但无法上网</td>
+</tr>
+<tr>
+<td>2</td>
+<td>gNB 发 GTP-U</td>
+<td>gNB</td>
+<td>上行 0 包，N3 无计数</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>.D.Di</code> 改 TEID/DA</td>
+<td>I-UPF</td>
+<td>上行到 A-UPF 但 TEID 错，A-UPF 丢包</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>End.MAP</code> 锚点重定向</td>
+<td>A-UPF</td>
+<td>包在锚点绕圈或回不来</td>
+</tr>
+<tr>
+<td>5</td>
+<td>出 N6 到 DN</td>
+<td>A-UPF</td>
+<td>DN 侧无流量</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>End.M.GTP6.E</code> 回 GTP</td>
+<td>A-UPF</td>
+<td>下行到 UPF 但 gNB 收不到</td>
+</tr>
+<tr>
+<td>7</td>
+<td>UE 收包</td>
+<td>UE</td>
+<td>业务慢/断，但链路全通（查 QoS/SID 列表）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>一句话：<strong>移动承载排障的优势是"每一步都有确定的责任网元"</strong>——不像纯 IP 转发只能靠抓包对齐。把这张表做成 check list，比看十份设计文档有用。</p>
+</blockquote>
+<h2 id="207-te">20.7 和切片、TE、演进怎么衔接</h2>
+<h3 id="2071-upf-sid">20.7.1 切片：同一个 UPF，不同 SID 列表</h3>
+<p>移动网切片最实用的落地方式不是"独立设备"，而是<strong>同一套物理网 + 不同 SID 列表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>切片</th>
+<th>SID 列表选择</th>
+<th>底层保障</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>eMBB（大带宽）</td>
+<td>走大带宽路径</td>
+<td>Flex-Algo 排除小带宽链路（第 4 章）</td>
+</tr>
+<tr>
+<td>URLLC（低时延）</td>
+<td>走最短时延路径</td>
+<td>Flex-Algo min-delay + 硬隔离队列</td>
+</tr>
+<tr>
+<td>mMTC（海量连接）</td>
+<td>走普通路径、低优先级</td>
+<td>队列调度 + 限速</td>
+</tr>
+</tbody>
+</table>
+<p>配置上就是"每个切片一个 SRv6 Policy，用 color 区分"（18.6.2），头端仍是同一个 UPF：</p>
+<pre><code class="language-text">segment-routing
+ traffic-eng
+  policies
+   policy UPF-A-URLLC
+    color 300 end-point ipv6 fc00:0:22::1
+    candidate-paths
+     preference 100
+      constraints
+       segments
+        sid-algorithm 130          ! min-delay 的 Flex-Algo
+   policy UPF-A-EMBB
+    color 330 end-point ipv6 fc00:0:22::1
+    candidate-paths
+     preference 100
+      constraints
+       segments
+        sid-algorithm 128          ! min-cost
+</code></pre>
+<h3 id="2072-te">20.7.2 和 TE 的关系</h3>
+<p>移动承载对 TE 的需求和政企专线不一样：</p>
+<table>
+<thead>
+<tr>
+<th>需求</th>
+<th>政企专线（第 18 章）</th>
+<th>移动承载</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>带宽保证</td>
+<td>强（可预留）</td>
+<td>强，但按切片聚合，不按 UE</td>
+</tr>
+<tr>
+<td>时延</td>
+<td>有 SLA 但粒度粗</td>
+<td>严格，且要可测量（URLLC）</td>
+</tr>
+<tr>
+<td>路径稳定</td>
+<td>越稳越好</td>
+<td>允许频繁重算（UE 移动）</td>
+</tr>
+<tr>
+<td>收敛时间</td>
+<td>&lt; 50 ms</td>
+<td>&lt; 100 ms 可接受，但<strong>不能抖</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键差异是"抖动"</strong>：移动网的路径切换会引起 GTP 的 TEID 与序列号乱序，应用层（尤其 VoNR）对乱序极敏感。所以移动承载用 TE 时要额外开<strong>有序转发/去抖</strong>，不能只看收敛时间。</p>
+<h3 id="2073">20.7.3 演进路径</h3>
+<pre><code class="language-text">阶段 1：GTP-U over IP（现状）
+   └─ 传输网纯 IP，UPF 之间靠路由
+
+阶段 2：GTP-U over SRv6（本章）
+   └─ 传输网 SRv6，UPF 承担 SID 行为；gNB 侧可先用 SR Proxy 兼容（第 13 章）
+
+阶段 3：全 SRv6 用户面
+   └─ gNB 直接发 SRv6（省掉 GTP 层），UPF 只做业务锚点
+</code></pre>
+<p>阶段 2 到 3 的坎不是协议，而是<strong>基站</strong>：存量 gNB 只认 GTP-U，所以阶段 2 会长期存在，<code>End.M.GTP6.*</code> 这组行为是必经之路。</p>
+<h2 id="208">20.8 本章小结</h2>
+<table>
+<thead>
+<tr>
+<th>记住这一条</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SRv6 承载移动网是"剥一层"不是"套一层"</td>
+<td>所以 MTU 比 GTP-U over IP 更宽松</td>
+</tr>
+<tr>
+<td><code>.D</code> 进 SRv6 域、<code>.E</code> 出 SRv6 域</td>
+<td>记反了整条链路方向全错</td>
+</tr>
+<tr>
+<td><code>Di</code> 是中间节点形态，不终结 GTP</td>
+<td>会话数监控会看不到流量</td>
+</tr>
+<tr>
+<td><code>End.MAP</code> 只换 DA，不解封装</td>
+<td>配成 End.DT6 就是"包到了但内层没进去"</td>
+</tr>
+<tr>
+<td>命名里的 4/6 指内层 IP 版本</td>
+<td>传输网永远是 IPv6</td>
+</tr>
+<tr>
+<td>切片落地 = 不同 color 的 SID 列表</td>
+<td>不是独立设备</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_1">实战案例</h2>
+<h3 id="aue">案例 A：UE 能上网，但一切换基站就断</h3>
+<p><strong>现象</strong>：单站覆盖下业务正常；UE 从 gNB-1 切到 gNB-2，业务中断 3–5 秒后恢复。</p>
+<p><strong>排障分支</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>位置</th>
+<th>期望值</th>
+<th>实际值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>切换后上行 TEID 是否更新</td>
+<td>I-UPF <code>.D.Di</code> 表</td>
+<td>新 TEID</td>
+<td>仍为旧值</td>
+</tr>
+<tr>
+<td>映射表版本</td>
+<td>控制器 / UPF <code>End.MAP</code> 表</td>
+<td>一致</td>
+<td>UPF 落后一个版本</td>
+</tr>
+<tr>
+<td>A-UPF 是否收到上行</td>
+<td>接口计数</td>
+<td>增长</td>
+<td>不增长</td>
+</tr>
+<tr>
+<td>锚点 SID 是否可达</td>
+<td><code>ping fc00:0:22:e002::</code></td>
+<td>通</td>
+<td>通</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：切换后 SMF 下发了新 TEID，但 <code>End.MAP</code> 的映射表由控制器异步推送，慢了一个周期；期间上行包被 <code>.D.Di</code> 按旧 TEID 改写，A-UPF 查不到会话直接丢。</p>
+<p><strong>修复</strong>：映射表推送改为<strong>与切换信令同步</strong>（或让 <code>.D.Di</code> 支持 TEID 通配回退），并加一条"表版本落后"告警。</p>
+<h3 id="b-0-upf">案例 B：下行 0 包，UPF 侧一切正常</h3>
+<p><strong>现象</strong>：UE 有 IP、能发上行（DN 能看到流量），下行完全收不到。</p>
+<p><strong>期望值判定表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>步</th>
+<th>期望</th>
+<th>常见错配</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DN → A-UPF</td>
+<td>有包</td>
+<td>无：N6 路由缺失</td>
+</tr>
+<tr>
+<td>A-UPF 执行 <code>End.M.GTP6.E</code></td>
+<td>生成 GTP-U，TEID 正确</td>
+<td>TEID 取自 SID Arg，Arg 位宽配错 → TEID 错</td>
+</tr>
+<tr>
+<td>A-UPF → gNB</td>
+<td>N3 有计数</td>
+<td>有计数但 gNB 丢弃（TEID 不匹配）</td>
+</tr>
+<tr>
+<td>gNB → UE</td>
+<td>空口有调度</td>
+<td>无：QoS flow 未建立</td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：上行 SID 的 SID 结构（Locator/Function/Arg 位宽）在头端与 UPF 两侧配置不一致，<code>End.M.GTP6.E</code> 从 Arg 里取出的 TEID 与 gNB 期望值差一位。</p>
+<p><strong>教训</strong>：<strong>SID 结构（SID Structure）必须在全网一致</strong>，这不是"建议"，是硬约束。18.2.2 的 SID Structure TLV 就是干这个用的——排障时先比对它。</p>
+<h3 id="c">案例 C：切片专线时延达标，但语音有杂音</h3>
+<p><strong>现象</strong>：URLLC 切片时延 P99 达标（8 ms），但 VoNR 通话有断续。</p>
+<p><strong>判据</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>达标值</th>
+<th>实测</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单向时延 P99</td>
+<td>&lt; 10 ms</td>
+<td>8 ms</td>
+<td>达标</td>
+</tr>
+<tr>
+<td>抖动</td>
+<td>&lt; 1 ms</td>
+<td>0.6 ms</td>
+<td>达标</td>
+</tr>
+<tr>
+<td>乱序率</td>
+<td>≈ 0</td>
+<td>0.4%</td>
+<td><strong>不达标</strong></td>
+</tr>
+<tr>
+<td>路径切换次数/小时</td>
+<td>&lt; 5</td>
+<td>42</td>
+<td><strong>不达标</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>根因</strong>：Flex-Algo min-delay 在两条等时延链路间反复优选，每次切换造成乱序；语音对乱序的容忍度远低于时延。</p>
+<p><strong>修复</strong>：给候选路径加<strong>粘性（sticky）</strong>，度量差异在阈值内不重算；同时开有序转发。<strong>结论：移动承载优化"稳定性"优先于"最优性"。</strong></p>
+<h2 id="_2">延伸阅读</h2>
+<ul>
+<li>RFC 9433：Segment Routing over IPv6 for the Mobile User Plane（End.MAP、End.M.GTP6.D/.D.Di/.E、H.M.GTP4.D）</li>
+<li>RFC 8754 / RFC 8986：SRH 与 SRv6 行为基础（第 2 章）</li>
+<li>RFC 9256：SR Policy 与候选路径（第 18 章）</li>
+<li>RFC 9350：IGP Flexible Algorithm（第 4 章、第 22 章）</li>
+<li>交叉章节：第 4 章（Flex-Algo 切片）、第 6 章（End.DT 与 VRF）、第 13 章（用 SR Proxy 兼容存量基站）、第 18 章（SR Policy 与 color）、第 22 章（切片与确定性）</li>
+</ul>
+    </article>
+    <nav class="pager"><a class="prev" href="19-srv6-compression.html">← 补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID</a></nav>
+    <footer class="foot">
+      <div class="feedback">
+  <div class="fb-head"><span class="fb-title">留言与勘误</span><span class="fb-sub">留言与勘误功能由 GitHub Discussions 提供</span></div>
+  <p>发现错别字、术语译法或技术表述有问题，或者想补充案例与配置，都可以在这里开一条讨论；需要 GitHub 账号。</p>
+  <div class="fb-actions">
+    <a class="fb-btn primary" href="https://github.com/huyushao521/srv6-notes/discussions/new?category=general&title=%5B%E5%8B%98%E8%AF%AF/%E7%95%99%E8%A8%80%5D%2020%20%E8%A1%A5%E7%AB%A0%20%C2%B7%20SRv6%20%E6%89%BF%E8%BD%BD%205G%20%E7%94%A8%E6%88%B7%E9%9D%A2%EF%BC%9AEnd.MAP%20%E4%B8%8E%20GTP-U&body=%2A%2A%E7%AB%A0%E8%8A%82%2A%2A%EF%BC%9Ahttps%3A//huyushao521.github.io/srv6-notes/20-srv6-mobile.html%0A%0A%2A%2A%E4%BD%8D%E7%BD%AE%2A%2A%EF%BC%9A%EF%BC%88%E5%B0%8F%E8%8A%82%E6%A0%87%E9%A2%98%20/%20%E6%AE%B5%E8%90%BD%E9%A6%96%E5%8F%A5%20/%20%E5%8E%9F%E6%96%87%E5%BC%95%E7%94%A8%EF%BC%89%0A%0A%2A%2A%E9%97%AE%E9%A2%98%E7%B1%BB%E5%9E%8B%2A%2A%EF%BC%9A%E9%94%99%E5%88%AB%E5%AD%97%20%C2%B7%20%E6%9C%AF%E8%AF%AD%E8%AF%91%E6%B3%95%20%C2%B7%20%E6%8A%80%E6%9C%AF%E8%A1%A8%E8%BF%B0%20%C2%B7%20%E8%A1%A5%E5%85%85%E5%BB%BA%E8%AE%AE%0A%0A%2A%2A%E8%AF%B4%E6%98%8E%2A%2A%EF%BC%9A%0A%0A%2A%2A%E5%8F%82%E8%80%83%E4%BE%9D%E6%8D%AE%2A%2A%EF%BC%9A%EF%BC%88RFC%20%E7%BC%96%E5%8F%B7%E3%80%81%E5%8E%9F%E4%B9%A6%E7%AB%A0%E8%8A%82%E3%80%81%E8%AE%BE%E5%A4%87%E8%BE%93%E5%87%BA%EF%BC%89%0A" target="_blank" rel="noopener">报告勘误 / 留言</a>
+    <a class="fb-btn" href="https://github.com/huyushao521/srv6-notes/discussions" target="_blank" rel="noopener">浏览全部讨论</a>
+  </div>
+</div>
+
+      <p>内容基于《Segment Routing Part III: SRv6》（Clarence Filsfils 等，2024）整理与讲解，配以工程实践案例。仅供学习交流。</p>
+    </footer>
+  </main>
+  <aside class="toc"><div class="toc-title">本页目录</div><div class="toc">
+<ul>
+<li><a href="#200">20.0 本章拓扑</a></li>
+<li><a href="#201-srv6">20.1 移动承载为什么盯上了 SRv6</a><ul>
+<li><a href="#2011-gtp-u">20.1.1 GTP-U 的封装税</a></li>
+<li><a href="#2012-srv6">20.1.2 SRv6 换掉了什么</a></li>
+</ul>
+</li>
+<li><a href="#202">20.2 六个行为，一张表看完</a></li>
+<li><a href="#203-endmap">20.3 End.MAP：一张"名字到位置"的表</a><ul>
+<li><a href="#2031-ue">20.3.1 它解决的是"UE 动、锚点不变"</a></li>
+<li><a href="#2032-enddt4dt6">20.3.2 和 End.DT4/DT6 的区别</a></li>
+</ul>
+</li>
+<li><a href="#204-endmgtp6d-ddi">20.4 下行：End.M.GTP6.D 与 .D.Di</a><ul>
+<li><a href="#2041-endmgtp6d-gtp-u-srv6">20.4.1 End.M.GTP6.D：把 GTP-U 换成 SRv6</a></li>
+<li><a href="#2042-endmgtp6ddi">20.4.2 End.M.GTP6.D.Di：中间节点不重封装</a></li>
+</ul>
+</li>
+<li><a href="#205-endmgtp6e-hmgtp4d">20.5 上行：End.M.GTP6.E 与 H.M.GTP4.D</a><ul>
+<li><a href="#2051-endmgtp6esrv6-gtp-u">20.5.1 End.M.GTP6.E：SRv6 转回 GTP-U</a></li>
+<li><a href="#2052-hmgtp4d4g">20.5.2 H.M.GTP4.D：4G 兼容的那一个</a></li>
+</ul>
+</li>
+<li><a href="#206-ue">20.6 一次完整走位：从 UE 上线到上网</a></li>
+<li><a href="#207-te">20.7 和切片、TE、演进怎么衔接</a><ul>
+<li><a href="#2071-upf-sid">20.7.1 切片：同一个 UPF，不同 SID 列表</a></li>
+<li><a href="#2072-te">20.7.2 和 TE 的关系</a></li>
+<li><a href="#2073">20.7.3 演进路径</a></li>
+</ul>
+</li>
+<li><a href="#208">20.8 本章小结</a></li>
+<li><a href="#_1">实战案例</a><ul>
+<li><a href="#aue">案例 A：UE 能上网，但一切换基站就断</a></li>
+<li><a href="#b-0-upf">案例 B：下行 0 包，UPF 侧一切正常</a></li>
+<li><a href="#c">案例 C：切片专线时延达标，但语音有杂音</a></li>
+</ul>
+</li>
+<li><a href="#_2">延伸阅读</a></li>
+</ul>
+</div>
+</aside>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

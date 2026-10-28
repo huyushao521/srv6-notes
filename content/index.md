@@ -9,7 +9,7 @@
 
 > IP 本来就应该是自足的。IPv4 时代我们不得不用 MPLS 做 VPN/TE、用 VXLAN 做二层延伸、用熵标签解决负载分担；IPv6 + SRv6 把这些"补丁层"全部收回到 IP 自身。
 
-主线 17 章可以分成五块，另加 1 个补章：
+主线 17 章可以分成五块，另加 3 个补章：
 
 | 板块 | 章节 | 你要拿到的东西 |
 |---|---|---|
@@ -19,6 +19,8 @@
 | 规划与落地 | 10–13 | 地址规划、MTU、安全、服务编程、SR-aware 与 SR Proxy |
 | 真实案例 | 14–17 | Bell Canada 两张网、阿里巴巴核心网，以及 IPv6 必备知识 |
 | **补章 · TE** | **18** | SRv6 Policy 模型、BGP-LS/PCEP 下发、BSID·Color·DSCP 引流、SBFD 与三层保护 |
+| **补章 · 压缩** | **19** | SRH 字节账、3216 槽位、NEXT/REPLACE-CSID 对比、压缩对 OAM 与 ACL 的反向影响 |
+| **补章 · 移动** | **20** | End.MAP、End.M.GTP6.D/.Di/.E、UL/DL 走位、切片与 TE 衔接 |
 
 > 第 18 章取自另一本书（Zhenbin Li 等著，2021）第 4 章。主线讲"段怎么表达路径"，补章讲"路径由谁算、怎么下发、断了怎么发现"——两本合起来，SRv6 的转发面与控制面才算闭环。
 
@@ -35,7 +37,7 @@
 
 ## 章节地图
 
-> 主线 17 章 + 补章 18 均带 <span class="done">已精读</span> 标记：每章已按原书段落**逐段中英对照**重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附**实战案例**（含排障分支与期望值表）和**延伸阅读**（RFC 编号与交叉章节）。
+> 主线 17 章 + 补章 18–20 均带 <span class="done">已精读</span> 标记：每章已按原书段落**逐段中英对照**重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附**实战案例**（含排障分支与期望值表）和**延伸阅读**（RFC 编号与交叉章节）。补章 19/20 的英文块取自 RFC 8754 / 8986 / 9433 的规范性语句。
 
 <div class="cards">
 <div class="card"><a href="01-introduction.html">01 SRv6 导论 <span class="done">已精读</span></a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
@@ -56,6 +58,8 @@
 <div class="card"><a href="16-case-bell-sp.html">16 案例 Bell SP <span class="done">已精读</span></a><p>生产环境 DDOS 服务链，真实 IOS XR 配置</p></div>
 <div class="card"><a href="17-ipv6-essentials.html">17 IPv6 必备 <span class="done">已精读</span></a><p>扩展头、Flow Label、MTU/PMTUD，读 SRv6 的底子</p></div>
 <div class="card"><a href="18-srv6-te.html">18 补章 · SRv6 TE <span class="done">已精读</span></a><p>SRv6 Policy 模型、BGP-LS 与 PCEP 扩展、BSID/Color/DSCP 引流、SBFD 与三层保护</p></div>
+<div class="card"><a href="19-srv6-compression.html">19 补章 · 头压缩工程化 <span class="done">已精读</span></a><p>SRH 字节账、3216 槽位边界、NEXT-CSID 与 REPLACE-CSID、压缩打翻的 OAM 与 ACL</p></div>
+<div class="card"><a href="20-srv6-mobile.html">20 补章 · SRv6 承载 5G <span class="done">已精读</span></a><p>End.MAP 映射表、End.M.GTP6.D/.Di/.E、UL/DL 七步走位、切片与 TE 衔接</p></div>
 </div>
 
 ## 阅读约定

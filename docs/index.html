@@ -47,6 +47,8 @@
 </ul></div>
 <div class="nav-group"><div class="nav-title">补章</div><ul>
 <li><a href="18-srv6-te.html"><b>18</b> 补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP</a></li>
+<li><a href="19-srv6-compression.html"><b>19</b> 补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID</a></li>
+<li><a href="20-srv6-mobile.html"><b>20</b> 补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U</a></li>
 </ul></div>
   </aside>
   <main class="content">
@@ -61,7 +63,7 @@
 <blockquote>
 <p>IP 本来就应该是自足的。IPv4 时代我们不得不用 MPLS 做 VPN/TE、用 VXLAN 做二层延伸、用熵标签解决负载分担；IPv6 + SRv6 把这些"补丁层"全部收回到 IP 自身。</p>
 </blockquote>
-<p>主线 17 章可以分成五块，另加 1 个补章：</p>
+<p>主线 17 章可以分成五块，另加 3 个补章：</p>
 <table>
 <thead>
 <tr>
@@ -101,6 +103,16 @@
 <td><strong>18</strong></td>
 <td>SRv6 Policy 模型、BGP-LS/PCEP 下发、BSID·Color·DSCP 引流、SBFD 与三层保护</td>
 </tr>
+<tr>
+<td><strong>补章 · 压缩</strong></td>
+<td><strong>19</strong></td>
+<td>SRH 字节账、3216 槽位、NEXT/REPLACE-CSID 对比、压缩对 OAM 与 ACL 的反向影响</td>
+</tr>
+<tr>
+<td><strong>补章 · 移动</strong></td>
+<td><strong>20</strong></td>
+<td>End.MAP、End.M.GTP6.D/.Di/.E、UL/DL 走位、切片与 TE 衔接</td>
+</tr>
 </tbody>
 </table>
 <blockquote>
@@ -115,7 +127,7 @@
 <code>01 → 06 → 10 → 14 → 15 → 16 → 18</code>，直接看两家运营商怎么把地址切成 Block/Set/Node，怎么算容量、怎么降 OPEX，以及 TE 的算路/下发/监控三件事怎么串起来。</p>
 <h2 id="_3">章节地图</h2>
 <blockquote>
-<p>主线 17 章 + 补章 18 均带 <span class="done">已精读</span> 标记：每章已按原书段落<strong>逐段中英对照</strong>重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附<strong>实战案例</strong>（含排障分支与期望值表）和<strong>延伸阅读</strong>（RFC 编号与交叉章节）。</p>
+<p>主线 17 章 + 补章 18–20 均带 <span class="done">已精读</span> 标记：每章已按原书段落<strong>逐段中英对照</strong>重写——英文块是原文摘录，中文是完整翻译；书中的图按原描述用 ASCII 重绘；每章末尾附<strong>实战案例</strong>（含排障分支与期望值表）和<strong>延伸阅读</strong>（RFC 编号与交叉章节）。补章 19/20 的英文块取自 RFC 8754 / 8986 / 9433 的规范性语句。</p>
 </blockquote>
 <div class="cards">
 <div class="card"><a href="01-introduction.html">01 SRv6 导论 <span class="done">已精读</span></a><p>Walled Garden、网络程序、3216、免重新编址、规模账本</p></div>
@@ -136,6 +148,8 @@
 <div class="card"><a href="16-case-bell-sp.html">16 案例 Bell SP <span class="done">已精读</span></a><p>生产环境 DDOS 服务链，真实 IOS XR 配置</p></div>
 <div class="card"><a href="17-ipv6-essentials.html">17 IPv6 必备 <span class="done">已精读</span></a><p>扩展头、Flow Label、MTU/PMTUD，读 SRv6 的底子</p></div>
 <div class="card"><a href="18-srv6-te.html">18 补章 · SRv6 TE <span class="done">已精读</span></a><p>SRv6 Policy 模型、BGP-LS 与 PCEP 扩展、BSID/Color/DSCP 引流、SBFD 与三层保护</p></div>
+<div class="card"><a href="19-srv6-compression.html">19 补章 · 头压缩工程化 <span class="done">已精读</span></a><p>SRH 字节账、3216 槽位边界、NEXT-CSID 与 REPLACE-CSID、压缩打翻的 OAM 与 ACL</p></div>
+<div class="card"><a href="20-srv6-mobile.html">20 补章 · SRv6 承载 5G <span class="done">已精读</span></a><p>End.MAP 映射表、End.M.GTP6.D/.Di/.E、UL/DL 七步走位、切片与 TE 衔接</p></div>
 </div>
 
 <h2 id="_4">阅读约定</h2>

@@ -36,6 +36,8 @@ PAGES = [
     ("16-case-bell-sp", "16", "案例：Bell Canada 服务编程落地", "case"),
     ("17-ipv6-essentials", "17", "IPv6 必备知识", "appendix"),
     ("18-srv6-te", "18", "补章 · SRv6 TE：SR Policy、BGP-LS 与 PCEP", "extra"),
+    ("19-srv6-compression", "19", "补章 · 头压缩工程化：uSID、NEXT-CSID 与 REPLACE-CSID", "extra"),
+    ("20-srv6-mobile", "20", "补章 · SRv6 承载 5G 用户面：End.MAP 与 GTP-U", "extra"),
 ]
 
 GROUPS = [
