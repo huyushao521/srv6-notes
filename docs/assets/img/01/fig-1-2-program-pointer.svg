@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img" aria-label="网络程序写在目的地址里，指针随转发前移">
+<style>
+.bg{fill:#fff}.loc{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.fun{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.arg{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.2}.pad{fill:#f5f6f8;stroke:#cbd3de;stroke-dasharray:4 3}
+.node{fill:#fff;stroke:#57606a;stroke-width:1.6}.note{fill:#f6f8fa;stroke:#cbd3de;stroke-width:1.2}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 13px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.loc{fill:#16283d;stroke:#58a6ff}.fun{fill:#14291d;stroke:#68d391}
+.arg{fill:#2a2113;stroke:#ecc94b}.pad{fill:#171c24;stroke:#39414f}.node{fill:#1b2028;stroke:#9aa4b2}.note{fill:#1b2028;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}}
+</style>
+<rect class="bg" width="900" height="400"/>
+<text class="h" x="24" y="28">报文自己就是状态：DA 里放着程序，指针即"执行到第几条"</text>
+
+<text class="s" x="60" y="58">IPv6 目的地址（128 bit）</text>
+<text class="s" x="840" y="58" text-anchor="end">fdbb:bb00 : 0002 : e100 : 0000 ::</text>
+<rect class="loc" x="60" y="66" width="195" height="46"/>
+<rect class="fun" x="255" y="66" width="98" height="46"/>
+<rect class="arg" x="353" y="66" width="98" height="46"/>
+<rect class="pad" x="451" y="66" width="389" height="46"/>
+<text class="m" x="157" y="95" text-anchor="middle">fdbb:bb00</text>
+<text class="m" x="304" y="95" text-anchor="middle">0002</text>
+<text class="m" x="402" y="95" text-anchor="middle">e100</text>
+<text class="s" x="645" y="95" text-anchor="middle">:: 补零，不参与指令</text>
+<text class="s" x="157" y="128" text-anchor="middle">Block 32 bit</text>
+<text class="s" x="304" y="128" text-anchor="middle">uN 16 bit</text>
+<text class="s" x="402" y="128" text-anchor="middle">uDT46 16 bit</text>
+
+<line x1="200" y1="140" x2="200" y2="176" stroke="#0b6bcb" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="450" y1="140" x2="450" y2="176" stroke="#2f855a" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="700" y1="140" x2="700" y2="176" stroke="#b7791f" stroke-width="1" stroke-dasharray="3 3"/>
+
+<rect class="node" x="120" y="176" width="160" height="40" rx="4"/>
+<rect class="node" x="370" y="176" width="160" height="40" rx="4"/>
+<rect class="node" x="620" y="176" width="160" height="40" rx="4"/>
+<text class="t" x="200" y="201" text-anchor="middle">PE-1（源端）</text>
+<text class="t" x="450" y="201" text-anchor="middle">P-1（中转）</text>
+<text class="t" x="700" y="201" text-anchor="middle">PE-2（终点）</text>
+<path d="M280 196 H366" stroke="#57606a" stroke-width="1.6" fill="none"/><path d="M366 196 l-9 -5 v10 z" fill="#57606a"/>
+<path d="M530 196 H616" stroke="#57606a" stroke-width="1.6" fill="none"/><path d="M616 196 l-9 -5 v10 z" fill="#57606a"/>
+
+<rect class="note" x="96" y="234" width="208" height="96" rx="4"/>
+<text class="t" x="110" y="256">压入程序</text>
+<text class="s" x="110" y="276">DA = fdbb:bb00:0002:e100::</text>
+<text class="s" x="110" y="296">查表 → 沿最短路径送往 2 号</text>
+<text class="s" x="110" y="316">节点，无需通知任何中间设备</text>
+
+<rect class="note" x="346" y="234" width="208" height="96" rx="4"/>
+<text class="t" x="360" y="256">只看前缀</text>
+<text class="s" x="360" y="276">匹配 /48：fdbb:bb00:0002::</text>
+<text class="s" x="360" y="296">后面 80 bit 完全不解析</text>
+<text class="s" x="360" y="316">不装隧道、不存每流表项</text>
+
+<rect class="note" x="596" y="234" width="208" height="96" rx="4"/>
+<text class="t" x="610" y="256">执行末条指令</text>
+<text class="s" x="610" y="276">DA 命中本地 uDT46</text>
+<text class="s" x="610" y="296">解封装 → 查 VRF → 投递</text>
+<text class="s" x="610" y="316">外层头丢弃，内层报文出域</text>
+
+<text class="t" x="24" y="362">没有隧道状态、没有标签绑定、没有每流表项 —— 唯一的状态就是报文自己。</text>
+<text class="s" x="24" y="386">路径由源端决定；中间节点只做"读当前指令、执行、后移指针"，扩容等于改段列表。</text>
+</svg>

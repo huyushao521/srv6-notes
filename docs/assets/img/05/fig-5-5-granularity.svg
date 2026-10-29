@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 448" width="900" height="448" role="img" aria-label="泄露粒度三档对比：默认路由、远端聚合、全网明细，以及对应的路由表规模账">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.n{fill:#1f2328;font:700 22px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m,.n{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="448"/>
+<text class="h" x="24" y="26">同样叫“泄露”，粒度可以差三个数量级（5.2.4 节）</text>
+
+<rect class="b4" x="24" y="46" width="264" height="178" rx="8"/>
+<text class="t" x="40" y="70">只靠 ATT 默认路由</text>
+<text class="n" x="40" y="110">1 条</text>
+<text class="s" x="40" y="134">区内路由表</text>
+<text class="s" x="40" y="158">出口：最近 ABR，固定</text>
+<text class="s" x="40" y="180">算法：不可用</text>
+<text class="r" x="40" y="206">次优 + 算法失效</text>
+
+<rect class="b2" x="318" y="46" width="264" height="178" rx="8"/>
+<text class="t" x="334" y="70">泄露远端聚合（/40）</text>
+<text class="n" x="334" y="110">≈ 区域数</text>
+<text class="s" x="334" y="134">区内路由表，通常几十条</text>
+<text class="s" x="334" y="158">出口：按区域选 ABR</text>
+<text class="s" x="334" y="180">算法：按块保留</text>
+<text class="g" x="334" y="206">原书推荐：够用且稳定</text>
+
+<rect class="b4" x="612" y="46" width="264" height="178" rx="8"/>
+<text class="t" x="628" y="70">泄露全网明细（/48）</text>
+<text class="n" x="628" y="110">≈ 节点数</text>
+<text class="s" x="628" y="134">区内路由表，上千条</text>
+<text class="s" x="628" y="158">出口：按节点选，最精确</text>
+<text class="s" x="628" y="180">算法：按块保留</text>
+<text class="r" x="628" y="206">远端任一节点增删 → 本区 SPF</text>
+
+<rect class="b3" x="24" y="240" width="852" height="104" rx="8"/>
+<text class="t" x="42" y="264">规模账（可直接套）：180 台节点 × 2 个 locator（Algo 0 + Flex-Algo）= 360 条/区</text>
+<text class="m" x="42" y="288">60 个区域互相明细泄露 → 21,600 条/区 → 全量泛洪量爆炸</text>
+<text class="m" x="42" y="310">按区域聚合并泄露　　　 → 120 条/区 → 可控</text>
+<text class="s" x="42" y="332">汇总做得好，泄露自动变轻：远端已在边界汇总，本区拿到的天然就是聚合。</text>
+
+<rect class="b" x="24" y="356" width="852" height="76" rx="8"/>
+<text class="t" x="42" y="380">最后一个常被忽略的点：泄露进来的 metric 是“到泄露点”的 metric，不是“端到端”的 metric。</text>
+<text class="s" x="42" y="404">所以聚合泄露只按区域选出口，不按目的地选出口；要按目的地选，就得回到明细泄露，或者用 SR Policy 显式指定。</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="900" height="420" role="img" aria-label="SRv6 EVPN 配置解剖：经典 EVPN 的 bridge-domain、ethernet-segment、BGP 邻居一字不改，只新增带微段行为的 locator 与 EVI 下的 SRv6 分配模式">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="420"/>
+<text class="h" x="20" y="26">7.4 配置解剖：经典 EVPN 一个字不改，只加两处</text>
+
+<rect class="b" x="20" y="44" width="390" height="252" rx="10"/>
+<text class="t" x="36" y="68">原样复用（不要动）</text>
+<rect class="b" x="36" y="80" width="358" height="52" rx="6"/>
+<text class="m" x="48" y="102">l2vpn bridge-domain BD100</text>
+<text class="s" x="48" y="122">interface Hu0/0/0/1.100</text>
+<rect class="b" x="36" y="142" width="358" height="52" rx="6"/>
+<text class="m" x="48" y="164">evpn ethernet-segment</text>
+<text class="s" x="48" y="184">identifier type 0 00.11...08</text>
+<rect class="b" x="36" y="204" width="358" height="52" rx="6"/>
+<text class="m" x="48" y="226">router bgp / l2vpn evpn</text>
+<text class="s" x="48" y="246">neighbor 2001:db8::2</text>
+<text class="s" x="36" y="278">这三块在 MPLS EVPN、VXLAN EVPN 里完全一样</text>
+
+<path class="ar" d="M410 170 L452 170" marker-end="url(#a)"/>
+
+<rect class="b2" x="454" y="44" width="426" height="118" rx="10"/>
+<text class="t" x="470" y="68">新增 ①：带微段行为的 locator</text>
+<text class="m" x="470" y="92">srv6 locators locator MAIN</text>
+<text class="m" x="470" y="114">micro-segment behavior unode pfx-16</text>
+<text class="m" x="470" y="136">prefix fdbb:bb00:0001::/48</text>
+<text class="s" x="470" y="156">没有这一行，SID 只能按 128 bit 全长分配，压不紧</text>
+
+<rect class="b2" x="454" y="176" width="426" height="120" rx="10"/>
+<text class="t" x="470" y="200">新增 ②：EVI 下的 SRv6 与分配模式</text>
+<text class="m" x="470" y="224">evi 100</text>
+<text class="m" x="470" y="246">segment-routing srv6</text>
+<text class="m" x="470" y="268">locator MAIN ／ alloc mode per-evi</text>
+<text class="s" x="470" y="288">E-Line 则改成显式 sid ... behavior uDX2</text>
+
+<rect class="b3" x="20" y="308" width="860" height="60" rx="8"/>
+<text class="t" x="36" y="332">所以改造的工作量只在两处，风险也只在两处</text>
+<text class="s" x="36" y="354">locator 规划（地址空间、anycast 段）＋ 分配模式（per-evi / per-AC / per-es），其余沿用现网模板</text>
+
+<rect class="b1" x="20" y="378" width="860" height="34" rx="8"/>
+<text class="s" x="36" y="400">反过来说：如果有人在 bridge-domain 下改 VLAN 映射来"适配 SRv6"，那一定是走错了方向</text>
+</svg>

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 424" width="900" height="424" role="img" aria-label="汇总之后的保护分层：区内保护到汇总前缀的下一跳，骨干保护到明细 locator 的下一跳">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.7;fill:none}
+.br{stroke:#0b6bcb;stroke-width:2;fill:none;stroke-dasharray:7 4}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}.br{stroke:#58a6ff}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="424"/>
+<text class="h" x="24" y="26">汇总之后保护被分层：汇总点就是保护责任的转移点（5.5.2 节）</text>
+
+<rect class="b" x="30" y="58" width="110" height="50" rx="8"/><text class="t" x="44" y="80">PE-1</text><text class="s" x="44" y="98">源</text>
+<rect class="b" x="164" y="58" width="110" height="50" rx="8"/><text class="t" x="178" y="80">P-11</text><text class="s" x="178" y="98">L1 中转</text>
+<rect class="b1" x="298" y="58" width="110" height="50" rx="8"/><text class="t" x="312" y="80">ABR-2</text><text class="s" x="312" y="98">汇总点</text>
+<rect class="b1" x="432" y="58" width="110" height="50" rx="8"/><text class="t" x="446" y="80">ABR-4</text><text class="s" x="446" y="98">持明细</text>
+<rect class="b" x="566" y="58" width="110" height="50" rx="8"/><text class="t" x="580" y="80">P-31</text><text class="s" x="580" y="98">L1 中转</text>
+<rect class="b" x="700" y="58" width="110" height="50" rx="8"/><text class="t" x="714" y="80">PE-3</text><text class="s" x="714" y="98">目的</text>
+<path class="ar" d="M140 83 L164 83" marker-end="url(#a)"/>
+<path class="ar" d="M274 83 L298 83" marker-end="url(#a)"/>
+<path class="ar" d="M408 76 L432 76" marker-end="url(#a)"/>
+<path class="ar" d="M410 90 L434 90" marker-end="url(#a)"/>
+<path class="ar" d="M542 83 L566 83" marker-end="url(#a)"/>
+<path class="ar" d="M676 83 L700 83" marker-end="url(#a)"/>
+<text class="s" x="286" y="46">区内：只有 fdbb:bb00::/40 一条</text>
+<text class="s" x="440" y="46">骨干：有 fc00:0:7::/48 明细</text>
+
+<path class="br" d="M30 132 L30 150 L408 150 L408 132"/>
+<text class="t" x="60" y="172">第 1 段：保护“到汇总前缀的下一跳”</text>
+<text class="s" x="60" y="192">P-11 故障 → TI-LFA 在区内算修复路径 → 仍到 ABR-2</text>
+<path class="br" d="M432 132 L432 150 L810 150 L810 132"/>
+<text class="t" x="460" y="220">第 2 段：保护“到明细 locator 的下一跳”</text>
+<text class="s" x="460" y="240">骨干链路故障 → TI-LFA 在骨干算修复路径 → 仍到 ABR-4</text>
+<text class="s" x="60" y="216">两段各自独立收敛，任一段故障不影响另一段的保护范围</text>
+
+<rect class="b2" x="24" y="262" width="420" height="92" rx="8"/>
+<text class="t" x="42" y="286">汇总做得合理</text>
+<text class="s" x="42" y="308">区内只保护 /40，骨干保护明细</text>
+<text class="s" x="42" y="330">每层只承担自己能看见的范围</text>
+<text class="g" x="42" y="348">PQ 空间与备份带宽按层规划</text>
+
+<rect class="b4" x="456" y="262" width="420" height="92" rx="8"/>
+<text class="t" x="474" y="286">汇总做得过粗（一条 /32 汇总全大区）</text>
+<text class="s" x="474" y="308">汇总路由器变成全区单点</text>
+<text class="s" x="474" y="330">它一挂，骨干只知道 /32 没了</text>
+<text class="r" x="474" y="348">几十台 PE 的业务一起断，保护范围归零</text>
+
+<rect class="b3" x="24" y="366" width="852" height="48" rx="8"/>
+<text class="t" x="42" y="390">设计原则：汇总做在哪一层，那一层就必须承担该层以下的全部明细保护能力（PQ 空间、备份带宽、算法内修复路径）。</text>
+</svg>

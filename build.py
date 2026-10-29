@@ -94,42 +94,62 @@ TEMPLATE = """<!DOCTYPE html>
 
 EN_RE = re.compile(r"^:::en[ \t]*\r?\n(.*?)^:::[ \t]*$", re.S | re.M)
 
-# 插图占位符：{{FIG|assets/img 下的相对路径|标题|说明（可含 HTML）|原书图号或 -}}
-FIG_RE = re.compile(r"\{\{FIG\|([^|]+)\|([^|]+)\|([^|]*)\|([^}]*)\}\}")
-# 仅扫描件：{{ORIG|相对路径|原书图号}}
-ORIG_RE = re.compile(r"\{\{ORIG\|([^|]+)\|([^}]*)\}\}")
-ORIG_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".svg")
+# 插图占位符：{{FIG|assets/img 下的相对路径|标题|说明（可含 HTML）}}
+FIG_RE = re.compile(r"\{\{FIG\|([^|\r\n]+)\|([^|\r\n]+)\|([^|\r\n]*?)(?:\|[^}\r\n]*)?\}\}")
+# md 源码里的 ASCII 图：```asciifig ... ```，与紧邻上方的矢量图合并成一张可切换的图卡
+ASCII_RE = re.compile(r"^```asciifig[ \t]*\r?\n(.*?)^```[ \t]*$", re.S | re.M)
+# 矢量图占位符 + 其后的 ASCII 图，合并为同一张图卡的两个视图
+# 注意：FIG 指令必须单行（title/desc 不得跨行），且与 asciifig 之间只允许空行
+COMBO_RE = re.compile(
+    r"\{\{FIG\|([^|\r\n]+)\|([^|\r\n]+)\|([^|\r\n]*?)(?:\|[^}\r\n]*)?\}\}"
+    r"(?:[ \t]*\r?\n)+"
+    r"^```asciifig[ \t]*\r?\n(.*?)^```[ \t]*$",
+    re.S | re.M,
+)
 
 
-def orig_block(rel_path, label):
-    """原书扫描件：存在则内嵌图片，否则给出一条“放哪里”的提示。"""
-    base = os.path.join(ROOT, "assets", "img", rel_path)
-    hit = next((base + e for e in ORIG_EXTS if os.path.exists(base + e)), None)
-    if hit:
-        src = "assets/img/%s%s" % (rel_path, os.path.splitext(hit)[1])
-        return '  <img class="orig-img" src="%s" alt="原书 %s" loading="lazy">\n' % (src, label)
+def fig_html(path, title, desc):
+    path = path.strip()
+    alt = re.sub(r"<[^>]+>", "", desc).strip()
     return (
-        '  <p class="orig-tip">尚未放入扫描件。把原书 %s 的截图保存为 '
-        "<code>assets/img/%s.png</code> 后重新构建，此处会自动显示。</p>\n" % (label, rel_path)
+        "<figure>\n"
+        '  <img src="assets/img/%s.svg" alt="%s">\n'
+        "  <figcaption><b>%s</b>　%s<br>点击图片可放大查看。</figcaption>\n"
+        "</figure>\n" % (path, alt, title.strip(), desc.strip())
     )
 
 
-def fig_html(path, title, desc, orig):
+def _esc(text):
+    return text.strip("\n").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def ascii_block(code):
+    """md 里手写的 ASCII 图原样保留，折叠展示，与上方的矢量版形成对照。"""
+    return (
+        '<details class="ascii" open><summary>原始 ASCII 图（md 源码，与上图对照）</summary>\n'
+        '<pre class="ascii-fig">%s</pre>\n</details>\n\n' % _esc(code)
+    )
+
+
+def fig_switch_html(path, title, desc, code):
+    """矢量图与原书 ASCII 图合成一张图卡，顶部两个标签切换，默认显示矢量版。"""
     path = path.strip()
     alt = re.sub(r"<[^>]+>", "", desc).strip()
-    out = [
-        "<figure>\n",
-        '  <img src="assets/img/%s.svg" alt="%s">\n' % (path, alt),
-        "  <figcaption><b>%s</b>　%s<br>点击图片可放大查看。</figcaption>\n"
-        % (title.strip(), desc.strip()),
-    ]
-    orig = orig.strip()
-    if orig and orig != "-":
-        out.append('  <details class="orig"><summary>原书 %s 扫描件对照</summary>\n' % orig)
-        out.append(orig_block("02/orig/" + os.path.basename(path), orig))
-        out.append("  </details>\n")
-    out.append("</figure>\n")
-    return "".join(out)
+    return (
+        '<figure class="fig-switch">\n'
+        '  <div class="fig-tabs">\n'
+        '    <button type="button" class="on" data-pane="svg">矢量版</button>\n'
+        '    <button type="button" data-pane="ascii">原书 ASCII</button>\n'
+        "  </div>\n"
+        '  <div class="fig-pane" data-pane="svg">\n'
+        '    <img src="assets/img/%s.svg" alt="%s">\n'
+        "  </div>\n"
+        '  <div class="fig-pane" data-pane="ascii" hidden>\n'
+        '    <pre class="ascii-fig">%s</pre>\n'
+        "  </div>\n"
+        "  <figcaption><b>%s</b>　%s<br>点击矢量图可放大查看。</figcaption>\n"
+        "</figure>\n\n" % (path, alt, _esc(code), title.strip(), desc.strip())
+    )
 
 
 def preprocess(text):
@@ -139,8 +159,11 @@ def preprocess(text):
         return '<div class="en" markdown="1">\n\n%s\n\n</div>\n' % m.group(1).strip()
 
     text = EN_RE.sub(repl, text)
-    text = FIG_RE.sub(lambda m: fig_html(m.group(1), m.group(2), m.group(3), m.group(4)), text)
-    text = ORIG_RE.sub(lambda m: orig_block(m.group(1).strip(), m.group(2).strip()), text)
+    text = COMBO_RE.sub(
+        lambda m: fig_switch_html(m.group(1), m.group(2), m.group(3), m.group(4)), text
+    )
+    text = ASCII_RE.sub(lambda m: ascii_block(m.group(1)), text)
+    text = FIG_RE.sub(lambda m: fig_html(m.group(1), m.group(2), m.group(3)), text)
     return text
 
 

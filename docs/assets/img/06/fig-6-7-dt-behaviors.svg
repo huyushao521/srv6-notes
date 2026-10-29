@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 438" width="900" height="438" role="img" aria-label="End.DT 与 End.DX 行为的选择决策：按 VRF 查表选 DT4/DT6/DT46，按接口转发选 DX4/DX6">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="438"/>
+<text class="h" x="20" y="26">6.2 选型：出口 PE 拿这个 SID 做什么，决定用哪个行为</text>
+
+<rect class="b1" x="330" y="44" width="240" height="46" rx="8"/>
+<text class="t" x="348" y="72">出口 PE 拿这个 SID 做什么？</text>
+<path class="ar" d="M450 90 L450 104 L240 104 L240 122" marker-end="url(#a)"/>
+<path class="ar" d="M450 90 L450 104 L660 104 L660 122" marker-end="url(#a)"/>
+<text class="s" x="256" y="100">只需要"进对的 VRF"</text>
+<text class="s" x="640" y="100">要指定从哪条链路出去</text>
+
+<rect class="b2" x="40" y="124" width="400" height="60" rx="8"/>
+<text class="t" x="56" y="148">per-VRF：SID 标识一个 VRF</text>
+<text class="s" x="56" y="170">同一个 VRF 的所有接入电路共用一个 SID</text>
+
+<rect class="b3" x="470" y="124" width="390" height="60" rx="8"/>
+<text class="t" x="486" y="148">per-CE：SID 标识一条接入电路</text>
+<text class="s" x="486" y="170">数据面不查 VRF 表，直接从端口发出</text>
+
+<path class="ar" d="M160 184 L100 202" marker-end="url(#a)"/>
+<path class="ar" d="M240 184 L230 202" marker-end="url(#a)"/>
+<path class="ar" d="M330 184 L370 202" marker-end="url(#a)"/>
+<path class="ar" d="M600 184 L575 202" marker-end="url(#a)"/>
+<path class="ar" d="M730 184 L765 202" marker-end="url(#a)"/>
+
+<rect class="b" x="40" y="204" width="120" height="66" rx="8"/>
+<text class="m" x="52" y="224">End.DT4</text><text class="s" x="52" y="242">0x0013</text><text class="s" x="52" y="260">IPv4 查 VRF</text>
+<rect class="b" x="170" y="204" width="120" height="66" rx="8"/>
+<text class="m" x="182" y="224">End.DT6</text><text class="s" x="182" y="242">0x0012</text><text class="s" x="182" y="260">IPv6 查 VRF</text>
+<rect class="b2" x="300" y="204" width="140" height="66" rx="8"/>
+<text class="m" x="312" y="224">End.DT46</text><text class="s" x="312" y="242">0x0014　最常用</text><text class="s" x="312" y="260">按内层版本查表</text>
+
+<rect class="b" x="490" y="204" width="170" height="66" rx="8"/>
+<text class="m" x="502" y="224">End.DX6</text><text class="s" x="502" y="242">0x0010　uDX6</text><text class="s" x="502" y="260">IPv6 接入，出指定口</text>
+<rect class="b" x="680" y="204" width="180" height="66" rx="8"/>
+<text class="m" x="692" y="224">End.DX4</text><text class="s" x="692" y="242">0x0011　uDX4</text><text class="s" x="692" y="260">IPv4 接入，出指定口</text>
+
+<rect class="b1" x="20" y="290" width="420" height="76" rx="8"/>
+<text class="t" x="36" y="314">选型口诀</text>
+<text class="s" x="36" y="336">能 per-VRF 就 per-VRF；只有"同 VRF 多接入 + 要定向"才上 per-CE</text>
+<text class="o" x="36" y="356">per-CE 的 SID 数 = 接入电路数，规模随接入点膨胀</text>
+
+<rect class="b" x="460" y="290" width="420" height="76" rx="8"/>
+<text class="t" x="476" y="314">出口没有"隧道终结"这件事</text>
+<text class="s" x="476" y="336">外层 IPv6 头被删掉，内层报文按原生方式路由</text>
+<text class="s" x="476" y="356">所以叫 decapsulation + table lookup（DT），不叫 VRF termination</text>
+
+<rect class="b3" x="20" y="378" width="860" height="52" rx="8"/>
+<text class="t" x="36" y="400">一个容易踩的搭配错误：per-CE 却配了 DT46 —— 行为能起来，但报文仍会按 VRF 表转发，定向能力静默失效。</text>
+<text class="s" x="36" y="420">判据：show segment-routing srv6 sid all 里 Context 是接口名而不是 VRF 名，才算真的 per-CE。</text>
+</svg>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 356" width="900" height="356" role="img" aria-label="SRv6 locator 汇总：控制面只通告一条 /48 前缀，转发面先按 /48 送达节点，再由节点按 /128 决定行为">
+<style>
+.bg{fill:#fff}.box{stroke-width:1.4}.b1{fill:#eef4fc;stroke:#0b6bcb}.b2{fill:#eaf7ee;stroke:#2f855a}.b3{fill:#fdf3e7;stroke:#b7791f}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}
+.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}.m{fill:#1f2328;font:600 13px Consolas,monospace}
+.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ln{stroke:#cbd3de;stroke-width:1.2}.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}.b3{fill:#2a2113;stroke:#ecc94b}
+.b{fill:#1b2029;stroke:#39414f}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.g{fill:#68d391}.ln{stroke:#39414f}.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="356"/>
+<text class="h" x="24" y="28">控制面：IGP 里只有一条 /48</text>
+<text class="g" x="492" y="28">转发面：/48 送到节点，/128 选行为</text>
+
+<rect class="b1 box" x="24" y="44" width="440" height="126" rx="8"/>
+<text class="t" x="40" y="68">fc00:0:2::/48 · Locator（节点 2 通告）</text>
+<line class="ln" x1="24" y1="80" x2="464" y2="80"/>
+<text class="m" x="40" y="102">fc00:0:2:e001::</text><text class="s" x="196" y="102">→ End.DT4（IPv4 VPN）</text>
+<text class="m" x="40" y="126">fc00:0:2:e002::</text><text class="s" x="196" y="126">→ End.X（邻接）</text>
+<text class="m" x="40" y="150">fc00:0:2:e003::</text><text class="s" x="196" y="150">→ End.DT6（IPv6 VPN）</text>
+<text class="s" x="24" y="192">SID 的数量、行为、flavor 全在节点本地定义，不逐条通告</text>
+
+<rect class="b2 box" x="492" y="44" width="384" height="56" rx="8"/>
+<text class="t" x="508" y="66">FIB（全网任意中间节点）</text>
+<text class="m" x="508" y="88">fc00:0:2::/48  →  节点 2</text>
+
+<path class="ar" d="M684 104 L684 122" marker-end="url(#a)"/>
+<rect class="b2 box" x="492" y="128" width="384" height="52" rx="8"/>
+<text class="s" x="508" y="150">报文 DA = fc00:0:2:e001::</text>
+<text class="s" x="508" y="168">最长匹配命中 /48 → 沿 IGP 路径送往节点 2</text>
+
+<path class="ar" d="M684 182 L684 200" marker-end="url(#a)"/>
+<rect class="b3 box" x="492" y="206" width="384" height="52" rx="8"/>
+<text class="s" x="508" y="228">节点 2 本地：/128 精确命中 e001</text>
+<text class="s" x="508" y="246">→ 执行 End.DT4，查 VRF 转内层 IPv4</text>
+
+<rect class="b" x="24" y="278" width="852" height="60" rx="8"/>
+<text class="t" x="40" y="302">locator 是“汇总点”，不是“隧道”：</text>
+<text class="s" x="40" y="324">全网只认前缀，行为在节点内部解释；locator 必须可路由，不可路由的 locator 只能本地使用（见 3.2.3）</text>
+</svg>

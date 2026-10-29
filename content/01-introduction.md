@@ -32,7 +32,9 @@ IPv4 networks have been augmented with many overlay and underlay technologies ov
 
 IPv4 网络这些年被不断"打补丁"：**VPN 和流量工程靠 MPLS**，**数据中心二层延伸靠 VXLAN**，**负载分担靠熵标签或深度报文检测**。每一个补丁都解决过真问题，但也都带来**一套新协议、一类新网关和一份新运维负担**。SRv6 押的是一个**大胆但简单**的赌注：**IPv6 只要加一点点架构能力，就能原生地把这些全做掉**。
 
-```text
+{{FIG|01/fig-1-1-three-to-one|图 1-1 · 矢量版|IPv4 时代一个需求配一套补丁栈（MPLS/VPN、VXLAN 二层、熵标签或 DPI），SRv6 用一个头、一套地址承接全部。}}
+
+```asciifig
 图 1-1：三张网 → 一张网（原书 Figure 1.1 重绘）
 
   IPv4  →  MPLS(LDP/RSVP/BGP3107) → MP-BGP VPNv4    ← VPN / TE
@@ -66,7 +68,9 @@ The network program is simply an ordered list of micro-instructions, called uSID
 
 所谓"**网络程序**"，就是**一个微指令（uSID）的有序列表，写在 IPv6 目的地址里**。**路径由源端决定**；每台中间路由器只做三件事：**读当前指令、执行它、把指针后移**。**全网任何地方都不保存每流状态。**
 
-```text
+{{FIG|01/fig-1-2-program-pointer|图 1-2 · 矢量版|DA 由 Block + uN + uDT46 组成；源端压入程序，中转只看 /48 前缀，终点执行末条指令——指针随转发前移。}}
+
+```asciifig
 图 1-2：程序在包里，指针随转发前移（原书 Figure 1.2 重绘）
 
   DA:  fdbb:bb00 : 0002 : e100 : 0000 ::
@@ -104,7 +108,9 @@ A frequent objection is that IP addresses can be spoofed, so a segment list coul
 
 **域外节点即使伪造一个合法 SID，也无法把报文送进域内**——它的**源地址不在域内前缀里**。
 
-```text
+{{FIG|01/fig-1-3-walled-garden|图 1-3 · 矢量版|SR 域的三道门：边界 ACL 拦外层源地址、封装边界区分域内外、域内接口靠 uRPF 只信域内邻居。}}
+
+```asciifig
 图 1-3：围墙的三道门（原书 Figure 1.3 重绘）
 
   域外 ──►[①ACL: 外层 src ∉ SRv6 Space → 丢]──► 域内
@@ -136,7 +142,11 @@ A uSID container is 128 bits wide: a 32-bit block followed by six 16-bit uSIDs. 
 
 一个 uSID 容器正好 **128 bit**：**32 bit Block + 6 个 16 bit uSID**（这就是"**3216**"这个缩写的来源）。**单个 Block 提供约 5.7 万个全局 uSID**。主流部署**只用两个 Block**（一个 min-cost、一个 min-delay），但**规划上按 256 个 Block 预留**——合计约 **1500 万个全局 uSID**。**256 个 /32 只相当于一个 /24**，占 `FC00::/7` 私有空间的 **0.00153%**。
 
-```text
+{{FIG|01/fig-1-5-usid-3216|图 1-5 · 矢量版|3216 的位布局与地址账：一个 Block 约 5.7 万个全局 uSID，256 个 Block 约 1500 万个，只占 FC00::/7 的 0.00153%。}}
+
+```asciifig
+图 1-5：3216 的位布局与地址账
+
 |  Block 32b  |  uSID 16b  |  uSID 16b  | ... |  uSID 16b  |
    fdbb:bb00       0007         0100                0000
    └─ 可路由 ─┘   └─ 全局 uN ─┘ └─ 本地 uF/uA/uDT ─┘
@@ -219,7 +229,9 @@ Because forwarding is based on longest prefix match, a router can install a sing
 
 **MPLS 的标签栈做不到任何一条。**
 
-```text
+{{FIG|01/fig-1-4-two-instr-lookup|图 1-4 · 矢量版|命中 /48 后剩余位 e001 即参数，一次查表同时完成 uN（到达）与 uA（出链路）；MPLS 需要两个标签与两次查表。}}
+
+```asciifig
 图 1-4：一次查表执行两条指令（原书 Figure 1.2 后半段重绘）
 
   DA = fdbb:bb00 : 0009 : e001 ::

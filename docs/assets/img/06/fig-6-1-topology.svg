@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 424" width="900" height="424" role="img" aria-label="本章拓扑：两个 PE 各持 /48 locator，P 路由器只有 locator 路由，没有任何 VPN 状态">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 11.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.7;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="424"/>
+<text class="h" x="20" y="26">本章拓扑：两个 PE 各持一个 /48，中间两台 P 只有 locator 路由（原书 Figure 6.1 重绘）</text>
+
+<rect class="b1" x="20" y="40" width="860" height="28" rx="6"/>
+<text class="m" x="32" y="59">SID block fdbb:bb00::/32　｜　micro-segment behavior unode pfx-16　｜　每 PE 一个 /48</text>
+
+<rect class="b" x="20" y="96" width="112" height="64" rx="8"/>
+<text class="t" x="32" y="120">CE-1</text><text class="s" x="32" y="142">10.1.1.1</text>
+<rect class="b2" x="152" y="86" width="176" height="84" rx="8"/>
+<text class="t" x="164" y="108">PE-1</text><text class="s" x="164" y="126">VRF-100</text>
+<text class="m" x="164" y="146">fdbb:bb00:0001::/48</text><text class="s" x="164" y="162">uN = …:e000::</text>
+<rect class="b" x="348" y="102" width="104" height="52" rx="8"/>
+<text class="t" x="362" y="124">P-1</text><text class="s" x="362" y="144">无 VPN 状态</text>
+<rect class="b" x="470" y="102" width="104" height="52" rx="8"/>
+<text class="t" x="484" y="124">P-2</text><text class="s" x="484" y="144">无 VPN 状态</text>
+<rect class="b2" x="594" y="86" width="176" height="84" rx="8"/>
+<text class="t" x="606" y="108">PE-2</text><text class="s" x="606" y="126">VRF-100</text>
+<text class="m" x="606" y="146">fdbb:bb00:0002::/48</text><text class="s" x="606" y="162">uDT46 = …:e001::</text>
+<rect class="b" x="790" y="96" width="90" height="64" rx="8"/>
+<text class="t" x="800" y="120">CE-2</text><text class="s" x="800" y="142">10.1.2.1</text>
+
+<path class="ar" d="M132 128 L152 128" marker-end="url(#a)"/>
+<path class="ar" d="M328 128 L348 128" marker-end="url(#a)"/>
+<path class="ar" d="M452 128 L470 128" marker-end="url(#a)"/>
+<path class="ar" d="M574 128 L594 128" marker-end="url(#a)"/>
+<path class="ar" d="M770 128 L790 128" marker-end="url(#a)"/>
+
+<text class="s" x="348" y="182">这两台只做最长前缀匹配，</text>
+<text class="s" x="348" y="200">没有 VRF、没有标签、没有 SRH</text>
+<text class="r" x="152" y="196">VPN 状态只存在于 PE</text>
+<text class="s" x="152" y="214">核心 cef vrf 应为空</text>
+
+<rect class="b2" x="20" y="232" width="430" height="88" rx="8"/>
+<text class="t" x="36" y="256">控制面路径</text>
+<text class="s" x="36" y="278">VPNv4/VPNv6 路由只在 PE 之间传</text>
+<text class="s" x="36" y="298">P 路由器只学 locator 前缀</text>
+<text class="g" x="36" y="316">→ 与 MPLS L3VPN 同一个 BGP-free core，且更强</text>
+
+<rect class="b3" x="470" y="232" width="410" height="88" rx="8"/>
+<text class="t" x="486" y="256">数据面路径</text>
+<text class="s" x="486" y="278">PE-1 压一个 IPv6 头（无 SRH）</text>
+<text class="s" x="486" y="298">DA = PE-2 的 uDT46，外层 NH = 内层 IPv4</text>
+<text class="r" x="486" y="316">→ 全程只靠 locator 路由，不靠标签分发</text>
+
+<rect class="b" x="20" y="332" width="860" height="76" rx="8"/>
+<text class="t" x="36" y="356">本章所有例子都落在这张图上：per-VRF 与 per-CE 的差别是 PE-2 上分配几个 SID；IPv6 下一跳决定 PE-1 能不能封装；MTU 决定中间这两跳能不能过去。</text>
+<text class="s" x="36" y="378">两个 /48 的选择不是随意的：它们同属一个 /32 block，所以核心一条 /32 或两条 /48 都够；跨 block 分配会额外吃掉汇总空间（第 10 章）。</text>
+<text class="s" x="36" y="398">CE-1 与 CE-2 在同一 VPN，但地址空间互不重叠 —— RD 让它们在 BGP 里唯一，RT 让它们互相导入。</text>
+</svg>

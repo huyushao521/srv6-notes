@@ -18,7 +18,9 @@
 
 原书的图没有标全链路度量，但文字给出的三条路径代价是明确的（Algo(0) 的 1→6→5→3 = 30、Flex-Algo(128) 的 1→2→3 = 10 ms、Flex-Algo(129) 的 1→6→5→4→3 = 40）。为让这三条结论同时成立，本章固定一张拓扑，后面所有图与算例都基于它：
 
-```text
+{{FIG|04/fig-4-1-topology|表 4-1 · 矢量版|全章共用的 6 节点拓扑：每条链路标注 IGP 度量与时延，5-3 为 RED 亲和链路。}}
+
+```asciifig
 表 4-1：本章拓扑（6 节点，IS-IS level-2 单区域）
 
    链路         IGP 度量    链路时延     亲和/备注
@@ -128,7 +130,9 @@ A typical use-case is for an operator to define a Flex-Algo, e.g., Flex-Algo(128
 
 典型用例：定义 **Flex-Algo(128)，最小化累计链路时延**，为全网低时延业务提供路径（原书 Figure 4.1）。
 
-```text
+{{FIG|04/fig-4-2-two-paths|图 4-1 · 矢量版|同一拓扑上 Algo(0) 走低代价路径、Flex-Algo(128) 走低时延路径，靠两个 locator 区分。}}
+
+```asciifig
     图 4-1：原书 Figure 4.1 —— 节点 1 到节点 3 的两条路径（Algo(0) 与 Flex-Algo(128)）
 
    ① Algo(0)：最小化 IGP 度量的路径
@@ -192,6 +196,8 @@ In the illustrations of this book, we dedicate the last nibble of the 32-bit SRv
 | Flex-Algo(K) | `fc00:000(K-127)::/32` | K=128 → `fc00:0001:0003::/48` | `fc00:1:3::/48` |
 | | | K=129 → `fc00:0002:0003::/48` | `fc00:2:3::/48` |
 | | | K=130 → `fc00:0003:0003::/48` | `fc00:3:3::/48` |
+
+{{FIG|04/fig-4-3-locator-encoding|locator 与算法 · 矢量版|算法编进 SID Block 最后一个 nibble：Algo(0) 用 fc00:0000::/32，Flex-Algo(K) 用 fc00:000(K-127)::/32。}}
 
 注意这只是**书中插图的编号习惯**，不是协议要求：算法号在 IS-IS Locator TLV 的 `Algorithm` 字段里（图 3-4），地址怎么切完全由运营商的地址规划决定（第 10 章）。
 
@@ -433,7 +439,9 @@ Flex-Algo 定义配在**某个 IGP 实例内**（例 4.5 是 IS-IS 实例 1）�
 
 这条对多区域设计很关键：第 5 章讲的泄露（leaking）之所以必要，一部分原因就是**Flex-Algo 参与者与定义都按 level 算**，level-1 里的算法路径可能需要 locator 被泄露到 level-2 才能跨区贯通。
 
-```text
+{{FIG|04/fig-4-4-fad-tlv|图 4-2 · 矢量版|Flex-Algo 定义 TLV：三要素分别落在 Flex-Algorithm、Calc-Type、Metric-Type 与约束 Sub-TLV 上。}}
+
+```asciifig
     图 4-2：原书 Figure 4.2 / 4.3 —— Flex-Algo 定义（FAD）TLV 格式
 
    0                   1                   2                   3
@@ -663,7 +671,9 @@ These rules show that at least one node in each IGP area must advertise the Flex
 
 由此可得：**每个 IGP 区域至少有一台节点必须通告该定义**；生产中建议**两台以上**（冗余）。如果**没有任何节点通告**，所有参与者都会**撤回参与**，这个 Flex-Algo 直接**失效**。
 
-```text
+{{FIG|04/fig-4-5-election|图 4-4 · 矢量版|定义选举：先取 Priority 最大，并列比 System-ID，再判断本机是否支持该定义。}}
+
+```asciifig
     图 4-4：定义选举的判定流程（RFC 9350 §5.3）
 
    收到本区内该算法的所有定义通告（含本地）
@@ -727,7 +737,9 @@ Each node advertises the list of IGP algorithms that it supports in the Algorith
 
 每台节点在 **Algorithm TLV（SR-Algorithm TLV）** 里通告自己支持的算法列表。该 TLV 在 IS-IS 中属于 Router Capability TLV，在 OSPF 中属于 Router Information LSA，在 BGP-LS 中属于 Node NLRI。
 
-```text
+{{FIG|04/fig-4-6-sr-algo|图 4-5 · 矢量版|SR-Algorithm TLV：通告即参与，Algo(0) 默认参与。}}
+
+```asciifig
     图 4-5：原书 Figure 4.5 / 4.6 —— SR-Algorithm TLV 格式
 
    0                   1                   2                   3
@@ -859,6 +871,9 @@ For these reasons, we assume throughout this book that when a node participates 
 | ❌ | ✅ | **不可达** | locator 泛洪了但没人算得出路径（拓扑里没它） |
 | ❌ | ❌ | 完全没有该算法 | 回落到 Algo(0) |
 
+{{FIG|04/fig-4-7-participation|参与与可达 · 矢量版|参与 × locator 通告的四种组合：只有“既参与又通告”才能当中转、终点与被修复目标。}}
+
+
 ## 4.5 Flex-Algo 段的实例化：一个 uN，一组 uA
 
 :::en
@@ -975,7 +990,9 @@ R3.00-00            * 0x00000010   0x040f        891  /*            0/0/0
 3. **同一条 IS-Extended 邻居下挂了三个 `END.X SID`**，各自 `Alg:0` / `Alg:128` / `Alg:129` —— **一个物理接口、三个算法、三个邻接段**。这是 SR-MPLS 做不到的。
 4. **`Application Specific Link Attributes` 里 `Standard Applications: 0x10 FLEX-ALGO`**，并带 `Link Min/Max Delay: 4000/4000 us` —— 时延作为"只给 Flex-Algo 应用看"的属性被通告（4.6 节展开）。
 
-```text
+{{FIG|04/fig-4-8-sid-planes|图 4-6 · 矢量版|同一节点上并行的三套 SID 平面：每算法一个 uN、一组 uA，段数 ×3 但只占 3 条前缀路由。}}
+
+```asciifig
     图 4-6：一台节点上的三套 SID 平面（节点 3，三个算法并行）
 
    ┌──────────────────────────────────────────────────────────────┐
@@ -1019,7 +1036,9 @@ Flex-Algo(K) 的路径计算分两步：
 
 **第二步：在 Topo(K) 上算最短路** —— 用 Flex-Algo(K) 的**计算类型**（SPF）与**优化度量**（IGP / delay / TE）从本机算到每个可达目的地。**不在 Topo(K) 里的东西不参与计算，也无法到达。**
 
-```text
+{{FIG|04/fig-4-9-topo-prune|图 4-7 · 矢量版|基础拓扑剪掉不参与的节点 6 与 RED 链路 5-3，得到 Topo(130)，最短路随之改变。}}
+
+```asciifig
     图 4-7：原书 Figure 4.7 —— 基础拓扑（左）与 Topo(130)（右）
 
    左：基础 IGP 拓扑，各节点支持的算法
@@ -1167,7 +1186,9 @@ Similar to how the primary paths to different locators of the same node vary bas
 
 正如同一节点不同 locator 的主路径因算法而异，**备份路径也随算法不同**。图 4.8（下方图 4-8）给出节点 5 到节点 2 的 Algo(0) 与 Flex-Algo(129) locator 的主/备路径。
 
-```text
+{{FIG|04/fig-4-10-primary-backup|图 4-8 · 矢量版|两套算法下节点 5 到节点 2 的主/备路径，修复列表只用本算法的 P/Q 段。}}
+
+```asciifig
     图 4-8：原书 Figure 4.8 —— 节点 5 到节点 2：两套算法、两条主路径、两条备份路径
 
    ① 到 Algo(0) locator  fc00:0:2::/48
@@ -1315,6 +1336,8 @@ Routing entry for fc00:2:5:e000::/80
 读法：**一个 /80 条目、两个 RDB** —— `Protected` 是主用（直连出接口），`Backup (TI-LFA)` 是修复。`Repair Node(s)` 列出修复列表里的中继节点（R2、R4），`SRv6 Format f3216` 说明它是 **uSID 压缩格式**（32/16/16/64，见第 2 章）。
 
 注意 `/80`：邻接段按 **locator(48) + function(16) + 32 = 80** 的粒度装表（uA 的 Func-Length 是 16，见例 4.13），这是 uSID 下邻接段的常见前缀长度。
+
+{{FIG|04/fig-4-11-adj-protect|邻接段保护 · 矢量版|每个 Flex-Algo 邻接段都有一个带 P 标记的受保护对偶，供 TI-LFA 修复路径引用。}}
 
 ### 4.7.1 关掉某个算法的 TI-LFA
 

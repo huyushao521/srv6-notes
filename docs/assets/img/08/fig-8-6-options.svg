@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img" aria-label="四种做法对比：明细全进 IGP 会让 IGP 规模爆炸，不汇总会让核心表项爆炸，汇总加 Null0 正是黑洞来源，只有汇总加 UPA 既保留规模收益又只在故障时产生开销">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}}
+</style>
+<rect class="bg" width="900" height="430"/>
+<text class="h" x="20" y="26">8.2.1 四条路只有一条能走：规模与可见性必须同时成立</text>
+
+<rect class="b4" x="20" y="44" width="205" height="232" rx="10"/>
+<text class="t" x="36" y="70">明细全进 IGP</text>
+<text class="s" x="36" y="96">每条 BGP 前缀都塞进 IGP</text>
+<text class="s" x="36" y="120">故障可见性：</text>
+<text class="g" x="36" y="140">✔ 立即可见</text>
+<text class="s" x="36" y="166">代价：</text>
+<text class="r" x="36" y="186">✘ IGP 规模爆炸</text>
+<text class="s" x="36" y="212">每家 ISP 都试过，</text>
+<text class="s" x="36" y="232">每家都退回来了</text>
+<text class="r" x="36" y="262">不可接受</text>
+
+<rect class="b4" x="240" y="44" width="205" height="232" rx="10"/>
+<text class="t" x="256" y="70">不汇总</text>
+<text class="s" x="256" y="96">全网跑明细路由</text>
+<text class="s" x="256" y="120">故障可见性：</text>
+<text class="g" x="256" y="140">✔ 立即可见</text>
+<text class="s" x="256" y="166">代价：</text>
+<text class="r" x="256" y="186">✘ 核心表项爆炸</text>
+<text class="s" x="256" y="212">FIB / 内存 / 收敛时间</text>
+<text class="s" x="256" y="232">一起被拖垮</text>
+<text class="r" x="256" y="262">不可接受</text>
+
+<rect class="b3" x="460" y="44" width="205" height="232" rx="10"/>
+<text class="t" x="476" y="70">汇总 + Null0</text>
+<text class="s" x="476" y="96">核心只见汇总</text>
+<text class="s" x="476" y="120">故障可见性：</text>
+<text class="r" x="476" y="140">✘ 完全不可见</text>
+<text class="s" x="476" y="166">代价：</text>
+<text class="r" x="476" y="186">✘ 正是黑洞来源</text>
+<text class="s" x="476" y="212">本章 8.1 的全部现象</text>
+<text class="s" x="476" y="232">都是这一格造成的</text>
+<text class="o" x="476" y="262">现网普遍在用，需补丁</text>
+
+<rect class="b2" x="680" y="44" width="205" height="232" rx="10"/>
+<text class="t" x="696" y="70">汇总 + UPA</text>
+<text class="s" x="696" y="96">核心仍只见汇总</text>
+<text class="s" x="696" y="120">故障可见性：</text>
+<text class="g" x="696" y="140">✔ 毫秒级可见</text>
+<text class="s" x="696" y="166">代价：</text>
+<text class="g" x="696" y="186">✔ 只在故障时产生</text>
+<text class="s" x="696" y="212">规模收益完整保留</text>
+<text class="s" x="696" y="232">平时零额外开销</text>
+<text class="g" x="696" y="262">本章推荐</text>
+
+<rect class="b1" x="20" y="290" width="860" height="60" rx="8"/>
+<text class="t" x="36" y="314">UPA 的精妙之处：它加的不是"更多路由"，而是"一条反向的话"</text>
+<text class="s" x="36" y="336">明细依然不进 IGP，汇总依然是唯一的正向信息；只有出事的那一刻，才多出一条带标志位的不可达声明</text>
+
+<rect class="b3" x="20" y="362" width="860" height="54" rx="8"/>
+<text class="s" x="36" y="384">前提：IGP 要支持该扩展，且发起侧与汇总侧都要配（见 8.5 与案例 C）；设备不识别时未知 TLV 被忽略，行为优雅退化</text>
+<text class="s" x="36" y="404">所以它是一次"可以灰度、可以回退"的改造，而不是一次协议迁移</text>
+</svg>

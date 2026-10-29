@@ -405,26 +405,43 @@ a:hover { text-decoration: underline; }
 }
 .md figure figcaption b { color: var(--fg); font-weight: 600; }
 
-/* 原书扫描件折叠对照 */
-.md figure details.orig {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
-  text-align: left;
+/* 图卡内「矢量版 / 原书 ASCII」切换：一张卡两种视图，ASCII 不占版面 */
+.md .fig-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
 }
-.md figure details.orig summary {
-  cursor: pointer;
-  font-size: 12.5px;
+.md .fig-tabs button {
+  padding: 3px 11px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--fg-soft);
-  list-style: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
 }
-.md figure details.orig summary::-webkit-details-marker { display: none; }
-.md figure details.orig summary::before { content: "▸ "; }
-.md figure details.orig[open] summary::before { content: "▾ "; }
-.md figure details.orig summary:hover { color: var(--fg); }
-.md figure .orig-img { margin-top: 10px; cursor: zoom-in; }
-.md figure .orig-tip { margin: 8px 0 0; font-size: 12px; color: var(--fg-soft); }
-.md figure .orig-tip code { font-size: 11.5px; padding: 1px 4px; }
+.md .fig-tabs button:hover { color: var(--fg); }
+.md .fig-tabs button.on {
+  color: var(--fg);
+  background: var(--bg);
+  border-color: var(--accent);
+}
+.md .fig-pane[hidden] { display: none; }
+.md .ascii-fig {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  overflow-x: auto;
+  font-family: ui-monospace, Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre;
+}
 
 /* 图片放大层 */
 .lightbox {

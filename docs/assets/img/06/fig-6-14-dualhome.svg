@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 442" width="900" height="442" role="img" aria-label="双归属场景：per-CE SID 可让去程与回程走不同 PE，anycast 下则完全随机">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 11.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ag{stroke:#2f855a;stroke-width:2.2;fill:none}.ao{stroke:#b7791f;stroke-width:2.2;fill:none}
+.ad{stroke:#c0392b;stroke-width:2.2;fill:none;stroke-dasharray:7 5}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ag{stroke:#68d391}.ao{stroke:#ecc94b}.ad{stroke:#f87171}}
+</style>
+<defs><marker id="ag" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7" fill="#2f855a"/></marker>
+<marker id="ao" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7" fill="#b7791f"/></marker>
+<marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7" fill="#c0392b"/></marker></defs>
+<rect class="bg" width="900" height="442"/>
+<text class="h" x="20" y="26">案例 B：同一个 CE 双归属两台 PE，per-CE SID 让去回程可以走不同一侧</text>
+
+<rect class="b" x="20" y="96" width="150" height="76" rx="8"/>
+<text class="t" x="34" y="118">PE-1</text><text class="s" x="34" y="138">入口</text><text class="s" x="34" y="158">去程从这发起</text>
+
+<rect class="b2" x="290" y="64" width="170" height="70" rx="8"/>
+<text class="t" x="304" y="86">PE-2</text><text class="s" x="304" y="106">VRF-100 · AC-1</text>
+<text class="m" x="304" y="124">uDX4 …:e101::</text>
+<rect class="b3" x="290" y="164" width="170" height="70" rx="8"/>
+<text class="t" x="304" y="186">PE-3</text><text class="s" x="304" y="206">VRF-100 · AC-2</text>
+<text class="m" x="304" y="224">uDX4 …:e102::</text>
+
+<rect class="b" x="620" y="96" width="150" height="76" rx="8"/>
+<text class="t" x="634" y="118">CE-1</text><text class="s" x="634" y="138">双归属</text><text class="s" x="634" y="158">10.1.1.0/24</text>
+
+<path class="ag" d="M170 120 L290 100" marker-end="url(#ag)"/>
+<text class="g" x="180" y="110">去程</text>
+<path class="ag" d="M460 100 L620 120" marker-end="url(#ag)"/>
+<path class="ao" d="M620 148 L460 200" marker-end="url(#ao)"/>
+<text class="o" x="500" y="234">回程（指定）</text>
+<path class="ao" d="M290 216 L170 164" marker-end="url(#ao)"/>
+<path class="ao" d="M170 152 L290 200" marker-end="url(#ao)"/>
+
+<text class="s" x="20" y="200">两段路径各自按 SID 选边</text>
+<text class="s" x="20" y="220">回程由出口 PE 决定，而不是入口</text>
+
+<rect class="b2" x="20" y="256" width="420" height="82" rx="8"/>
+<text class="t" x="36" y="280">per-CE：能定向</text>
+<text class="s" x="36" y="302">两个 SID 都在 BGP 里，路由按策略优选一条</text>
+<text class="s" x="36" y="322">回程走哪台 PE 由远端 SID 决定，可双向对称</text>
+
+<rect class="b4" x="460" y="256" width="420" height="82" rx="8"/>
+<text class="t" x="476" y="280">anycast：不能定向</text>
+<text class="s" x="476" y="302">两台 PE 用同一个 SID，回程由 IGP 就近决定</text>
+<text class="s" x="476" y="322">去回不对称 → 防火墙会话、状态检查掉流量</text>
+
+<rect class="b" x="20" y="350" width="860" height="80" rx="8"/>
+<text class="t" x="36" y="374">判定：show bgp vpnv4 unicast rd &lt;RD&gt; &lt;CE 前缀&gt; 看有几条路径、Prefix-SID 是否相同</text>
+<text class="m" x="36" y="396">两条路径 + 两个不同 SID → per-CE，可控</text>
+<text class="m" x="36" y="416">两条路径 + 同一个 SID → anycast，回程不可控</text>
+</svg>

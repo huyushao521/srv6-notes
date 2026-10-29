@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 448" width="900" height="448" role="img" aria-label="三种故障与对应保护：链路断由 TI-LFA 本地修复，汇总路由器整机挂由 BGP PIC edge 切备份，而汇总路由器活着但某个分量丢失没有任何机制覆盖，这正是 UPA 补的洞">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="448"/>
+<text class="h" x="20" y="26">8.3 三种故障：前两种有机制，第三种是协议层的空洞</text>
+
+<rect class="b2" x="20" y="46" width="180" height="76" rx="10"/>
+<text class="t" x="36" y="70">① 链路 / 节点断</text>
+<text class="s" x="36" y="92">路径没了</text>
+<text class="s" x="36" y="112">控制面可见</text>
+<path class="ar" d="M200 84 L244 84" marker-end="url(#a)"/>
+<rect class="b1" x="246" y="46" width="300" height="76" rx="10"/>
+<text class="t" x="262" y="70">TI-LFA</text>
+<text class="m" x="262" y="92">&lt; 50 ms，本地修复</text>
+<text class="s" x="262" y="112">不动控制面，报文改走备份下一跳</text>
+<rect class="b2" x="580" y="46" width="120" height="76" rx="10"/>
+<text class="g" x="600" y="80">✔ 已覆盖</text>
+<text class="s" x="592" y="102">单链路 / 单节点</text>
+
+<rect class="b2" x="20" y="132" width="180" height="76" rx="10"/>
+<text class="t" x="36" y="156">② 汇总路由器整机挂</text>
+<text class="s" x="36" y="178">下一跳不可达</text>
+<text class="s" x="36" y="198">BGP 可见</text>
+<path class="ar" d="M200 170 L244 170" marker-end="url(#a)"/>
+<rect class="b1" x="246" y="132" width="300" height="76" rx="10"/>
+<text class="t" x="262" y="156">BGP PIC edge</text>
+<text class="m" x="262" y="178">亚秒级</text>
+<text class="s" x="262" y="198">切到预装的备份 PE</text>
+<rect class="b2" x="580" y="132" width="120" height="76" rx="10"/>
+<text class="g" x="600" y="166">✔ 已覆盖</text>
+<text class="s" x="592" y="188">PE 级</text>
+
+<rect class="b4" x="20" y="218" width="180" height="94" rx="10"/>
+<text class="t" x="36" y="242">③ 汇总路由器活着</text>
+<text class="t" x="36" y="262">但某个分量丢了</text>
+<text class="r" x="36" y="284">控制面完全不可见</text>
+<text class="s" x="36" y="304">最贵、最难查</text>
+<path class="ar" d="M200 264 L244 264" marker-end="url(#a)"/>
+<rect class="b" x="246" y="218" width="300" height="94" rx="10"/>
+<text class="t" x="262" y="242">没有机制覆盖</text>
+<text class="s" x="262" y="264">路由器没挂、会话还 up、汇总还在</text>
+<text class="s" x="262" y="284">数据面只能靠丢包表达</text>
+<text class="s" x="262" y="304">这就是 8.1 描述的黑洞</text>
+<rect class="b3" x="580" y="218" width="120" height="94" rx="10"/>
+<text class="o" x="596" y="252">✘ 空洞</text>
+<text class="s" x="596" y="274">只能靠 UPA 补</text>
+<text class="s" x="596" y="294">（8.2）</text>
+
+<rect class="b1" x="724" y="218" width="156" height="94" rx="10"/>
+<text class="t" x="740" y="242">UPA 补这一格</text>
+<text class="m" x="740" y="264">IGP 负向通告</text>
+<text class="s" x="740" y="286">把分量失效变成</text>
+<text class="s" x="740" y="304">控制面可见事件</text>
+
+<rect class="b" x="20" y="328" width="860" height="52" rx="8"/>
+<text class="t" x="36" y="352">三者的分工可以一句话记：</text>
+<text class="s" x="36" y="372">TI-LFA 保护「到汇总路由器的路径」，PIC 保护「汇总路由器本身」，UPA 保护「汇总路由器还活着但下面掉了一块」</text>
+
+<rect class="b2" x="20" y="388" width="860" height="50" rx="8"/>
+<text class="s" x="36" y="410">UPA 不替代其中任何一个 —— 它只是把 PIC edge 在汇总存在时缺的那一个输入补上</text>
+<text class="s" x="36" y="430">所以正确说法不是「用 UPA 取代 PIC」，而是「做了激进汇总，就必须配 UPA」</text>
+</svg>

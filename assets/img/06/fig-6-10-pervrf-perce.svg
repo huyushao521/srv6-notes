@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 436" width="900" height="436" role="img" aria-label="per-VRF 与 per-CE 两种 SID 分配：前者一个 uDT46 服务整个 VRF，后者每条接入电路一个 uDX">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 11.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.7;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="436"/>
+<text class="h" x="20" y="26">6.3 的两种分配：一个 VRF 一个 SID，还是每条接入电路一个 SID</text>
+
+<text class="t" x="20" y="52">per-VRF：SID 标识 VRF（默认选择）</text>
+<rect class="b2" x="60" y="62" width="150" height="80" rx="8"/>
+<text class="t" x="74" y="84">PE-2</text><text class="s" x="74" y="104">VRF-100</text>
+<text class="m" x="74" y="124">uDT46 × 1</text>
+<rect class="b" x="290" y="66" width="120" height="44" rx="8"/>
+<text class="t" x="302" y="86">CE-A</text><text class="s" x="302" y="104">10.1.1.1</text>
+<rect class="b" x="290" y="140" width="120" height="44" rx="8"/>
+<text class="t" x="302" y="160">CE-B</text><text class="s" x="302" y="178">10.1.1.2</text>
+<path class="ar" d="M210 88 L290 88" marker-end="url(#a)"/>
+<path class="ar" d="M210 124 L250 124 L250 162 L290 162" marker-end="url(#a)"/>
+<text class="s" x="214" y="80">AC-1</text>
+<text class="s" x="252" y="146">AC-2</text>
+<text class="m" x="60" y="164">fdbb:bb00:0002:e001::</text>
+<text class="s" x="60" y="182">两条 AC 共用同一个 SID</text>
+
+<text class="t" x="470" y="52">per-CE：SID 标识一条接入电路</text>
+<rect class="b3" x="500" y="62" width="160" height="80" rx="8"/>
+<text class="t" x="514" y="84">PE-3</text><text class="s" x="514" y="104">VRF-100</text>
+<text class="m" x="514" y="124">uDX4 × 2</text>
+<rect class="b" x="740" y="66" width="120" height="44" rx="8"/>
+<text class="t" x="752" y="86">CE-A</text><text class="s" x="752" y="104">10.1.1.1</text>
+<rect class="b" x="740" y="140" width="120" height="44" rx="8"/>
+<text class="t" x="752" y="160">CE-B</text><text class="s" x="752" y="178">10.1.1.2</text>
+<path class="ar" d="M660 88 L740 88" marker-end="url(#a)"/>
+<path class="ar" d="M660 124 L700 124 L700 162 L740 162" marker-end="url(#a)"/>
+<text class="m" x="664" y="80">…:e101::</text>
+<text class="m" x="664" y="146">…:e102::</text>
+<text class="s" x="500" y="164">每个 SID 指向一条具体链路</text>
+<text class="r" x="500" y="182">SID 数 = 接入电路数（≥ VRF 数）</text>
+
+<rect class="b" x="20" y="200" width="420" height="120" rx="8"/>
+<text class="t" x="36" y="224">per-VRF 的账</text>
+<text class="s" x="36" y="248">SID 数 = VRF 数（4,000 VRF → 4,000 SID）</text>
+<text class="s" x="36" y="270">出口：查一次 VRF 表</text>
+<text class="s" x="36" y="292">双栈：一个 DT46 全包</text>
+<text class="r" x="36" y="312">缺点：无法区分同 VRF 的不同 CE</text>
+
+<rect class="b" x="460" y="200" width="420" height="120" rx="8"/>
+<text class="t" x="476" y="224">per-CE 的账</text>
+<text class="s" x="476" y="248">SID 数 = 接入电路数（20,000 条 → 20,000 SID）</text>
+<text class="s" x="476" y="270">出口：不查表，直接出接口（更快）</text>
+<text class="s" x="476" y="292">双栈：DX4 / DX6 必须分开</text>
+<text class="g" x="476" y="312">优点：能定向，能按 CE 做差异化回程</text>
+
+<rect class="b2" x="20" y="332" width="860" height="46" rx="8"/>
+<text class="t" x="36" y="360">判定命令：show segment-routing srv6 sid all 里 Context 列是 VRF 名 → per-VRF；是接口名 → per-CE。</text>
+
+<rect class="b3" x="20" y="386" width="860" height="42" rx="8"/>
+<text class="s" x="36" y="412">选型顺序：先问"远端 PE 需不需要指定走哪条链路"。不需要 → per-VRF（省 SID、好运维）；需要 → 再评估 SID 数与 6.6 的转置。</text>
+</svg>

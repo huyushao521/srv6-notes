@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="900" height="500" role="img" aria-label="基础拓扑剪枝成 Topo(130)：去掉不参与 Flex-Algo(130) 的节点 6 与 RED 链路 5-3，最短路从 1-6-5-4-3 变成 1-2-3">
+<style>
+.bg{fill:#fff}.nd{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.ndg{fill:#f0f2f5;stroke:#c4cbd4;stroke-width:1.2}
+.ndx{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.r{fill:#c0392b;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.ln{stroke:#8b95a3;stroke-width:2.2;fill:none}.dead{stroke:#c9cfd8;stroke-width:1.6;fill:none;stroke-dasharray:5 5}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.nd{fill:#16283d;stroke:#58a6ff}.ndg{fill:#1b2029;stroke:#4a5260}
+.ndx{fill:#2a2113;stroke:#ecc94b}.b{fill:#1b2029;stroke:#39414f}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}
+.h{fill:#58a6ff}.o{fill:#ecc94b}.r{fill:#f87171}.ln{stroke:#6b7684}.dead{stroke:#4a5260}}
+</style>
+<rect class="bg" width="900" height="500"/>
+<text class="h" x="24" y="26">先剪枝，再算最短路：同一份定义，参与者不同，路径就不同</text>
+<text class="t" x="24" y="52">左：基础拓扑（各节点支持的算法）</text>
+<text class="t" x="470" y="52">右：Topo(130)（定义 = IGP 度量 + 排除 RED）</text>
+
+<path class="dead" d="M76 130 L146 78"/>
+<path class="ln" d="M230 78 L300 78"/>
+<path class="dead" d="M380 84 L440 124"/>
+<path class="ln" d="M300 96 L300 168"/>
+<path class="ln" d="M322 178 L406 130"/>
+<path class="ln" d="M380 180 L430 180"/>
+<path class="dead" d="M74 214 L74 252 L458 252 L458 202"/>
+<rect class="ndx" x="46" y="130" width="56" height="34" rx="8"/><text class="t" x="74" y="153" text-anchor="middle">R6</text>
+<rect class="nd" x="46" y="180" width="56" height="34" rx="8"/><text class="t" x="74" y="203" text-anchor="middle">R1</text>
+<rect class="nd" x="230" y="60" width="56" height="34" rx="8"/><text class="t" x="258" y="83" text-anchor="middle">R5</text>
+<rect class="nd" x="406" y="112" width="56" height="34" rx="8"/><text class="t" x="434" y="135" text-anchor="middle">R3</text>
+<rect class="nd" x="300" y="168" width="56" height="34" rx="8"/><text class="t" x="328" y="191" text-anchor="middle">R4</text>
+<rect class="nd" x="430" y="168" width="56" height="34" rx="8"/><text class="t" x="458" y="191" text-anchor="middle">R2</text>
+<text class="s" x="46" y="122">R6：只支持 algo 0</text>
+<text class="r" x="286" y="72">RED</text>
+
+<path class="ln" d="M530 130 L570 78"/>
+<path class="ln" d="M650 78 L700 78"/>
+<path class="dead" d="M756 84 L790 124"/>
+<path class="ln" d="M700 96 L700 168"/>
+<path class="ln" d="M722 178 L786 130"/>
+<path class="ln" d="M746 180 L790 180"/>
+<path class="ln" d="M530 214 L530 252 L818 252 L818 202"/><rect class="ndg" x="502" y="130" width="56" height="34" rx="8"/><text class="s" x="530" y="153" text-anchor="middle">R6</text>
+<rect class="nd" x="502" y="180" width="56" height="34" rx="8"/><text class="t" x="530" y="203" text-anchor="middle">R1</text>
+<rect class="nd" x="650" y="60" width="56" height="34" rx="8"/><text class="t" x="678" y="83" text-anchor="middle">R5</text>
+<rect class="nd" x="786" y="112" width="56" height="34" rx="8"/><text class="t" x="814" y="135" text-anchor="middle">R3</text>
+<rect class="nd" x="700" y="168" width="56" height="34" rx="8"/><text class="t" x="728" y="191" text-anchor="middle">R4</text>
+<rect class="nd" x="790" y="168" width="56" height="34" rx="8"/><text class="t" x="818" y="191" text-anchor="middle">R2</text>
+<text class="r" x="520" y="122">R6 已剪掉</text>
+<text class="r" x="756" y="72">5-3 已剪掉</text>
+<text class="o" x="560" y="230">剩下 1-2-3 唯一可选</text>
+
+<rect class="b" x="24" y="284" width="852" height="200" rx="8"/>
+<text class="t" x="40" y="310">两条剪枝规则，作用完全不同</text>
+<text class="s" x="40" y="336">① 剪节点：R6 不参与 130 → R6 及其两条链路（1-6、6-5）整体消失，连中转都不行</text>
+<text class="s" x="40" y="360">② 剪链路：5-3 带 RED 亲和 → 只删这条边，两端节点仍在拓扑里</text>
+<text class="t" x="40" y="392">到 R3 的最短路因此不同：</text>
+<text class="m" x="40" y="418">Flex-Algo(129)  1 → 6 → 5 → 4 → 3   代价 40</text>
+<text class="m" x="40" y="442">Flex-Algo(130)  1 → 2 → 3           代价 50（R6 不在，1-2 度量 40 也得走）</text>
+<text class="s" x="40" y="468">两份定义一字不差，只因为“谁参与”不同，路径就变了 —— 排障先看参与者名单，再看定义内容</text>
+</svg>

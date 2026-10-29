@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 372" width="900" height="372" role="img" aria-label="最长前缀匹配让一次查表执行 uN 与 uA 两条指令">
+<style>
+.bg{fill:#fff}.loc{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.fun{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.arg{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.2}.pad{fill:#f5f6f8;stroke:#cbd3de;stroke-dasharray:4 3}
+.mpls{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.hit{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.8}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 13px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.k{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.loc{fill:#16283d;stroke:#58a6ff}.fun{fill:#14291d;stroke:#68d391}
+.arg{fill:#2a2113;stroke:#ecc94b}.pad{fill:#171c24;stroke:#39414f}.mpls{fill:#2a2113;stroke:#ecc94b}.hit{fill:#14291d;stroke:#68d391}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.k{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="372"/>
+<text class="h" x="24" y="28">最长前缀匹配 = 免费的压缩引擎：一次查表执行两条指令</text>
+
+<text class="s" x="40" y="60">DA = fdbb:bb00 : 0009 : e001 : 0000 ::</text>
+<rect class="loc" x="40" y="70" width="155" height="46"/>
+<rect class="fun" x="195" y="70" width="78" height="46"/>
+<rect class="arg" x="273" y="70" width="78" height="46"/>
+<rect class="pad" x="351" y="70" width="300" height="46"/>
+<text class="m" x="117" y="99" text-anchor="middle">fdbb:bb00</text>
+<text class="m" x="234" y="99" text-anchor="middle">0009</text>
+<text class="m" x="312" y="99" text-anchor="middle">e001</text>
+<text class="s" x="501" y="99" text-anchor="middle">::</text>
+<text class="s" x="117" y="134" text-anchor="middle">/32</text>
+<text class="s" x="234" y="134" text-anchor="middle">uN</text>
+<text class="s" x="312" y="134" text-anchor="middle">uA</text>
+
+<path d="M40 142 v10 H273 v-10" fill="none" stroke="#2f855a" stroke-width="1.4"/>
+<text class="s" x="156" y="170" text-anchor="middle">本节点只装这一条表项：/48 = fdbb:bb00:0009::</text>
+
+<rect class="hit" x="40" y="184" width="300" height="30" rx="3"/>
+<text class="t" x="190" y="204" text-anchor="middle">命中 /48 → 剩余位即指令</text>
+
+<circle cx="140" cy="252" r="15" fill="none" stroke="#0b6bcb" stroke-width="1.5"/><text class="s" x="140" y="257" text-anchor="middle">1</text>
+<text class="s" x="166" y="257">最长匹配 /48，不解析后面 80 bit</text>
+<circle cx="140" cy="286" r="15" fill="none" stroke="#2f855a" stroke-width="1.5"/><text class="s" x="140" y="291" text-anchor="middle">2</text>
+<text class="s" x="166" y="291">剩余位 e001 = 参数，直接映射出接口</text>
+<circle cx="140" cy="320" r="15" fill="none" stroke="#b7791f" stroke-width="1.5"/><text class="s" x="140" y="325" text-anchor="middle">3</text>
+<text class="s" x="166" y="325">出 Hu0/0/0/1，uN 与 uA 在这一次查表里做完</text>
+
+<rect class="mpls" x="600" y="60" width="276" height="150" rx="4"/>
+<text class="t" x="616" y="84">同样的动作，MPLS 要几步</text>
+<rect class="mpls" x="616" y="98" width="120" height="26" rx="2"/><text class="m" x="676" y="116" text-anchor="middle">标签 A</text>
+<rect class="mpls" x="616" y="130" width="120" height="26" rx="2"/><text class="m" x="676" y="148" text-anchor="middle">标签 B</text>
+<text class="s" x="750" y="116">查表 1 → 弹栈</text>
+<text class="s" x="750" y="148">查表 2 → 弹栈</text>
+<text class="k" x="616" y="178">两个标签、两次弹栈、两次查表</text>
+<text class="k" x="616" y="198">标签不可汇总，栈深受硬件限制</text>
+
+<text class="s" x="600" y="240">另外两件白拿的好处：</text>
+<text class="s" x="600" y="264">· 16 / 32 bit uSID 同程序混用（第 15 章 WLIB）</text>
+<text class="s" x="600" y="288">· 256 个 /48 汇总成 1 个 /40（第 14 章 Set）</text>
+<text class="s" x="600" y="312">核心表项因此降两个数量级</text>
+
+<text class="s" x="24" y="352">差别不在芯片更快，而在"地址本身就是指令"：前缀只负责把报文送到节点，剩下的位负责告诉节点做什么。</text>
+</svg>

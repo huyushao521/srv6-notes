@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 404" width="900" height="404" role="img" aria-label="DF 按 EVI 分别选举：PE-1 在 EVI 100 上是 DF、在 EVI 200 上是 Non-DF，PE-3 恰好相反，所以同一台 PE 在不同 VLAN 上角色不同">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.ar{stroke:#5a6472}}
+</style>
+<rect class="bg" width="900" height="404"/>
+<text class="h" x="20" y="26">7.3.1 DF 是按 EVI（VLAN）各自选举的 —— 同一台 PE 可以是半 DF</text>
+
+<rect class="b" x="20" y="44" width="460" height="150" rx="8"/>
+<text class="m" x="36" y="68">show evpn ethernet-segment Hu0/0/0/1.100 detail</text>
+<text class="s" x="36" y="92">Multi-homing mode　　: All Active</text>
+<text class="s" x="36" y="112">ES to BGP Gates　　: Ready</text>
+<text class="s" x="36" y="132">ES to L2FIB　　　　: Ready</text>
+<text class="s" x="36" y="156">DF Election Result:</text>
+<text class="g" x="52" y="176">EVI 100, VLAN 100　: DF　　　← 本机负责泛洪</text>
+
+<rect class="b4" x="20" y="204" width="460" height="34" rx="6"/>
+<text class="r" x="36" y="226">EVI 200, VLAN 200　: Non-DF　← 本机只转已知单播</text>
+<text class="s" x="20" y="256">同一条 AC、同一个 ES，两台 PE 在两个 VLAN 上互换角色。</text>
+
+<rect class="b1" x="500" y="44" width="380" height="120" rx="10"/>
+<text class="t" x="516" y="68">EVI 100 / VLAN 100</text>
+<rect class="b2" x="516" y="82" width="160" height="36" rx="6"/>
+<text class="m" x="530" y="105">PE-1 = DF</text>
+<rect class="b" x="700" y="82" width="164" height="36" rx="6"/>
+<text class="m" x="714" y="105">PE-3 = Non-DF</text>
+<text class="g" x="516" y="146">泛洪只从 PE-1 出去 → CE 收到一份</text>
+
+<rect class="b1" x="500" y="176" width="380" height="120" rx="10"/>
+<text class="t" x="516" y="200">EVI 200 / VLAN 200</text>
+<rect class="b" x="516" y="214" width="160" height="36" rx="6"/>
+<text class="m" x="530" y="237">PE-1 = Non-DF</text>
+<rect class="b2" x="700" y="214" width="164" height="36" rx="6"/>
+<text class="m" x="714" y="237">PE-3 = DF</text>
+<text class="g" x="516" y="278">泛洪只从 PE-3 出去 → 仍是 CE 收到一份</text>
+
+<rect class="b3" x="20" y="286" width="460" height="70" rx="8"/>
+<text class="t" x="36" y="310">最容易误判的现象</text>
+<text class="s" x="36" y="332">"某个 VLAN 广播不通，隔壁 VLAN 一切正常"</text>
+<text class="m" x="36" y="350">第一件事：查该 EVI 那一行的 DF 结果</text>
+
+<rect class="b1" x="20" y="366" width="860" height="34" rx="8"/>
+<text class="s" x="36" y="388">推论：DF 数量必须"每个 EVI/VLAN 恰好 1 台"——不是"每台 PE 一个 DF"，也不是"每台 PE 都是 DF"</text>
+</svg>

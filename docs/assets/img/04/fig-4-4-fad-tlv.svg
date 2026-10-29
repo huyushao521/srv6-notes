@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 424" width="900" height="424" role="img" aria-label="Flex-Algo 定义 TLV 格式：Type/Length、Flex-Algorithm、Metric-Type、Calc-Type、Priority 与约束 Sub-TLV">
+<style>
+.bg{fill:#fff}.cell{fill:#f7f9fc;stroke:#9aa4b2;stroke-width:1.3}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.cell{fill:#1b2029;stroke:#6b7684}.b1{fill:#16283d;stroke:#58a6ff}
+.b3{fill:#2a2113;stroke:#ecc94b}.b{fill:#1b2029;stroke:#39414f}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.o{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="424"/>
+<text class="h" x="24" y="26">Flex-Algo 定义（FAD）TLV：三要素落在三个字段上</text>
+
+<rect class="cell" x="24" y="48" width="426" height="32"/><text class="m" x="237" y="69" text-anchor="middle">Type  26 / 16 / 1039</text>
+<rect class="cell" x="450" y="48" width="426" height="32"/><text class="m" x="663" y="69" text-anchor="middle">Length</text>
+
+<rect class="cell" x="24" y="80" width="213" height="32"/><text class="m" x="130" y="101" text-anchor="middle">Flex-Algorithm</text>
+<rect class="cell" x="237" y="80" width="213" height="32"/><text class="m" x="343" y="101" text-anchor="middle">Metric-Type</text>
+<rect class="cell" x="450" y="80" width="213" height="32"/><text class="m" x="556" y="101" text-anchor="middle">Calc-Type</text>
+<rect class="cell" x="663" y="80" width="213" height="32"/><text class="m" x="769" y="101" text-anchor="middle">Priority</text>
+
+<rect class="cell" x="24" y="112" width="852" height="32"/>
+<text class="m" x="450" y="133" text-anchor="middle">Sub-TLVs：Exclude SRLG / Exclude-Any / Include-Any / Include-All / Flags</text>
+<text class="s" x="24" y="166">Type：IS-IS 26（Router Capability TLV）· OSPF 16（Router Information LSA）· BGP-LS 1039</text>
+
+<rect class="b" x="24" y="186" width="852" height="128" rx="8"/>
+<text class="t" x="40" y="212">字段 ↔ FAD 三要素</text>
+<text class="m" x="40" y="240">Flex-Algorithm  →  算法编号 128–255（每个域自定义）</text>
+<text class="m" x="40" y="266">Calc-Type       →  计算类型：借标准算法编号，SPF 时填 0（当前唯一）</text>
+<text class="m" x="40" y="292">Metric-Type     →  优化度量：0=IGP metric / 1=link delay / 2=TE metric</text>
+
+<rect class="b3" x="24" y="330" width="852" height="76" rx="8"/>
+<text class="t" x="40" y="354">优先级只决定“选谁的版本”，不决定“算什么”</text>
+<text class="s" x="40" y="378">Priority 参与定义选举（同优先级再比 System-ID）；约束集与度量才是真正影响路径的内容</text>
+<text class="s" x="40" y="398">不写 advertise-definition 的节点：定义只在本地，永远选不上，也不会参与</text>
+</svg>

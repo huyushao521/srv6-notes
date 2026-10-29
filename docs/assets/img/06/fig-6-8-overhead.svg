@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 414" width="900" height="414" role="img" aria-label="封装开销账：承载 100 字节客户报文时，MPLS 两层标签为 108 字节，SRv6 为 140 字节，带 SRH 超过 180 字节">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 11.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.pay{fill:#dbe7f6;stroke:#5b7fa6;stroke-width:1}.ov{fill:#f6c9a8;stroke:#b7791f;stroke-width:1}
+.ov2{fill:#f0a8a8;stroke:#c0392b;stroke-width:1}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.o{fill:#ecc94b}
+.pay{fill:#1e3350;stroke:#4a7ab0}.ov{fill:#4a3417;stroke:#ecc94b}.ov2{fill:#4a1d1d;stroke:#f87171}}
+</style>
+<rect class="bg" width="900" height="414"/>
+<text class="h" x="20" y="26">6.2.1 的开销账：同一份 100 字节客户报文，四种封装的总长度（1 B ≈ 3.6 px）</text>
+
+<text class="t" x="20" y="60">MPLS L3VPN（两层标签）</text>
+<rect class="pay" x="150" y="70" width="360" height="30"/>
+<rect class="ov" x="510" y="70" width="29" height="30"/>
+<text class="s" x="158" y="90">客户报文 100 B</text>
+<text class="m" x="548" y="90">108 B　+8</text>
+
+<text class="t" x="20" y="126">SRv6 常规（无 SRH）</text>
+<rect class="pay" x="150" y="136" width="360" height="30"/>
+<rect class="ov" x="510" y="136" width="144" height="30"/>
+<text class="s" x="158" y="156">客户报文 100 B</text>
+<text class="m" x="662" y="156">140 B　+32</text>
+
+<text class="t" x="20" y="192">SRv6 + SRH（2 段）</text>
+<rect class="pay" x="150" y="202" width="360" height="30"/>
+<rect class="ov2" x="510" y="202" width="288" height="30"/>
+<text class="s" x="158" y="222">客户报文 100 B</text>
+<text class="m" x="806" y="222">≥180 B　+72</text>
+
+<text class="t" x="20" y="258">uSID 压缩（指令全塞进 DA）</text>
+<rect class="pay" x="150" y="268" width="360" height="30"/>
+<rect class="ov" x="510" y="268" width="144" height="30"/>
+<text class="s" x="158" y="288">客户报文 100 B</text>
+<text class="m" x="662" y="288">140 B　+32</text>
+
+<rect class="b1" x="20" y="312" width="420" height="86" rx="8"/>
+<text class="t" x="36" y="336">注意第三条</text>
+<text class="s" x="36" y="358">uSID 并不能把 40 B 变小 —— 它只是省掉了 SRH</text>
+<text class="s" x="36" y="378">超过 5 条微指令才需要 SRH，那时开销回到 180 B 以上</text>
+
+<rect class="b4" x="460" y="312" width="420" height="86" rx="8"/>
+<text class="t" x="476" y="336">这笔账什么时候必须显式算</text>
+<text class="s" x="476" y="358">平均包小 + 流量大：视频回传、城域大流量</text>
+<text class="r" x="476" y="378">+32 B / 108 B ≈ 多 30% 每比特成本，不能想当然说"SRv6 更省"</text>
+</svg>

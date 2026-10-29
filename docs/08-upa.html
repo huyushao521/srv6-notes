@@ -125,7 +125,16 @@
 </tr>
 </tbody>
 </table>
-<pre><code class="language-text">图 8-1：三个角色的位置（原书 Figure 8.1 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-1-topology.svg" alt="核心 ABR 用 PIC edge 只收到一条汇总，地市 PE3 把汇总指向 Null0、其下明细已失效 —— 三个角色各站一边，中间没有任何机制负责翻译。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 8-1：三个角色的位置（原书 Figure 8.1 重绘）
 
         ┌──────────────── 核心 ────────────────┐
         │  ABR / PE-1（PIC edge，有备份路径）    │
@@ -141,8 +150,11 @@
         └──────────────────────────────────────┘
 
   问题：PE3 上 10.1.1.0/24 消失，但 10.1.0.0/16 依然在
-        → 核心的 BGP 表毫无变化 → PIC 没有理由切备份 → 报文进 Null0
-</code></pre>
+        → 核心的 BGP 表毫无变化 → PIC 没有理由切备份 → 报文进 Null0</pre>
+  </div>
+  <figcaption><b>8.0 · 矢量版</b>　核心 ABR 用 PIC edge 只收到一条汇总，地市 PE3 把汇总指向 Null0、其下明细已失效 —— 三个角色各站一边，中间没有任何机制负责翻译。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <h2 id="81">8.1 故障长什么样</h2>
 <div class="en">
 <p>Consider a PE that advertises a summary route for a large block of prefixes, and an upstream PE that uses BGP PIC edge protection with a backup path. When the downstream PE loses one specific prefix inside the summary, the summary route itself does not change: it is still originated by the summarizing router. The upstream PE therefore keeps sending traffic for the lost prefix toward a router that can no longer deliver it, and the packet is silently dropped.</p>
@@ -152,6 +164,11 @@
 <p>The failure is invisible to BGP: the BGP session is up, the next hop is reachable, and the summary route is present. Only the data plane knows, and only by dropping packets. This is one of the most expensive failure modes in a large network, because it can last for minutes with no alarm.</p>
 </div>
 <p>对 BGP 来说这个故障是"<strong>看不见</strong>"的：会话正常、下一跳可达、汇总路由在表中。<strong>只有数据面知道，而它的表达方式就是丢包</strong>。这种故障在大网里代价极高——<strong>可能持续几分钟而没有任何告警</strong>。</p>
+<figure>
+  <img src="assets/img/08/fig-8-2-blackhole.svg" alt="四项协议状态全绿、告警一条不报，报文走了三跳每一步都合规，最后一步进 Null0 被静默丢弃。">
+  <figcaption><b>8.1 · 矢量版</b>　四项协议状态全绿、告警一条不报，报文走了三跳每一步都合规，最后一步进 Null0 被静默丢弃。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="811">8.1.1 三方各说各话：为什么能持续几十秒</h3>
 <p>把三个平面的"认知"并排列出来，黑缝就一目了然：</p>
 <table>
@@ -188,6 +205,11 @@
 <div class="en">
 <p>The chain is broken at the point where the information should travel: the prefix that failed is a BGP prefix, so its failure is not visible to the IGP, and the summary that hides it is a BGP route, so its presence is not affected. Neither protocol is misconfigured; the combination is.</p>
 </div>
+<figure>
+  <img src="assets/img/08/fig-8-3-three-planes.svg" alt="四个认知并排：数据面丢包、PE3 的 BGP 认为汇总未变、ABR 只有汇总、IGP 完全沉默 —— 断点就在信息本该传递的那一格。">
+  <figcaption><b>8.1.1 · 矢量版</b>　四个认知并排：数据面丢包、PE3 的 BGP 认为汇总未变、ABR 只有汇总、IGP 完全沉默 —— 断点就在信息本该传递的那一格。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p>链条断在"信息本该传递的那一点"：<strong>失效的前缀是 BGP 前缀</strong>，所以它的失效对 <strong>IGP 不可见</strong>；<strong>掩盖它的汇总是 BGP 路由</strong>，所以它的存在<strong>不受影响</strong>。两个协议都没有配错，<strong>是组合错了</strong>。</p>
 <p>这也解释了为什么现象总是"<strong>70 秒左右自愈</strong>"：直到 IGP 重收敛后 PE4 的明细路由胜出、或 BGP 会话超时/扫描周期触发，业务才回来。<strong>自愈不是保护机制起作用，是"等到了"</strong>。</p>
 <h2 id="82-upa">8.2 UPA 怎么解决</h2>
@@ -195,7 +217,16 @@
 <p>UPA is an IGP signaling mechanism. When a router loses reachability to a prefix that it had previously advertised, or that is covered by a summary it originates, it sends an explicit IGP announcement stating that the prefix is unreachable. Upstream routers react immediately instead of waiting for a BGP timeout, and PIC can switch to the backup path.</p>
 </div>
 <p>UPA 是一种 <strong>IGP 信令机制</strong>：当路由器丢失到某前缀的可达性（或该前缀被<strong>它自己产生的汇总</strong>覆盖）时，它发一条<strong>显式的 IGP 通告，声明该前缀不可达</strong>。上游路由器<strong>立即反应</strong>，而不必等 BGP 超时，<strong>PIC 也就有机会切到备份路径</strong>。</p>
-<pre><code class="language-text">图 8-2：UPA 的时序（原书 Figure 8.2 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-4-timeline.svg" alt="两条时间轴对照：有 UPA 时 t=1ms 检测、5ms 发通告、20ms 改 FIB、50ms 内恢复；无 UPA 时同一失效要等约 70 秒。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 8-2：UPA 的时序（原书 Figure 8.2 重绘）
 
   t=0     PE3 上 10.1.1.0/24 的下一跳失效
   t=1ms   PE3 检测到（IGP/BFD/接口 down）
@@ -206,14 +237,22 @@
 
   对照：无 UPA
   t=0     同样失效
-  t=70s   IGP 重收敛 + BGP 最优路径重算完成 → 才恢复
-</code></pre>
+  t=70s   IGP 重收敛 + BGP 最优路径重算完成 → 才恢复</pre>
+  </div>
+  <figcaption><b>8.2 · 矢量版</b>　两条时间轴对照：有 UPA 时 t=1ms 检测、5ms 发通告、20ms 改 FIB、50ms 内恢复；无 UPA 时同一失效要等约 70 秒。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <div class="en">
 <p>The announcement carries the specific prefix, not the summary, so the summarization benefit is preserved: the core still only carries the aggregate, and UPA is only used as a fast negative signal for the affected component.</p>
 </div>
 <p>关键在于：UPA 携带的是<strong>具体前缀</strong>，<strong>不是汇总</strong>。所以<strong>汇总的规模收益完全保留</strong>——核心仍然只装聚合路由，<strong>UPA 只是为受影响的那一个分量提供一个"快速负面信号"</strong>。</p>
 <h3 id="821">8.2.1 报文里到底装了什么</h3>
 <p>UPA 不是新协议，是 <strong>IGP（IS-IS / OSPF）的一个扩展通告</strong>：</p>
+<figure>
+  <img src="assets/img/08/fig-8-5-upa-packet.svg" alt="UPA 的五个字段：失效的具体前缀、标志位、可选原因码、最大值度量、限定在汇总边界内的作用域。">
+  <figcaption><b>8.2.1 · 矢量版</b>　UPA 的五个字段：失效的具体前缀、标志位、可选原因码、最大值度量、限定在汇总边界内的作用域。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <table>
 <thead>
 <tr>
@@ -255,6 +294,11 @@
 </div>
 <p>UPA 刻意设计成<strong>负向信号</strong>，而不是常规意义上的"路由撤销"：<strong>这个前缀本来就不在 IGP 里，没有东西可撤销</strong>。这条通告只是<strong>临时、显式地声明不可达</strong>，在转发层面<strong>覆盖掉覆盖它的聚合路由</strong>；一旦可达性恢复，通告就被撤销。</p>
 <p>这一点是 UPA 与"明细进 IGP"的根本区别：</p>
+<figure>
+  <img src="assets/img/08/fig-8-6-options.svg" alt="四条路对比：明细进 IGP 与不汇总都炸规模，汇总加 Null0 就是黑洞本身，只有汇总加 UPA 同时保住规模与可见性。">
+  <figcaption><b>8.2.1 · 矢量版</b>　四条路对比：明细进 IGP 与不汇总都炸规模，汇总加 Null0 就是黑洞本身，只有汇总加 UPA 同时保住规模与可见性。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <table>
 <thead>
 <tr>
@@ -337,14 +381,31 @@
 <p>It is important to see that UPA does not replace any of these mechanisms; it supplies the one input that PIC edge is missing when summarization is in place. TI-LFA protects the path to the summarizing router, PIC protects against the summarizer's failure, and UPA covers the case where the summarizer is alive but one of its components is not.</p>
 </div>
 <p>关键认识：<strong>UPA 不替代上面任何一个机制，它补的是"汇总存在时 PIC edge 缺的那一个输入"</strong>。TI-LFA 保护"到汇总路由器的路径"，PIC 保护"汇总路由器本身挂了"，<strong>UPA 覆盖的正是第三种情况：汇总路由器活着，但它下面某个分量没了。</strong></p>
-<pre><code class="language-text">图 8-3：三种故障与对应的保护（原书 Figure 8.3 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-7-mechanism-map.svg" alt="三种故障对三种保护：链路断给 TI-LFA、整机挂给 PIC edge、汇总活着但分量丢了没有机制 —— 这一格只能由 UPA 补。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 8-3：三种故障与对应的保护（原书 Figure 8.3 重绘）
 
   ① 链路断    ──► TI-LFA（&lt;50ms，本地修复，不影响控制面）
   ② 汇总路由器挂 ──► BGP PIC edge（切到备份 PE，亚秒）
-  ③ 汇总路由器活着，但某个分量丢了 ──► 【无机制覆盖】← UPA 补这个洞
-</code></pre>
+  ③ 汇总路由器活着，但某个分量丢了 ──► 【无机制覆盖】← UPA 补这个洞</pre>
+  </div>
+  <figcaption><b>8.3 · 矢量版</b>　三种故障对三种保护：链路断给 TI-LFA、整机挂给 PIC edge、汇总活着但分量丢了没有机制 —— 这一格只能由 UPA 补。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p>第 ③ 种是唯一"协议层面无解"的，因为它<strong>在控制面不可见</strong>：路由器没有挂、汇总还在、会话还 up。</p>
 <h2 id="84-upa-igp">8.4 规模与作用域：UPA 会不会把 IGP 搞炸</h2>
+<figure>
+  <img src="assets/img/08/fig-8-8-scope.svg" alt="作用域示意：汇聚层发起、汇总边界内泛洪、核心只接收不发起、其他区域完全看不到；越靠核心越只听说，越靠业务越只说。">
+  <figcaption><b>8.4 · 矢量版</b>　作用域示意：汇聚层发起、汇总边界内泛洪、核心只接收不发起、其他区域完全看不到；越靠核心越只听说，越靠业务越只说。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p>这是部署前必须回答的问题。答案是：<strong>默认不会，前提是限制作用域</strong>。</p>
 <table>
 <thead>
@@ -393,8 +454,18 @@ router isis 1
  !
 !
 </code></pre>
+<figure>
+  <img src="assets/img/08/fig-8-9-threshold.svg" alt="失效数 N 分三段：≤50 逐条发、50–500 分批发、>500 改为撤销汇总；混用会把业务故障放大成控制面故障。">
+  <figcaption><b>8.4 · 矢量版</b>　失效数 N 分三段：≤50 逐条发、50–500 分批发、>500 改为撤销汇总；混用会把业务故障放大成控制面故障。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p>阈值的设计逻辑：<strong>少量分量失效用 UPA 精准通知；大面积失效用撤销汇总让 BGP 重新算路</strong>。两者混用会导致 IGP 被 UPA 淹没而 BGP 又不知道发生了什么。</p>
 <h2 id="85">8.5 配置与验证</h2>
+<figure>
+  <img src="assets/img/08/fig-8-10-config.svg" alt="双侧配置对照：发起侧配 upa 与阈值，汇总侧配 upa 与 additional-paths；能力必须双向协商，只配一侧等于没配。">
+  <figcaption><b>8.5 · 矢量版</b>　双侧配置对照：发起侧配 upa 与阈值，汇总侧配 upa 与 additional-paths；能力必须双向协商，只配一侧等于没配。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p><strong>例 8.2：IOS XR 上启用 UPA 与 PIC</strong></p>
 <pre><code class="language-text">! ① 汇总发起者（地市汇聚 PE3）：允许为被汇总覆盖的分量发 UPA
 router isis 1
@@ -421,6 +492,11 @@ router bgp 65000
  !
 !
 </code></pre>
+<figure>
+  <img src="assets/img/08/fig-8-11-verify.svg" alt="四步验证：能力协商、故障时确实发通告、FIB 立即改指备份、ping 1000 包验证切换时间；第 ③ 步是最硬的证据。">
+  <figcaption><b>8.5 · 矢量版</b>　四步验证：能力协商、故障时确实发通告、FIB 立即改指备份、ping 1000 包验证切换时间；第 ③ 步是最硬的证据。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p><strong>例 8.3：验证 UPA 真的在起作用</strong></p>
 <pre><code class="language-text">! ① 确认能力已协商
 RP/0/RP0/CPU0:ABR# show isis database detail | include &quot;UPA|Router Capability&quot;
@@ -442,10 +518,19 @@ RP/0/RP0/CPU0:ABR# ping 10.1.1.1 count 1000 interval 10 timeout 1
 </code></pre>
 <p>第 ③ 步是<strong>最直接的证据</strong>：<strong>不用等 BGP 的 70 秒，FIB 已经指向备份</strong>。</p>
 <h2 id="86-upa">8.6 排障：UPA 没生效怎么查</h2>
-<pre><code class="language-text">业务中断几十秒后自愈，怀疑 UPA 未生效
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-12-troubleshoot.svg" alt="五步排查按信息流方向：能力、双侧配置、是否真发、FIB 是否变、有无备份路径；上游任何一环断了，现象都是几十秒后自愈。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">业务中断几十秒后自愈，怀疑 UPA 未生效
   │
   ├─ ① IGP 能力协商了吗
-  │    show isis database detail | include &quot;Router Capability&quot;
+  │    show isis database detail | include "Router Capability"
   │    └─ 两台设备都必须支持（否则未知 TLV 被忽略）
   │
   ├─ ② UPA 起了吗（是否只在发起侧配了）
@@ -453,16 +538,19 @@ RP/0/RP0/CPU0:ABR# ping 10.1.1.1 count 1000 interval 10 timeout 1
   │
   ├─ ③ 分量失效时真的发了吗
   │    show isis database detail | include UPA
-  │    └─ 没有 → 明细前缀未被视为&quot;被汇总覆盖&quot;，检查汇总配置
+  │    └─ 没有 → 明细前缀未被视为"被汇总覆盖"，检查汇总配置
   │
   ├─ ④ 收到 UPA 后 FIB 变了吗
   │    show cef &lt;prefix&gt;
   │    └─ 没变 → PIC 没有备份路径可切（备份路径本身不存在）
   │
   └─ ⑤ 有备份路径吗
-       show bgp &lt;prefix&gt; | include &quot;Backup&quot;
-       └─ 无 → PIC 无从切起，问题回到 BGP 拓扑本身
-</code></pre>
+       show bgp &lt;prefix&gt; | include "Backup"
+       └─ 无 → PIC 无从切起，问题回到 BGP 拓扑本身</pre>
+  </div>
+  <figcaption><b>8.6 · 矢量版</b>　五步排查按信息流方向：能力、双侧配置、是否真发、FIB 是否变、有无备份路径；上游任何一环断了，现象都是几十秒后自愈。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <table>
 <thead>
 <tr>
@@ -509,6 +597,11 @@ RP/0/RP0/CPU0:ABR# ping 10.1.1.1 count 1000 interval 10 timeout 1
 <p>UPA closes a gap that exists only when summarization and BGP PIC edge are combined: the aggregate hides the component failure that PIC needs to observe. By announcing the specific unreachable prefix in the IGP, the summarizing router makes the failure visible in milliseconds, and the traffic is moved to the backup path before the aggregate would have changed.</p>
 </div>
 <p>UPA 补的洞<strong>只在"汇总 + BGP PIC edge"同时存在时才出现</strong>：聚合路由<strong>隐藏了 PIC 需要观察的分量故障</strong>。通过<strong>在 IGP 里通告具体的不可达前缀</strong>，汇总路由器让故障在<strong>毫秒级可见</strong>，流量在聚合路由本来要变化之前就被移到备份路径。</p>
+<figure>
+  <img src="assets/img/08/fig-8-13-summary.svg" alt="六个维度对照：可见性、恢复时间、告警、规模收益、配置复杂度、适用网络 —— 唯一没变的是规模收益。">
+  <figcaption><b>8.7 · 矢量版</b>　六个维度对照：可见性、恢复时间、告警、规模收益、配置复杂度、适用网络 —— 唯一没变的是规模收益。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <table>
 <thead>
 <tr>
@@ -555,15 +648,27 @@ RP/0/RP0/CPU0:ABR# ping 10.1.1.1 count 1000 interval 10 timeout 1
 <h3 id="a">案例 A：一分钟的静默丢包（原书案例）</h3>
 <p><strong>现象</strong>：核心到某地市的双 PE 冗余，协议全绿、监控无告警，但该地市 <code>10.1.1.0/24</code> 业务中断约 <strong>70 秒</strong>后自行恢复，且每隔几个月复现一次。</p>
 <p><strong>复盘</strong>：</p>
-<pre><code class="language-text">① 拓扑：地市 PE3 与 PE4 双归核心，PE3 为主用
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-14-case-a.svg" alt="从 70 秒到亚秒：故障期报文持续进 Null0 且无告警，启用 UPA 后切换压在 1 秒内，附复盘五步与上线检查。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">① 拓扑：地市 PE3 与 PE4 双归核心，PE3 为主用
         核心对地市汇总为 10.1.0.0/16，明细不进核心
 ② 故障：PE3 到某台汇聚的链路中断 → 10.1.1.0/24 在 PE3 上不可达
         但 PE3 仍通告 10.1.0.0/16（汇总没有任何变化）
 ③ 结果：核心 ABR 的 BGP 路由不变，流量继续压向 PE3
         PE3 命中 Null0 静默丢弃，直到 IGP 重收敛后 PE4 明细胜出
-④ 修正：PE3/PE4 与 ABR 启用 UPA，并保证&quot;分量丢失即发 UPA&quot;
-⑤ 实测：切换时间从 70 秒 → 亚秒级（ping 1000 包 0 丢）
-</code></pre>
+④ 修正：PE3/PE4 与 ABR 启用 UPA，并保证"分量丢失即发 UPA"
+⑤ 实测：切换时间从 70 秒 → 亚秒级（ping 1000 包 0 丢）</pre>
+  </div>
+  <figcaption><b>案例 A · 矢量版</b>　从 70 秒到亚秒：故障期报文持续进 Null0 且无告警，启用 UPA 后切换压在 1 秒内，附复盘五步与上线检查。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p><strong>上线检查</strong>：</p>
 <table>
 <thead>
@@ -593,23 +698,47 @@ RP/0/RP0/CPU0:ABR# ping 10.1.1.1 count 1000 interval 10 timeout 1
 </table>
 <h3 id="b-igp">案例 B：阈值救了 IGP 一命</h3>
 <p><strong>场景</strong>：某运营商全网启用 UPA 后三个月，一台地市汇聚 PE 因电源故障整机重启。若按"每个分量发一条 UPA"的设计，该 PE 下有 <strong>8,000 条明细</strong>会同时产生 UPA。</p>
-<pre><code class="language-text">① 实际观察：重启瞬间 IGP LSP 大小从 1.2 KB 涨到 3.8 MB
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-15-case-b.svg" alt="8000 条 UPA 一起泛洪：LSP 从 1.2 KB 涨到 3.8 MB、CPU 打满 40 秒；配上 500 条阈值改为撤销汇总后 IGP 平稳。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">① 实际观察：重启瞬间 IGP LSP 大小从 1.2 KB 涨到 3.8 MB
 ② 原因：8,000 条 UPA 被逐个泛洪，LSP 分片激增，SPF 反复计算
 ③ 后果：核心 CPU 打满 40 秒，比原故障更严重
 ④ 修正：配置 suppress-above 500
         → 分量失效数 &gt; 500 时，直接撤销汇总通告，不再发 UPA
-⑤ 复测：同样的整机重启，IGP 平稳，业务切换 300 ms（BGP 重新收敛）
-</code></pre>
+⑤ 复测：同样的整机重启，IGP 平稳，业务切换 300 ms（BGP 重新收敛）</pre>
+  </div>
+  <figcaption><b>案例 B · 矢量版</b>　8000 条 UPA 一起泛洪：LSP 从 1.2 KB 涨到 3.8 MB、CPU 打满 40 秒；配上 500 条阈值改为撤销汇总后 IGP 平稳。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p><strong>教训</strong>：<strong>UPA 是"精准通知"机制，不是"批量通知"机制</strong>。整机级故障必须交给 BGP，否则会把一个业务故障放大成一次控制面故障。</p>
 <h3 id="c">案例 C：只配了一侧</h3>
 <p><strong>现象</strong>：新版本升级后按文档配了 UPA，但故障恢复时间仍是 60 多秒。</p>
-<pre><code class="language-text">① show isis database detail | include UPA  → 故障时确实有通告
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/08/fig-8-16-case-c.svg" alt="只配一侧：发起侧发了通告，ABR 漏配 upa 把标志位当普通前缀忽略，FIB 不动，恢复仍要 60 多秒。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">① show isis database detail | include UPA  → 故障时确实有通告
 ② show cef 10.1.1.0/24                     → 仍指向 PE3，没切
 ③ 差异比对：发起侧配了 upa，汇总侧（ABR）漏配 upa
 ④ 原因：ABR 不识别 UPA 标志位，把它当作普通前缀忽略
 ⑤ 修复：ABR 补配 upa，重启 ISIS 进程（或等待能力重新协商）
-⑥ 复测：FIB 在 20 ms 内切换
-</code></pre>
+⑥ 复测：FIB 在 20 ms 内切换</pre>
+  </div>
+  <figcaption><b>案例 C · 矢量版</b>　只配一侧：发起侧发了通告，ABR 漏配 upa 把标志位当普通前缀忽略，FIB 不动，恢复仍要 60 多秒。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p><strong>教训</strong>：<strong>UPA 是双向能力协商，不是单向开关</strong>。配置检查清单里必须包含"发起侧 + 汇总侧 + 中间所有 ABR"。</p>
 <h2 id="_2">延伸阅读</h2>
 <ul>

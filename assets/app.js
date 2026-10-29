@@ -37,6 +37,19 @@
     });
   }
 
+  // 图卡内「矢量版 / 原书 ASCII」切换
+  Array.prototype.forEach.call(document.querySelectorAll('.fig-switch'), function (fig) {
+    var tabs = Array.prototype.slice.call(fig.querySelectorAll('.fig-tabs button'));
+    var panes = Array.prototype.slice.call(fig.querySelectorAll('.fig-pane'));
+    tabs.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-pane');
+        tabs.forEach(function (b) { b.classList.toggle('on', b === btn); });
+        panes.forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== key; });
+      });
+    });
+  });
+
   // 正文插图点击放大
   var figs = Array.prototype.slice.call(document.querySelectorAll('.md figure img'));
   if (figs.length) {

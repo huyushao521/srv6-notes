@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 404" width="900" height="404" role="img" aria-label="把算法编码进 SID Block 最后一个 nibble：Algo(0) 用 fc00:0000::/32，Flex-Algo(K) 用 fc00:000(K-127)::/32">
+<style>
+.bg{fill:#fff}.bx{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.3}.hl{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.8}
+.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.bx{fill:#1b2029;stroke:#39414f}.hl{fill:#2a2113;stroke:#ecc94b}
+.b1{fill:#16283d;stroke:#58a6ff}.b{fill:#1b2029;stroke:#39414f}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.o{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="404"/>
+<text class="h" x="24" y="26">把算法编进 SID Block：最后一个 nibble 就是 Algorithm</text>
+
+<rect class="bx" x="60" y="52" width="66" height="38"/><text class="m" x="93" y="77" text-anchor="middle">f</text>
+<rect class="bx" x="126" y="52" width="66" height="38"/><text class="m" x="159" y="77" text-anchor="middle">c</text>
+<rect class="bx" x="192" y="52" width="66" height="38"/><text class="m" x="225" y="77" text-anchor="middle">0</text>
+<rect class="bx" x="258" y="52" width="66" height="38"/><text class="m" x="291" y="77" text-anchor="middle">0</text>
+<rect class="bx" x="324" y="52" width="66" height="38"/><text class="m" x="357" y="77" text-anchor="middle">0</text>
+<rect class="bx" x="390" y="52" width="66" height="38"/><text class="m" x="423" y="77" text-anchor="middle">0</text>
+<rect class="bx" x="456" y="52" width="66" height="38"/><text class="m" x="489" y="77" text-anchor="middle">0</text>
+<rect class="hl" x="522" y="52" width="66" height="38"/><text class="m" x="555" y="77" text-anchor="middle">K−127</text>
+<text class="s" x="60" y="108">SID Block：32 bit</text>
+<text class="o" x="540" y="108">↑ 算法号（Algo 0 → 0000）</text>
+
+<rect class="b" x="24" y="126" width="852" height="130" rx="8"/>
+<text class="t" x="40" y="152">书中插图的编号约定（只是画图习惯，不是协议要求）</text>
+<text class="m" x="40" y="180">Algo(0)         fc00:0000::/32  →  fc00:0000:0003::/48  =  fc00:0:3::/48</text>
+<text class="m" x="40" y="206">Flex-Algo(128)  fc00:0001::/32  →  fc00:0001:0003::/48  =  fc00:1:3::/48</text>
+<text class="m" x="40" y="232">Flex-Algo(129)  fc00:0002::/32  →  fc00:0002:0003::/48  =  fc00:2:3::/48</text>
+
+<rect class="b1" x="24" y="274" width="852" height="62" rx="8"/>
+<text class="t" x="40" y="298">locator 内部结构：Block(32) + Node-ID(16) = /48</text>
+<text class="s" x="40" y="320">Function 与 Args 留给 locator 下的各个段；算法不改变结构，只改变“到这条前缀怎么算路”</text>
+
+<text class="s" x="24" y="364">协议上算法写在 IS-IS Locator TLV 的 Algorithm 字段（图 3-4）；地址怎么切完全由运营商的规划决定（第 10 章）</text>
+<text class="s" x="24" y="386">一个算法一个 block，因此一个算法一套 locator —— 这是“每算法一个地址块”说法的由来</text>
+</svg>

@@ -59,7 +59,7 @@
   <main class="content">
     <article class="md">
 <blockquote>
-<p><strong>本章定位</strong>：原书第 2 章《SRv6 Fundamentals》。本版按原书 2.1–2.7 的段落顺序<strong>逐段对照</strong>：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段的完整翻译，必要时补一句工程注解。书中的 Figure 2.1–2.6 先用 ASCII 重绘以保留原书的信息密度，再各配一张矢量图（可缩放、点击放大）；每张矢量图下方还可以展开「原书扫描件对照」。</p>
+<p><strong>本章定位</strong>：原书第 2 章《SRv6 Fundamentals》。本版按原书 2.1–2.7 的段落顺序<strong>逐段对照</strong>：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段的完整翻译，必要时补一句工程注解。书中的 Figure 2.1–2.6 各配一张矢量图（可缩放、点击放大）。</p>
 </blockquote>
 <h2 id="21-segment-routing">2.1 Segment Routing 简述</h2>
 <div class="en">
@@ -481,9 +481,6 @@
 <figure>
   <img src="assets/img/02/fig-2-5-usid-container.svg" alt="128 位 uSID 容器：32 位 block 加 6 条 16 位微指令，未用槽位填 End-of-Container（0000）。">
   <figcaption><b>图 2-5 · 矢量版</b>　128 位 uSID 容器：32 位 block 加 6 条 16 位微指令，未用槽位填 End-of-Container（0000）。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.1 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.1 的截图保存为 <code>assets/img/02/orig/fig-2-5-usid-container.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <h3 id="241-shift-and-forward">2.4.1 Shift and Forward（位移转发）</h3>
@@ -547,9 +544,6 @@
 <figure>
   <img src="assets/img/02/fig-2-6-usid.svg" alt="uSID 容器的逐跳左移：Block 全程不变，容器每跳左移 16 bit，右侧补 0000。">
   <figcaption><b>图 2-6 · 矢量版</b>　uSID 容器的逐跳左移：Block 全程不变，容器每跳左移 16 bit，右侧补 0000。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.2 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.2 的截图保存为 <code>assets/img/02/orig/fig-2-6-usid.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <p>这个设计最妙的地方：<strong>没有任何"读指针"需要维护</strong>。MPLS 靠标签栈顶指针（栈操作），SRH 靠 Segments Left（需要读写 SRH），而 uSID 的"当前位置"就是<strong>DA 里 block 之后的第一条非零 uSID</strong>——位移一次，指针自动前进一格。</p>
@@ -598,9 +592,6 @@
 <figure>
   <img src="assets/img/02/fig-2-8-header-overhead.svg" alt="6 条 uSID 与 6 条非压缩 SID 的头部开销：相差 88 字节，MTU 1280 时占比 3% 对 10%。">
   <figcaption><b>图 2-8 · 矢量版</b>　6 条 uSID 与 6 条非压缩 SID 的头部开销：相差 88 字节，MTU 1280 时占比 3% 对 10%。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.3 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.3 的截图保存为 <code>assets/img/02/orig/fig-2-8-header-overhead.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <h2 id="25-segment-routing-headersrh">2.5 Segment Routing Header（SRH）</h2>
@@ -633,9 +624,6 @@
 <figure>
   <img src="assets/img/02/fig-2-9-rh-generic.svg" alt="Routing Header 通用格式：前 32 位的四个字段被 SRH 完全复用。">
   <figcaption><b>图 2-9 · 矢量版</b>　Routing Header 通用格式：前 32 位的四个字段被 SRH 完全复用。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.4 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.4 的截图保存为 <code>assets/img/02/orig/fig-2-9-rh-generic.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <table>
@@ -706,9 +694,6 @@
 <figure>
   <img src="assets/img/02/fig-2-10-srh.svg" alt="SRH 头部字段与位宽：四个对字段、Last Entry/Flags/Tag，其下是 128 位的 Segment List。">
   <figcaption><b>图 2-10 · 矢量版</b>　SRH 头部字段与位宽：四个对字段、Last Entry/Flags/Tag，其下是 128 位的 Segment List。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.5 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.5 的截图保存为 <code>assets/img/02/orig/fig-2-10-srh.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <div class="en">
@@ -802,9 +787,6 @@
 <figure>
   <img src="assets/img/02/fig-2-11-topology.svg" alt="原书 Figure 2.6 的拓扑：5 台 SRv6 节点加 4 台 Transit，标注 SID block、locator 与业务 SID。">
   <figcaption><b>图 2-11 · 矢量版</b>　原书 Figure 2.6 的拓扑：5 台 SRv6 节点加 4 台 Transit，标注 SID block、locator 与业务 SID。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.6 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.6 的截图保存为 <code>assets/img/02/orig/fig-2-11-topology.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <div class="en">
@@ -956,11 +938,6 @@
     S16. }
 </code></pre>
 <p><em>图 2-14：原书 Example 2.1——End 行为的伪代码（注意 SL==0 的分支直接交回上层）</em></p>
-<details class="orig"><summary>原书 Example 2.1 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Example 2.1 的截图保存为 <code>assets/img/02/orig/fig-2-14-end-pseudocode.png</code> 后重新构建，此处会自动显示。</p>
-
-</details>
-
 <div class="en">
 <p>Let us examine this pseudocode and apply it to the example of Figure 2.6 where Node 2 receives the packet transmitted by Node 1. Node 2 receives the packet whose IPv6 destination address is fc00:0:2:X::, which is a local End SID of Node 2. Since the SID is an End SID, Node 2 performs the operations in Example 2.1, starting at line S01.</p>
 </div>
@@ -1030,9 +1007,6 @@
 <figure>
   <img src="assets/img/02/fig-2-15-hop-evolution.svg" alt="逐跳报文演进表：收到的 DA、Segments Left 的前后值与发出的 DA 三列对照。">
   <figcaption><b>图 2-15 · 矢量版</b>　逐跳报文演进表：收到的 DA、Segments Left 的前后值与发出的 DA 三列对照。<br>点击图片可放大查看。</figcaption>
-  <details class="orig"><summary>原书 Figure 2.6 扫描件对照</summary>
-  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.6 的截图保存为 <code>assets/img/02/orig/fig-2-15-hop-evolution.png</code> 后重新构建，此处会自动显示。</p>
-  </details>
 </figure>
 
 <p>注意 <code>Segments Left</code> 与 <code>DA</code> 的配合关系：<strong>DA 永远是"SID 列表里第 SL 个元素"</strong>。SL 减 1、DA 换成 <code>Segment List[SL]</code>，这两步必须原子完成，否则会短暂出现"DA 与 SL 不自洽"的报文——某些实现里这是排障时看到 SID 跳过站的原因。</p>

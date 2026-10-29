@@ -1,6 +1,6 @@
 # 05 · IS-IS 中 Locator 的泄露、重分发与汇总
 
-> **本章定位**：原书第 5 章《IS-IS Locator Leaking, Redistribution, and Summarization》。本版按原书段落顺序**逐段对照**：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段完整翻译，必要时补一段工程注解。书中的 Figure 5.1–5.6 按原文描述用 ASCII 重绘，图注标明来源。配置与命令输出来自原书 Example 5.1–5.12，按 IOS XR 风格保留。
+> **本章定位**：原书第 5 章《IS-IS Locator Leaking, Redistribution, and Summarization》。本版按原书段落顺序**逐段对照**：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段完整翻译，必要时补一段工程注解。书中的 Figure 5.1–5.11 全部重绘为矢量图（拓扑、泄露、汇总、重分发、保护分层），每张叠加命令行输出的图都保留 ASCII 视图可一键切换；另有 8 张原书没有的补充图，集中讲验证闭环、粒度取舍、算法路由表与排障流程。图注标明来源。配置与命令输出来自原书 Example 5.1–5.12，按 IOS XR 风格保留。
 
 **本章要拿到的东西**（原书章首列表）：
 
@@ -19,7 +19,9 @@
 
 原书用一个两级结构：三个 Level-1 区域挂在一个 Level-2 骨干上，每个区域内有 PE 与 P 节点。本章所有图与算例都基于这张拓扑：
 
-```text
+{{FIG|05/fig-5-1-topology|图 5-1 · 矢量版|三个 L1 区域加 L2 骨干：标出每个节点的角色、locator 与默认路由来源，末尾指出 PE-1 到 PE-7 的外层 DA 没有明细。}}
+
+```asciifig
 图 5-1：本章拓扑（原书 Figure 5.1 重绘）
 
       Area 49.0001            L2 骨干（全部 L1/L2 与 L2-only）           Area 49.0003
@@ -75,6 +77,8 @@ This mechanism is also sufficient to reach a remote SRv6 locator, because the lo
 1. 所有报文都从**最近的**边界路由器出区，不管哪台 ABR 到目的 locator 的路径更优；
 2. 算法属性（第 4 章的 Flex-Algo）在这一跳**完全丢失**——默认路由只有 Algo(0)。
 
+{{FIG|05/fig-5-2-default-vs-leak|5.1 · 矢量版|同一目的两条路径：ATT 默认路由固定最近 ABR 且算法丢失；泄露明细后按前缀选最优 ABR。}}
+
 把两种做法摆在一起看：
 
 | 维度 | 只靠 ATT 默认路由 | 泄露 L2 明细进 L1 |
@@ -114,7 +118,9 @@ When a prefix is leaked downwards, from Level-2 into Level-1, the router sets th
 
 前缀**向下泄露**（L2 → L1）时，路由器在通告中置 **up/down bit（down 位）**。如果某台路由器在**向上**方向收到带 down 位的同一条前缀（即被人又从 L1 塞回 L2），必须**忽略**。这条规则防止层级之间形成路由环路。
 
-```text
+{{FIG|05/fig-5-3-down-bit|图 5-2 · 矢量版|向下泄露置 X=1；带 X 的前缀从 L1 回灌 L2 必须忽略，否则形成 L2 与 L1 之间的三跳环。}}
+
+```asciifig
 图 5-2：down bit 的传播与"回灌即丢弃"（原书 Figure 5.2 重绘）
 
    ┌──────────── L2 骨干 ────────────┐
@@ -222,6 +228,8 @@ RP/0/RP0/CPU0:ABR-2# show isis database verbose level-1 ABR-2.00-00
   <...>
 ```
 
+{{FIG|05/fig-5-4-verify|5.2.3 · 矢量版|三条命令构成闭环判据：有路由、带 X 位、未被回灌；每一步都给出失败时的指向。}}
+
 `X:1` 就是 **down bit**（X 位在 RFC 5305 的 IPv6 扩展可达性 TLV 中承载 up/down 语义）。排障时这三个证据构成闭环：
 
 | 现象 | 查什么 | 判据 |
@@ -231,6 +239,8 @@ RP/0/RP0/CPU0:ABR-2# show isis database verbose level-1 ABR-2.00-00
 | 路由在两个区域之间反复消失 | L2 侧是否又学到了带 X 位的同一前缀 | 学到且**未被忽略** → 违反 5.2.1，需查实现版本与策略 |
 
 ### 5.2.4 泄露粒度：明细、聚合，还是只靠默认路由
+
+{{FIG|05/fig-5-5-granularity|5.2.4 · 矢量版|泄露粒度三档对比与规模账：1 条、约等于区域数、约等于节点数，以及 21,600 条的算式。}}
 
 同样叫"泄露"，粒度可以差三个数量级。三种做法在一个 200 节点区域里的对比：
 
@@ -278,6 +288,8 @@ Contrary to SR-MPLS, SRv6 does not require the distribution of any label or SID 
 :::
 
 与 SR-MPLS 的关键差别：**SRv6 不需要在实例之间分发任何标签或 SID 绑定**——**locator 前缀本身就是可达性信息**。locator 的拥有者在本地执行 End 行为，任何能把报文路由到这个前缀的路由器都能使用该 locator 下的 SID。
+
+{{FIG|05/fig-5-6-instance-redist|5.3 · 矢量版|CORE 与 METRO 只交换 locator 前缀：无链路状态、无标签绑定、无 down 位保护，算法属性丢失。}}
 
 这一条把跨域设计简化了一大截：
 
@@ -365,6 +377,8 @@ MPLS has no equivalent capability: a label space cannot be summarized, because l
 
 MPLS **没有对应能力**：标签空间不可汇总——标签是本地有效标识，**没有层级结构**。这正是大型 MPLS 网路由表随节点数**线性增长**，而 SRv6 网可以做到**平坦**的主要原因之一。
 
+{{FIG|05/fig-5-7-summary-ratio|5.4 · 矢量版|256 个 /48 装进一个 /40：压缩比、规模曲线与三组实数，右侧列出汇总的三项代价。}}
+
 数字摆出来更直观：
 
 | 网络规模 | MPLS 核心路由表 | SRv6 汇总后 | 差 |
@@ -389,7 +403,9 @@ But it also creates a well-known failure mode: when the summarizing router loses
 
 这就是第 8 章 **UPA（Unreachable Prefix Announcement）** 要解决的问题。本章只需记住因果链：
 
-```text
+{{FIG|05/fig-5-8-null0|图 5-3 · 矢量版|三段时序：正常送达、明细消失而汇总仍在、报文命中 Null0 且不产生 ICMP。}}
+
+```asciifig
 图 5-3：汇总 + 明细丢失 = 静默黑洞（原书 Figure 5.3 重绘）
 
    核心只看到：fdbb:bb00::/40  →  ABR-2
@@ -462,7 +478,9 @@ Routing entry for fdbb:bb00::/40
 
 现网几乎不会只有一台 ABR。当两台 ABR 同时为同一区域做同一个 `summary-prefix` 时，核心看到的是"两条等价的汇总路由"，走 ECMP。这里有一个**只在故障时才暴露**的坑：
 
-```text
+{{FIG|05/fig-5-9-dual-abr-ecmp|图 5-5 · 矢量版|双 ABR 同时汇总、单边明细丢失：ECMP 下约 50% 丢包，而三方观测都显示正常。}}
+
+```asciifig
 图 5-5：双 ABR 汇总 + 单边明细丢失（原书 Figure 5.5 重绘）
 
               核心 ──┬── ECMP ──► ABR-2  /40，明细完整 → 正常送达
@@ -507,6 +525,8 @@ As a consequence, a router that does not participate in Flex-Algo(128) has no ro
 :::
 
 由此推出一条**极容易踩的坑**：**不参与 Flex-Algo(128) 的路由器，压根没有 Flex-Algo(128) locator 的路由**——这条前缀不在它的 Algo(0) 路由表里。外层目的地是这类 locator 的报文会被它**直接丢弃**，尽管**同一个目的节点的 Algo(0) locator 完全可达**。
+
+{{FIG|05/fig-5-10-algo-table|5.5.1 · 矢量版|外层 DA 是算法 locator：未参与算法的节点没有该前缀，查表即失败；并列 Algo(0) 与 FA128 两张表。}}
 
 这解释了一类经典现象：
 
@@ -565,7 +585,9 @@ When locators are summarized at the area border, the routers inside the area no 
 
 于是保护被**分层**了：
 
-```text
+{{FIG|05/fig-5-11-layered-protection|图 5-4 · 矢量版|汇总后保护分层：区内保护到汇总前缀的下一跳，骨干保护到明细 locator 的下一跳。}}
+
+```asciifig
 图 5-4：汇总后的分层保护（原书 Figure 5.4 重绘）
 
    PE-1 ──► P-11 ──► ABR-2 ══════► ABR-4 ──► P-31 ──► PE-3
@@ -600,7 +622,9 @@ When locators are summarized at the area border, the routers inside the area no 
 
 跨区故障的现象高度雷同（"内层通、外层不通"），但根因分布在五个层次。按下面的顺序查，每一步都有明确的"是/否"判据，**不要跳步**：
 
-```text
+{{FIG|05/fig-5-12-troubleshoot|5.6 · 矢量版|五步定位法：每步一条命令、一个是与否的判据，右侧给出跳出分支与对应小节。}}
+
+```asciifig
 第 1 步：外层 locator 在源端有没有路由？
   show isis route <远端 locator>
   ├─ 无条目 ──────────────► 泄露/重分发没配，或策略 drop 了（5.2、5.3）
@@ -739,6 +763,8 @@ router isis 1
   redistribute isis 1 level-1 into level-2 route-policy LOC-L1TO2
 ```
 
+{{FIG|05/fig-5-13-case-plan|案例 A · 矢量版|两个 /32 按算法分块、块内按区域切 /40；三个泄露方向与 64 条对 19,000 条的账本。}}
+
 **规模账本**（这是本章最该记住的收益）：
 
 | 项目 | 不汇总 | 汇总后 |
@@ -785,6 +811,8 @@ router isis 1
    - 三向重分发形成闭环（无 down 位保护）
    - 策略两边不一致（一侧 le 64，一侧 le 48）
 ```
+
+{{FIG|05/fig-5-14-redist-loop|案例 B · 矢量版|三向重分发成环：前缀往返触发 SPF；下方三个叠加问题与星型修复。}}
 
 **修复**：
 

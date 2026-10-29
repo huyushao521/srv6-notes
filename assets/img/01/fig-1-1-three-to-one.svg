@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 384" width="900" height="384" role="img" aria-label="IPv4 时代三套补丁栈与 SRv6 单一封装的对比">
+<style>
+.bg{fill:#fff}.box{stroke-width:1.4}.b1{fill:#eef4fc;stroke:#0b6bcb}.b2{fill:#eaf7ee;stroke:#2f855a}.b3{fill:#fdf3e7;stroke:#b7791f}
+.big{fill:#eef4fc;stroke:#0b6bcb;stroke-width:2.2}.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}
+.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}.m{fill:#1f2328;font:600 13px Consolas,monospace}
+.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}.b3{fill:#2a2113;stroke:#ecc94b}
+.big{fill:#16283d;stroke:#58a6ff}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.o{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="384"/>
+<text class="h" x="24" y="30">IPv4 时代：一个需求 = 一套协议 + 一类网关</text>
+<text class="h" x="596" y="30">SRv6：一种封装全做掉</text>
+
+<rect class="box b1" x="24" y="44" width="500" height="76" rx="4"/>
+<text class="t" x="40" y="70">VPN / 流量工程</text>
+<text class="m" x="40" y="92">MPLS（LDP / RSVP-TE / BGP 3107）+ MP-BGP VPNv4</text>
+<text class="s" x="40" y="110">要维护：标签池、会话、标签绑定</text>
+
+<rect class="box b2" x="24" y="132" width="500" height="76" rx="4"/>
+<text class="t" x="40" y="158">数据中心二层延伸</text>
+<text class="m" x="40" y="180">VXLAN / GRE over UDP + EVPN</text>
+<text class="s" x="40" y="198">要维护：VTEP 表、VNI 规划</text>
+
+<rect class="box b3" x="24" y="220" width="500" height="76" rx="4"/>
+<text class="t" x="40" y="246">负载分担</text>
+<text class="m" x="40" y="268">Entropy Label 或 深度报文检测（DPI）</text>
+<text class="s" x="40" y="286">要维护：芯片能力、DPI 性能</text>
+
+<path d="M534 170 H582" stroke="#0b6bcb" stroke-width="2" fill="none"/>
+<path d="M582 170 l-9 -5 v10 z" fill="#0b6bcb"/>
+<text class="s" x="558" y="160" text-anchor="middle">合并</text>
+
+<rect class="big" x="596" y="44" width="284" height="252" rx="5"/>
+<text class="t" x="612" y="70">IPv6 头（必要时加 SRH）</text>
+<text class="m" x="612" y="94">DA = 有序微指令列表</text>
+<line x1="612" y1="108" x2="864" y2="108" stroke="#cbd3de" stroke-width="1"/>
+<text class="s" x="612" y="132">VPN / 二层 / TE / 熵 / 服务链</text>
+<text class="s" x="612" y="152">共用同一个头、同一套地址</text>
+<text class="m" x="612" y="182">一个 SID</text><text class="s" x="700" y="182">← 取代标签绑定</text>
+<text class="m" x="612" y="208">段列表</text><text class="s" x="700" y="208">← 取代隧道状态</text>
+<text class="m" x="612" y="234">Flow Label</text><text class="s" x="712" y="234">← 取代熵标签</text>
+<text class="o" x="612" y="264">删掉：LDP / 3107 / VTEP / DPI</text>
+<text class="s" x="612" y="284">少 3 个协议、少 2 类网关</text>
+
+<text class="s" x="24" y="330">省下的不是转发性能，而是运维面：协议少了、网关少了、会漂移的配置点少了。</text>
+<text class="s" x="24" y="352">同一套地址既能路由也能编程 —— 这是"一种封装替三套栈"能成立的前提。</text>
+<text class="s" x="24" y="374">代价同样明确：每层封装 40 字节开销、MTU 要留余量、设备必须认扩展头。</text>
+</svg>

@@ -18,7 +18,9 @@
 
 ## 7.0 本章拓扑
 
-```text
+{{FIG|07/fig-7-1-topology|7.0 · 矢量版|DC-1 的 CE-SW1 全活多归到 PE-1 与 PE-3（共享一个 anycast SID），DC-2 单归 PE-2；中间 P-1/P-2 只有 IGP 与 locator 路由，没有任何 EVPN 状态。}}
+
+```asciifig
 图 7-1：本章拓扑（原书 Figure 7.1 重绘）
 
   DC-1（PE-1，多归 PE-3）                        DC-2（PE-2）
@@ -69,7 +71,9 @@ End.DT2M carries an argument that identifies the broadcast domain, so a single S
 
 把四种动作放到一张流程图上，看清"查表在哪一步"：
 
-```text
+{{FIG|07/fig-7-2-four-behaviors|7.1 · 矢量版|四个行为的处理路径并排对照：差别只在剥掉外层之后查哪张表 —— DX2 不查、DX2V 查 VLAN、DT2U 查 MAC、DT2M 查 BD 与 IMET 复制表。}}
+
+```asciifig
 图 7-2：四个行为的处理路径（原书 Figure 7.2 重绘）
 
   收到 IPv6 外层，DA = 本地 SID
@@ -89,6 +93,8 @@ End.DT2M carries an argument that identifies the broadcast domain, so a single S
                                          所有 IMET 远端（DF 判定）
 ```
 
+{{FIG|07/fig-7-3-l3-vs-l2|7.1 · 矢量版|三层的五种行为码只有一种动作（查表投递），二层有四种动作，其中两种带复制语义 —— 这就是二层多出一个 DF 选举的原因。}}
+
 | 对比项 | 三层（第 6 章） | 二层（本章） |
 |---|---|---|
 | 行为数量 | 4（DT4/DT6/DT46/DX4/DX6） | 4（DX2/DX2V/DT2U/DT2M） |
@@ -105,6 +111,8 @@ EVPN route types are reused unchanged. The Ethernet A-D route per EVI and per ES
 
 EVPN 路由类型**原样复用**：per-EVI / per-ES 的 Ethernet A-D 路由、MAC/IP 通告路由、Inclusive Multicast（IMET）路由、Ethernet Segment 路由，编码全不变；变化的只是 **NLRI 里的标签字段被 SRv6 L2 Service TLV 取代**，TLV 内携带端点行为与 SID。
 
+{{FIG|07/fig-7-4-evpn-routes|7.2 · 矢量版|五类 EVPN 路由原样复用，只有标签字段被 SRv6 L2 Service TLV 取代；Type 4 完全不携带 SID，因此 ES 与 DF 逻辑一字不改。}}
+
 | 路由类型 | 用途 | 携带的 SRv6 信息 | 有无变化 |
 |---|---|---|---|
 | Type 1（Ethernet A-D） | 别名/备份、分割 Horizon | per-EVI / per-ES 的 uDX2 或 uDT2U SID | 标签 → TLV |
@@ -119,7 +127,9 @@ The label field of the NLRI is replaced by the SRv6 L2 Service TLV defined in RF
 
 NLRI 里的标签字段被 **RFC 9252 定义的 SRv6 L2 Service TLV** 取代，携带端点行为与 128 bit SID。**控制面其余部分没有任何变化**——这正是 EVPN 能**独立于 Underlay 迁移**的原因：先在 MPLS/VXLAN 上把 EVPN 跑稳，再单独换封装。
 
-```text
+{{FIG|07/fig-7-5-type2-encoding|7.2 · 矢量版|Type 2 的嵌套结构：Label 置 0 但保留，Next-Hop 必须是 IPv6，Prefix-SID 属性里的 L2 Service TLV 同时说清 SID、行为与 SID Structure。}}
+
+```asciifig
 图 7-3：Type 2 路由的 SRv6 编码（原书 Figure 7.3 重绘）
 
   MP_REACH_NLRI（EVPN，Type 2）
@@ -150,6 +160,8 @@ EVI 100
         SID: fdbb:bb00:0100:e100::   Behavior: End.DX2
 ```
 
+{{FIG|07/fig-7-6-evidence-chain|7.2 · 矢量版|证据链按 Type 3 → Type 2 → Type 1 成立，每一环缺失时的现象各不相同，因此排障顺序必须自下而上。}}
+
 排障核心证据链：**有 Type 3（能泛洪）→ 有 Type 2（能学到 MAC）→ 有 Type 1（多归别名/备份）**，且每条都带着 SID 与行为。缺任何一类，业务表现都不同（见 7.7）。
 
 ## 7.3 多归与 Anycast SID
@@ -166,7 +178,9 @@ Designated forwarder election still applies for broadcast and multicast traffic:
 
 广播/组播仍需 **DF（Designated Forwarder，指定转发者）选举**：**只有 DF** 把泛洪流量送到该网段，否则一个广播帧会被每台多归 PE 各复制一份。
 
-```text
+{{FIG|07/fig-7-7-anycast-unicast|7.3 · 矢量版|anycast SID 的单播效果：两台 PE 通告同一 SID，IGP 里出现两条等价路径，按流哈希分担，无需任何 EVPN 逐流信令。}}
+
+```asciifig
 图 7-4：anycast SID 的两种效果（原书 Figure 7.4 重绘）
 
   ① 单播：ECMP 自动分担（anycast SID 在 IGP 里是多条等价路径）
@@ -182,9 +196,13 @@ Designated forwarder election still applies for broadcast and multicast traffic:
              结果：DF 选举保证去重
 ```
 
+{{FIG|07/fig-7-8-df-flood|7.3 · 矢量版|同一个 anycast SID 用在泛洪上会立刻出错：两台 PE 各转发一份，CE 收到两份广播；DF 的作用就是把"复制"收敛到唯一一台。}}
+
 ### 7.3.1 单播与泛洪：两条完全不同的规则
 
 这是本章最容易搞混的一点，必须分开记：
+
+{{FIG|07/fig-7-9-traffic-matrix|7.3.1 · 矢量版|四类流量的规则矩阵：能命中表项的可以 ECMP，凡是"要复制给多人"的必须先保证只有一台在复制。}}
 
 | 流量类型 | SID 类型 | 是否 ECMP | 是否需要 DF | 去重靠什么 |
 |---|---|---|---|---|
@@ -198,6 +216,8 @@ It is worth being precise: the anycast SID provides load balancing for unicast, 
 :::
 
 这里要说精确：**anycast SID 为单播提供负载分担，但不能用于泛洪**。如果泛洪流量发给 anycast SID，**每台多归 PE 都会收到一份**并转发到同一个网段，帧就被复制了。**DF 选举的存在意义，正是为每个网段的每个 VLAN 指定唯一一台负责泛洪的 PE。**
+
+{{FIG|07/fig-7-10-df-per-evi|7.3.1 · 矢量版|DF 按 EVI/VLAN 分别选举：PE-1 在 EVI 100 上是 DF、在 EVI 200 上是 Non-DF，PE-3 恰好相反，所以"某个 VLAN 广播不通"要查那一行。}}
 
 **例 7.2：确认 DF 与 ES 状态**
 
@@ -223,6 +243,8 @@ The configuration is essentially the classic EVPN configuration with two additio
 :::
 
 配置基本就是经典 EVPN，只加两处：**带微段行为的 locator**，以及 **EVI 下的 per-EVI 分配模式**。bridge-domain 与 ethernet-segment 的配置一个字都不用改。
+
+{{FIG|07/fig-7-11-config-anatomy|7.4 · 矢量版|配置解剖：bridge-domain、ethernet-segment、BGP 邻居一字不改，新增的只有带微段行为的 locator 与 EVI 下的分配模式。}}
 
 **例 7.3：PE 侧完整配置（E-Line + E-LAN 共用一套 locator）**
 
@@ -279,6 +301,8 @@ l2vpn
  !
 ```
 
+{{FIG|07/fig-7-12-alloc-modes|7.4 · 矢量版|三种分配模式并排：per-evi 消耗等于 EVI 数，per-AC 消耗等于 AC 数，per-ES 用 anycast 复用；三者可共存于同一 locator。}}
+
 两种分配模式的区别是选型的核心：
 
 | 模式 | 生成的 SID | 行为 | 消耗 | 适用 |
@@ -299,6 +323,8 @@ fdbb:bb00:0100:e100::        uDX2       'ES 0011.0203...'（anycast）
 fdbb:bb00:0001:e200::        uDX2       'XC ELine-100'
 ```
 
+{{FIG|07/fig-7-13-anycast-locator|7.4 · 矢量版|anycast SID 的 /48 不是任何一台 PE 的本机 locator，必须两台同时通告才形成 ECMP；只有一台通告就是单路径加黑洞风险。}}
+
 注意 anycast SID 的前缀是 `fdbb:bb00:0100::/48`——**不是本机 locator**。它必须由 PE-1 与 PE-3 **都通告**，才能形成 ECMP。
 
 ## 7.5 规模：为什么二层比三层更吃 SID
@@ -308,6 +334,8 @@ Layer 2 services are more demanding on SID space than Layer 3 services, because 
 :::
 
 二层业务对 SID 空间的压力**大于三层**，因为**业务实例的粒度比 VRF 细得多**：一条 E-Line 就是**每条 AC 一个 SID**，而一个 VRF 可以服务成千上万条客户前缀。于是运营商把目光投向 **Argument 空间**与 **Wide uSID**，把编码压紧。
+
+{{FIG|07/fig-7-14-sid-scale|7.5 · 矢量版|规模对比：E-Line 按每条 AC 消耗 SID，量级是三层业务的十倍以上，因此用 32 bit Wide uSID 直接编码 AC 号，牺牲段列表深度换实例空间。}}
 
 租户数与 AC 数的差别决定了选型（以某城域运营商为例）：
 
@@ -334,7 +362,9 @@ Note the interaction between L2 services and MTU: an L2 frame already carries it
 
 二层业务与 MTU 的相互作用要特别注意：**二层帧本身带自己的头部**（4 字节 802.1Q Tag、可能的 QinQ 8 字节），SRv6 再**加 40 字节外层 IPv6**。如果 Underlay MTU 没有提升，**大帧被静默丢弃**——在存储复制业务里，这表现为"**重传变多**"而不是明显中断，极其难定位。
 
-```text
+{{FIG|07/fig-7-15-mtu-ladder|7.6 · 矢量版|二层 MTU 阶梯：1518 起，加 802.1Q 与 QinQ 各 4 字节，再加 40 字节 SRv6 外层，QinQ 场景需要 1566；核心建议 1600 或 9000。}}
+
+```asciifig
 图 7-5：二层 MTU 预算（原书 Figure 7.4 后半段重绘）
 
   CE 侧标准以太帧                1518 B（含 14 B 头 + 4 B FCS）
@@ -362,7 +392,9 @@ In a data center interconnect, the lack of jumbo frame support is often discover
 
 二层故障的定位比三层更依赖 EVPN 路由类型。先看缺哪一类，现象几乎一一对应：
 
-```text
+{{FIG|07/fig-7-16-troubleshoot|7.7 · 矢量版|按"缺哪类路由"分五支：Type 3 缺失、Type 2 在但 MAC 学不到、Type 1 缺失、DF 异常、大帧被丢，每支给出对应的检查命令。}}
+
+```asciifig
 现象：E-Line / E-LAN 不通
   │
   ├─ Type 3（IMET）缺失 ──► 广播/未知单播全不通，已知单播也学不到 MAC
@@ -419,7 +451,9 @@ SRv6 上的二层 VPN **完整复用 EVPN**，把以太网的四种转发语义�
 
 **场景**：两个 DC 之间用 E-Line 承载存储复制流量，原方案 VXLAN + 网关；改造为 SRv6 EVPN，要求迁移期零丢包。
 
-```text
+{{FIG|07/fig-7-19-migration|案例 A · 矢量版|零丢包割接三阶段：只建控制面并验证、把新 PE 作为备份逐条分流、全量切换后保留回退窗口；每步只改一个变量。}}
+
+```asciifig
 阶段一：只建控制面
 ① 两端 PE 建立 EVPN 邻居，先只通告 Type 4/1，确认多归与 DF 正常
 ② 建立 EVI / BD，配 uDX2 的 per-AC SID；不开业务，只验证
@@ -446,6 +480,8 @@ SRv6 上的二层 VPN **完整复用 EVPN**，把以太网的四种转发语义�
 | 多归链路利用率不均 | 用了单播 SID 而非 anycast SID | 统一 anycast SID，让 ECMP 生效 |
 
 ### 案例 B：城域 E-LAN 多归，广播重复导致交换机 CPU 飙升
+
+{{FIG|07/fig-7-17-esi-mismatch|案例 B · 矢量版|ESI 末位差一个字节 → Type 4 认为是两个 ES → 各自选出自己的 DF → 广播帧两份 → 接入交换机 CPU 飙升。}}
 
 **现象**：某城域 E-LAN 接入 600 个小区，割接到 SRv6 后，多个小区的接入交换机 CPU 周期性飙升到 90%，抓包发现**每个广播帧收到两份**。
 
@@ -476,6 +512,8 @@ evpn
 3. 广播重复不是"性能问题"，是**配置错误**，必须修根因，不能靠限速掩盖。
 
 ### 案例 C：存储复制的"重传变多"
+
+{{FIG|07/fig-7-18-jumbo-path|案例 C · 矢量版|两端 PE 都是 9000，中间一台 P 的互联口仍是 1500：9000 字节帧被静默丢弃，TCP 靠重传维持，表现为"变慢不断"。}}
 
 **现象**：DC 间 E-Line 割接后，存储复制吞吐从 3.2 Gbps 掉到 1.8 Gbps，链路无丢包告警，业务只是"变慢"。
 

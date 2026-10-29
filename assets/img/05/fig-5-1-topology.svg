@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 472" width="900" height="472" role="img" aria-label="第五章拓扑：三个 Level-1 区域挂在 L2 骨干上，PE-1 / PE-9 / PE-7 为 L1-only">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.ar{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}
+.ar{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="472"/>
+<text class="h" x="24" y="26">本章拓扑：三个 L1 区域挂在一条 L2 骨干上（原书 Figure 5.1）</text>
+
+<rect class="b1" x="40" y="46" width="820" height="106" rx="8"/>
+<text class="t" x="58" y="70">L2 骨干（L1/L2 与 L2-only 节点）</text>
+<text class="s" x="58" y="89">骨干知道骨干拓扑，也知道所有区域的所有前缀；区域间转发全靠这一层</text>
+<rect class="b" x="60" y="98" width="150" height="44" rx="7"/><text class="t" x="74" y="117">ABR-2　L1/L2</text><text class="m" x="74" y="134">fc00:0:2::/48</text>
+<rect class="b" x="270" y="98" width="150" height="44" rx="7"/><text class="t" x="284" y="117">ABR-4　L2-only</text><text class="m" x="284" y="134">fc00:0:4::/48</text>
+<rect class="b" x="480" y="98" width="150" height="44" rx="7"/><text class="t" x="494" y="117">ABR-5　L2-only</text><text class="m" x="494" y="134">fc00:0:5::/48</text>
+<rect class="b" x="690" y="98" width="150" height="44" rx="7"/><text class="t" x="704" y="117">ABR-6　L1/L2</text><text class="m" x="704" y="134">fc00:0:6::/48</text>
+
+<rect class="b" x="40" y="196" width="260" height="140" rx="8"/><text class="s" x="54" y="216">Area 49.0001</text>
+<rect class="b" x="330" y="196" width="260" height="140" rx="8"/><text class="s" x="344" y="216">Area 49.0002</text>
+<rect class="b" x="620" y="196" width="260" height="140" rx="8"/><text class="s" x="634" y="216">Area 49.0003</text>
+
+<rect class="b2" x="70" y="228" width="200" height="46" rx="7"/><text class="t" x="82" y="248">PE-1　L1-only</text><text class="m" x="82" y="266">fc00:0:1::/48</text>
+<rect class="b" x="70" y="282" width="200" height="46" rx="7"/><text class="t" x="82" y="302">P-11　L1/L2</text><text class="s" x="82" y="320">无 locator</text>
+<rect class="b" x="360" y="228" width="200" height="46" rx="7"/><text class="t" x="372" y="248">P-12　L1/L2</text><text class="s" x="372" y="266">无 locator</text>
+<rect class="b2" x="360" y="282" width="200" height="46" rx="7"/><text class="t" x="372" y="302">PE-9　L1-only</text><text class="m" x="372" y="320">fc00:0:9::/48</text>
+<rect class="b2" x="650" y="228" width="200" height="46" rx="7"/><text class="t" x="662" y="248">PE-3　L1-only</text><text class="m" x="662" y="266">fc00:0:3::/48</text>
+<rect class="b2" x="650" y="282" width="200" height="46" rx="7"/><text class="t" x="662" y="302">PE-7　L1-only</text><text class="m" x="662" y="320">fc00:0:7::/48</text>
+
+<path class="ar" d="M135 152 L135 174 L170 174 L170 196" marker-end="url(#a)"/>
+<path class="ar" d="M345 152 L345 176 L460 176 L460 196" marker-end="url(#a)"/>
+<path class="ar" d="M555 152 L555 176 L460 176"/>
+<path class="ar" d="M765 152 L765 196" marker-end="url(#a)"/>
+
+<rect class="b3" x="40" y="352" width="820" height="96" rx="8"/>
+<text class="t" x="58" y="376">三个 L1-only 节点（PE-1 / PE-9 / PE-7）没有任何 L2 明细，只有一条指向最近 ABR 的 ::/0</text>
+<text class="s" x="58" y="399">PE-1 用 SRv6 封装去 PE-7，外层 DA = fc00:0:7:: —— PE-1 的路由表里没有这条前缀，只有 ::/0。</text>
+<text class="r" x="58" y="424">能通 ≠ 通得对：泄露解决“对”，汇总解决“规模”，discipline 解决“不乱”。</text>
+</svg>

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="900" height="540" role="img" aria-label="本章拓扑：6 节点、8 条链路，每条链路标注 IGP 度量与时延，5-3 为 RED 亲和链路">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.ln{stroke:#8b95a3;stroke-width:2.4;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}.ln{stroke:#6b7684}}
+</style>
+<rect class="bg" width="900" height="540"/>
+<text class="h" x="24" y="26">图 4-1 的底图：本章拓扑与三维属性（度量 / 时延 / 亲和）</text>
+
+<path class="ln" d="M130 219 L130 311"/>
+<path class="ln" d="M162 200 L308 200"/>
+<path class="ln" d="M372 200 L538 200"/>
+<path class="ln" d="M340 219 L340 311"/>
+<path class="ln" d="M372 315 L538 215"/>
+<path class="ln" d="M372 330 L538 330"/>
+<path class="ln" d="M130 349 L130 412 L570 412 L570 349"/>
+
+<rect class="b1" x="98" y="311" width="64" height="38" rx="8"/><text class="t" x="130" y="336" text-anchor="middle">R1</text>
+<rect class="b1" x="98" y="181" width="64" height="38" rx="8"/><text class="t" x="130" y="206" text-anchor="middle">R6</text>
+<rect class="b1" x="308" y="181" width="64" height="38" rx="8"/><text class="t" x="340" y="206" text-anchor="middle">R5</text>
+<rect class="b1" x="308" y="311" width="64" height="38" rx="8"/><text class="t" x="340" y="336" text-anchor="middle">R4</text>
+<rect class="b1" x="538" y="311" width="64" height="38" rx="8"/><text class="t" x="570" y="336" text-anchor="middle">R2</text>
+<rect class="b1" x="538" y="181" width="64" height="38" rx="8"/><text class="t" x="570" y="206" text-anchor="middle">R3</text>
+
+<text class="m" x="140" y="272">10 / 1ms</text>
+<text class="m" x="196" y="192">10 / 2ms</text>
+<text class="m" x="418" y="192">10 / 12ms</text>
+<text class="r" x="418" y="176">RED 亲和</text>
+<text class="m" x="350" y="272">10 / 10ms</text>
+<text class="m" x="432" y="286">10 / 10ms</text>
+<text class="m" x="412" y="322">20 / 8ms</text>
+<text class="m" x="330" y="404">40 / 6ms（贵但快）</text>
+
+<rect class="b" x="650" y="120" width="226" height="200" rx="8"/>
+<text class="t" x="666" y="146">怎么读这张图</text>
+<text class="s" x="666" y="172">每条链路：IGP 度量 / 时延</text>
+<text class="s" x="666" y="196">1-2：度量 40，时延仅 6ms</text>
+<text class="s" x="666" y="220">→ 代价最优与时延最优分道</text>
+<text class="s" x="666" y="246">5-3：RED 亲和链路</text>
+<text class="s" x="666" y="270">→ 129 / 130 两个算法都排除它</text>
+<text class="s" x="666" y="296">所有链路度量 10 或 20，唯 1-2 是 40</text>
+
+<rect class="b" x="24" y="424" width="852" height="96" rx="8"/>
+<text class="t" x="40" y="448">三条关键路径（后面所有图与算例都基于它）</text>
+<text class="m" x="40" y="476">Algo(0)         1→6→5→3        代价 30，时延 15 ms</text>
+<text class="m" x="40" y="498">Flex-Algo(128)  1→2→3          时延 10 ms（度量 50）</text>
+<text class="m" x="40" y="520">Flex-Algo(129)  1→6→5→4→3      代价 40（避开 RED）</text>
+</svg>

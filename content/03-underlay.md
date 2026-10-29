@@ -471,6 +471,20 @@ Non-routable segment identifiers (SIDs) are locally significant. This means that
 
 *图 3-6：可路由与不可路由 locator/段的可达性差别（按 3.2.3 节与 3.4 节文字绘制）*
 
+{{FIG|03/fig-3-1-locator-summary|图 3-1 · 矢量版|IGP 只通告一条 /48 locator 前缀，全网按前缀把报文送到节点，SID 与行为在节点本地定义。}}
+
+```asciifig
+图 3-1：一条 locator 汇总所有 SID（原书 Figure 3.1 / 3.4 重绘）
+
+  控制面                            转发面
+  fc00:0:2::/48                     FIB：fc00:0:2::/48 → 节点 2
+   ├ e001 → End.DT4                 DA = fc00:0:2:e001::
+   ├ e002 → End.X                     → 命中 /48，沿 IGP 送到节点 2
+   └ e003 → End.DT6                 → 节点 2 本地 /128 命中 e001，执行 End.DT4
+  ──────────────────────────────────────────────
+  SID 数量、行为、flavor 全在节点本地定义，不逐条通告；locator 必须可路由
+```
+
 ## 3.3 IGP Prefix Segment
 
 :::en
@@ -601,6 +615,22 @@ The End behavior supports the micro-segment, penultimate segment popping, and ul
 
 End 行为支持三种 flavor：**micro-segment（uSID）**、**penultimate segment popping（PSP）**、**ultimate segment decapsulation（USD）**。下面三小节依次讲。
 
+{{FIG|03/fig-3-2-end-behavior|图 3-2 · 矢量版|End 端点行为只做两件事：DA 换成下一段、再查一次表；不改载荷、不看内层。}}
+
+```asciifig
+图 3-2：End 默认端点行为（原书 Figure 3.5 / 3.6 重绘）
+
+  收到：DA = fc00:0:2:X::   SL = 1   Hop Limit = 64
+    ↓
+  ① DA 属于本地 locator（/48） → 命中本地 End SID
+  ② SL ← SL − 1 ；DA ← Segment List[SL]
+  ③ 按新 DA 重新查 FIB
+    ↓
+  发出：DA = fc00:0:5:eeee::   SL = 0   Hop Limit = 63
+  ──────────────────────────────────────────────
+  不动载荷、不看内层；没有 SRH 或 SL 归零时，按 SID 终结（USD）或直接转发
+```
+
 ### 3.3.1.1 Micro-Segment（uSID）flavor
 
 :::en
@@ -716,6 +746,21 @@ The uSID flavor is standardized at the IETF as the NEXT-C-SID flavor in draft-ie
 :::
 
 uSID flavor 在 IETF 标准化为 **NEXT-C-SID flavor**，见 `draft-ietf-spring-srv6-srh-compression`（现已成 RFC 9800）。注意：读 IANA 码点时看到 `End with NEXT-CSID`，说的就是这个 flavor，不要与 `NEXT-ONLY-CSID` 混。
+
+{{FIG|03/fig-3-3-un-flavor|图 3-3 · 矢量版|uN flavor 以 16 位为步长左移 DA，Block 全程不变，容器末尾停止左移。}}
+
+```asciifig
+图 3-3：End.uN 的 16 位左移（原书 Figure 3.7 / 3.8 / 3.9 重绘）
+
+  节点 2：fc00:0000 │ 0002 0003 0004 0000 0000 0000
+          命中 0002 → 左移 16 bit
+  节点 3：fc00:0000 │ 0003 0004 0000 0000 0000 0000
+          命中 0003 → 左移 16 bit
+  节点 4：fc00:0000 │ 0004 0000 0000 0000 0000 0000
+          最后一条非零 uSID → 不再左移（EoC）
+  ──────────────────────────────────────────────
+  Block 恒为前 32 位，左移空出的槽位补 0000；末尾按 flavor 交付 / 解封装
+```
 
 ### 3.3.1.2 Penultimate Segment Pop（PSP）flavor
 
@@ -896,6 +941,19 @@ The combination of these two flavors is very useful in practice: it removes the 
 :::
 
 这两种 flavor 的组合**在实践中非常有用**：既在最后一跳去掉了 SRH（减小报文），又在目的节点去掉了外层 IPv6 头，于是目的节点**不需要任何 SRv6 特定处理**就能把内层报文转发到最终目的地——PE 上"隧道到此结束、进入业务处理"是最典型的用法。
+
+{{FIG|03/fig-3-4-psp-usd|图 3-4 · 矢量版|PSP 在倒数第二跳剥离 SRH，USD 在终点剥掉外层 IPv6，Next Header 决定内层协议。}}
+
+```asciifig
+图 3-4：PSP 与 USD 的剥离时机（原书 Figure 3.10 / 3.13 / 3.15 重绘）
+
+  PSP（倒数第二跳）                  USD（终点）
+    DA = 最后一段之前的 SID            末节点命中 End.DT4
+    SL 已归零 → 转发前剥离 SRH         剥外层 IPv6，查 VRF
+    末端收到：NH=4，无 SRH             NH=4 → IPv4 / 41 → IPv6 / 143 → Ethernet
+  ──────────────────────────────────────────────
+  两者全开时域内只剩基本头 + 载荷；同 MPLS PHP 的思路，但由 SID flavor 静态决定
+```
 
 ### 3.3.2 配置
 
@@ -1224,6 +1282,20 @@ In the example, the segment list contains the adjacency segment fc00:0:e005:: (E
 
 *图 3-20：End.X 与 PSP flavor 组合（按原书 Figure 3.26/3.27 重绘）*
 
+{{FIG|03/fig-3-5-endx|图 3-5 · 矢量版|End.X 命中邻接段后从指定接口发出、不查 SPF；与 uN 组合时一次查表完成两条微指令。}}
+
+```asciifig
+图 3-5：End.X 与 uN + uA 组合（原书 Figure 3.23 / 3.25 重绘）
+
+  End.X                            uN + uA 组合
+    DA = fc00:0:2:e002::             DA = fc00:0000:0002:e002:0000…
+    类型：不可路由 Adj-SID           FIB：fc00:0000:0002:e002::/64
+    动作：从 Eth3 直接发出           动作：出 Eth3 + 左移 32 bit
+    不查 SPF → 报文被钉在链路上      一条前缀吃掉 uN 与 uA 两条指令
+  ──────────────────────────────────────────────
+  可路由 Adj-SID 用于跨域；LAN End.X 绑定 LAN 上的邻居；flavor 同样适用
+```
+
 ### 3.4.2 配置
 
 :::en
@@ -1497,6 +1569,19 @@ TI-LFA is further detailed in Chapter 8, where the SRv6 implementation of the re
 :::
 
 TI-LFA 的完整细节在第 8 章：包括修复路径的 SRv6 实现、与 IGP 的交互，以及**修复段列表的 uSID 压缩**（压缩后一条修复路径常常能塞进一个 128 bit 容器，连 SRH 都不需要）。
+
+{{FIG|03/fig-3-6-tilfa|图 3-6 · 矢量版|TI-LFA 用邻接段把修复路径钉死，IGP 收敛前由源节点按修复列表转发。}}
+
+```asciifig
+图 3-6：TI-LFA 修复路径（原书 Figure 3.33 / 3.34 / 3.35 重绘）
+
+     1 ──────▶ 2 ──✕──▶ 3 ────▶ 业务 SID
+     └────▶ 4 ────────▶┘
+     修复列表：[ Adj(1→4) , Adj(4→3) , 业务 SID ]
+  ──────────────────────────────────────────────
+  P 空间 = 故障链路前仍可达；Q 空间 = 收敛后仍可达目的；取最近交点
+  链路保护 1 条 Adj-SID；节点保护整段绕开；修复列表 ≤6 条可免 SRH
+```
 
 ## 3.6 小结
 

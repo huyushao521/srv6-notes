@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="跨区不通的五步定位法：从源端路由、down 位、出口选择、算法路由到实际丢包点">
+<style>
+.bg{fill:#fff}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.b2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b4{fill:#fdeaea;stroke:#c0392b;stroke-width:1.4}
+.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 11.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.r{fill:#c0392b;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#2f855a;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.n{fill:#fff;font:700 13px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b1{fill:#16283d;stroke:#58a6ff}.b2{fill:#14291d;stroke:#68d391}
+.b3{fill:#2a2113;stroke:#ecc94b}.b4{fill:#2a1618;stroke:#f87171}.b{fill:#1b2029;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.r{fill:#f87171}.g{fill:#68d391}}
+</style>
+<rect class="bg" width="900" height="470"/>
+<text class="h" x="24" y="26">跨区不通的五步定位：每一步都有明确的“是/否”判据，不要跳步（5.6 节）</text>
+
+<rect class="b1" x="24" y="40" width="852" height="60" rx="8"/>
+<circle cx="48" cy="70" r="13" fill="#0b6bcb"/><text class="n" x="44" y="75">1</text>
+<text class="t" x="74" y="60">外层 locator 在源端有没有路由？</text>
+<text class="m" x="74" y="82">show isis route &lt;远端 locator&gt;</text>
+<text class="r" x="476" y="60">✗ 无条目 → 泄露/重分发没配，或策略 drop（5.2 / 5.3）</text>
+<text class="g" x="476" y="82">✓ 有条目 → 第 2 步</text>
+
+<rect class="b" x="24" y="106" width="852" height="60" rx="8"/>
+<circle cx="48" cy="136" r="13" fill="#57606a"/><text class="n" x="44" y="141">2</text>
+<text class="t" x="74" y="126">这条路由是不是泄露来的，down 位对不对？</text>
+<text class="m" x="74" y="148">show isis database verbose level-1</text>
+<text class="r" x="476" y="126">✗ X:0 而链路确实跨区 → 本地产生，可能误配 redistribute</text>
+<text class="g" x="476" y="148">✓ X:1 → 第 3 步</text>
+
+<rect class="b1" x="24" y="172" width="852" height="60" rx="8"/>
+<circle cx="48" cy="202" r="13" fill="#0b6bcb"/><text class="n" x="44" y="207">3</text>
+<text class="t" x="74" y="192">出口是“最近 ABR”还是“最优 ABR”？</text>
+<text class="m" x="74" y="214">traceroute &lt;locator&gt; / show isis route detail</text>
+<text class="r" x="476" y="192">✗ 出口是最近 ABR、绕行骨干 → 只靠 ATT 默认路由（5.1）</text>
+<text class="g" x="476" y="214">✓ 出口符合设计 → 第 4 步</text>
+
+<rect class="b" x="24" y="238" width="852" height="60" rx="8"/>
+<circle cx="48" cy="268" r="13" fill="#57606a"/><text class="n" x="44" y="273">4</text>
+<text class="t" x="74" y="258">算法 locator 在中间节点有没有路由？</text>
+<text class="m" x="74" y="280">show isis route flex-algo 128 &lt;locator&gt;</text>
+<text class="r" x="476" y="258">✗ 无条目 → 该节点未参与算法（5.5.1）</text>
+<text class="g" x="476" y="280">✓ 有条目 → 第 5 步</text>
+
+<rect class="b1" x="24" y="304" width="852" height="60" rx="8"/>
+<circle cx="48" cy="334" r="13" fill="#0b6bcb"/><text class="n" x="44" y="339">5</text>
+<text class="t" x="74" y="324">报文到底在哪一跳被丢？</text>
+<text class="m" x="74" y="346">traceroute 分段 + show segment-routing srv6 sid all</text>
+<text class="r" x="476" y="324">停在汇总路由器 → 命中 Null0，明细丢失（5.4.1，上 UPA）</text>
+<text class="r" x="476" y="346">停在某台 P 节点 → 该节点无此 locator 路由，回第 1 / 4 步</text>
+
+<rect class="b3" x="24" y="376" width="852" height="78" rx="8"/>
+<text class="t" x="42" y="400">为什么必须按顺序：现象高度雷同（内层通、外层不通），但根因分布在五个层次，跳步就会把“泄露没配”误判成“算法没开”。</text>
+<text class="s" x="42" y="424">每步都要形成一条可复核的证据：有/无路由 → X 位值 → 出口选择 → 算法表 → 实际丢包跳。证据链闭合后，修复动作是确定的。</text>
+<text class="r" x="42" y="446">最容易跳过的两步：第 3 步（路径次优但业务“能通”，没人报障）与第 5 步（停在谁身上，往往就是谁的明细不全）。</text>
+</svg>

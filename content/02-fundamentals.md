@@ -1,4 +1,4 @@
-> **本章定位**：原书第 2 章《SRv6 Fundamentals》。本版按原书 2.1–2.7 的段落顺序**逐段对照**：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段的完整翻译，必要时补一句工程注解。书中的 Figure 2.1–2.6 先用 ASCII 重绘以保留原书的信息密度，再各配一张矢量图（可缩放、点击放大）；每张矢量图下方还可以展开「原书扫描件对照」。
+> **本章定位**：原书第 2 章《SRv6 Fundamentals》。本版按原书 2.1–2.7 的段落顺序**逐段对照**：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段的完整翻译，必要时补一句工程注解。书中的 Figure 2.1–2.6 各配一张矢量图（可缩放、点击放大）。
 
 ## 2.1 Segment Routing 简述
 
@@ -52,7 +52,7 @@ Segment Routing 有两种数据面实例：一种跑在 MPLS 上，通常称为 
 
 *图 2-0：逐跳状态 vs 源路由（按 2.1 节文字描述绘制）*
 
-{{FIG|02/fig-2-0-hopstate|图 2-0 · 矢量版|逐跳状态与源路由的对比：前者靠信令让全网维护每流状态，后者只把程序写进报文头。|-}}
+{{FIG|02/fig-2-0-hopstate|图 2-0 · 矢量版|逐跳状态与源路由的对比：前者靠信令让全网维护每流状态，后者只把程序写进报文头。}}
 
 ### 2.1.2 Segment 与 SID
 
@@ -119,7 +119,7 @@ In addition, certain scenarios (e.g., Traffic Engineering) may require pushing a
 
 *图 2-1：SID 列表与活动段的关系（按 2.1.4 与 2.6 节描述绘制）*
 
-{{FIG|02/fig-2-1-activeseg|图 2-1 · 矢量版|SID 列表倒序存放、活动段永远在 DA 里、SL 与 DA 必须原子更新。|-}}
+{{FIG|02/fig-2-1-activeseg|图 2-1 · 矢量版|SID 列表倒序存放、活动段永远在 DA 里、SL 与 DA 必须原子更新。}}
 
 ### 2.1.5 SR 域（SR Domain）
 
@@ -184,7 +184,7 @@ The local semantic of a local segment does not mean that nodes in the network do
 
 *图 2-2：Global 段负责"送到能执行的人手上"，Local 段负责"从哪个接口出去"（按 2.1.6 节描述绘制）*
 
-{{FIG|02/fig-2-2-global-local|图 2-2 · 矢量版|全局段把报文送到能执行指令的节点，本地段再从该节点指定的接口送出。|-}}
+{{FIG|02/fig-2-2-global-local|图 2-2 · 矢量版|全局段把报文送到能执行指令的节点，本地段再从该节点指定的接口送出。}}
 
 ### 2.1.7 拓扑段：Prefix Segment 与 Adjacency Segment
 
@@ -273,7 +273,7 @@ An adjacency segment is typically used to steer traffic to a neighbor node if th
 
 *图 2-3：Prefix 段与 Adjacency 段的差别（按 2.1.7 节描述绘制）*
 
-{{FIG|02/fig-2-3-prefix-adj|图 2-3 · 矢量版|Prefix 段多跳且 ECMP 感知，Adjacency 段钉死一跳，强制绕行与 TI-LFA 靠后者。|-}}
+{{FIG|02/fig-2-3-prefix-adj|图 2-3 · 矢量版|Prefix 段多跳且 ECMP 感知，Adjacency 段钉死一跳，强制绕行与 TI-LFA 靠后者。}}
 
 ### 2.1.8 业务段：L3VPN per-VRF Segment
 
@@ -449,7 +449,7 @@ As specified in RFC 8986, section 3.1, the format of an SRv6 SID comprises three
 
 *图 2-4：SRv6 SID 的 LOC:FUNCT:ARG 结构（按 RFC 8986 §3.1 与 2.3.2 节绘制）*
 
-{{FIG|02/fig-2-4-loc-funct-arg|图 2-4 · 矢量版|SRv6 SID 的 LOC:FUNCT:ARG 位布局，以及 48/16/0 的示例切分。|-}}
+{{FIG|02/fig-2-4-loc-funct-arg|图 2-4 · 矢量版|SRv6 SID 的 LOC:FUNCT:ARG 位布局，以及 48/16/0 的示例切分。}}
 
 :::en
 The locator encodes the parent node instantiating the SID. The function is an opaque identifier of the local behavior bound to the SID. The arguments, only used in some particular cases, provide information required for processing that specific Endpoint behavior.
@@ -513,7 +513,7 @@ The uSID container contains up to six 16-bit uSIDs, represented in the figure as
 
 *图 2-5：网络程序在 128 位 uSID 容器中的编码（按原书 Figure 2.1 重绘）*
 
-{{FIG|02/fig-2-5-usid-container|图 2-5 · 矢量版|128 位 uSID 容器：32 位 block 加 6 条 16 位微指令，未用槽位填 End-of-Container（0000）。|Figure 2.1}}
+{{FIG|02/fig-2-5-usid-container|图 2-5 · 矢量版|128 位 uSID 容器：32 位 block 加 6 条 16 位微指令，未用槽位填 End-of-Container（0000）。}}
 
 ### 2.4.1 Shift and Forward（位移转发）
 
@@ -557,7 +557,7 @@ Node 2 then looks up the updated destination address in its forwarding table. It
 
 *图 2-6：原书 Figure 2.2 重绘——每跳只左移 16 位，指针自然指向下一条指令*
 
-{{FIG|02/fig-2-6-usid|图 2-6 · 矢量版|uSID 容器的逐跳左移：Block 全程不变，容器每跳左移 16 bit，右侧补 0000。|Figure 2.2}}
+{{FIG|02/fig-2-6-usid|图 2-6 · 矢量版|uSID 容器的逐跳左移：Block 全程不变，容器每跳左移 16 bit，右侧补 0000。}}
 
 
 这个设计最妙的地方：**没有任何"读指针"需要维护**。MPLS 靠标签栈顶指针（栈操作），SRH 靠 Segments Left（需要读写 SRH），而 uSID 的"当前位置"就是**DA 里 block 之后的第一条非零 uSID**——位移一次，指针自动前进一格。
@@ -588,7 +588,7 @@ By leveraging the IP longest prefix match functionality, the node cannot only ma
 
 *图 2-7：uN+uA 单次查表（按 2.4.2 节描述绘制）*
 
-{{FIG|02/fig-2-7-un-ua-lookup|图 2-7 · 矢量版|一条 /64 表项同时覆盖 uN 与 uA，对比 MPLS 一次只能看栈顶一个标签。|-}}
+{{FIG|02/fig-2-7-un-ua-lookup|图 2-7 · 矢量版|一条 /64 表项同时覆盖 uN 与 uA，对比 MPLS 一次只能看栈顶一个标签。}}
 
 ### 2.4.3 压缩与未压缩的头部开销
 
@@ -615,7 +615,7 @@ By now, you may see the huge benefits that uSID provides. It allows encoding a n
 
 *图 2-8：压缩 SID 列表与未压缩 SID 列表的头部对比（按原书 Figure 2.3 与 2.4.3 节数据重绘）*
 
-{{FIG|02/fig-2-8-header-overhead|图 2-8 · 矢量版|6 条 uSID 与 6 条非压缩 SID 的头部开销：相差 88 字节，MTU 1280 时占比 3% 对 10%。|Figure 2.3}}
+{{FIG|02/fig-2-8-header-overhead|图 2-8 · 矢量版|6 条 uSID 与 6 条非压缩 SID 的头部开销：相差 88 字节，MTU 1280 时占比 3% 对 10%。}}
 
 ## 2.5 Segment Routing Header（SRH）
 
@@ -655,7 +655,7 @@ SRH 是 IPv6 规范（RFC 8200）定义的一种 **Routing Header**。IPv6 源�
 
 *图 2-9：IPv6 Routing Header 通用格式（按原书 Figure 2.4 重绘，RFC 8200 §4.4）*
 
-{{FIG|02/fig-2-9-rh-generic|图 2-9 · 矢量版|Routing Header 通用格式：前 32 位的四个字段被 SRH 完全复用。|Figure 2.4}}
+{{FIG|02/fig-2-9-rh-generic|图 2-9 · 矢量版|Routing Header 通用格式：前 32 位的四个字段被 SRH 完全复用。}}
 
 | 字段 | 长度 | 含义 |
 |---|---|---|
@@ -700,7 +700,7 @@ SRH 的格式在 RFC 8754 中规定。由于它属于 Routing Header，因此遵
 
 *图 2-10：SRH 格式（按原书 Figure 2.5 重绘，RFC 8754 §2）*
 
-{{FIG|02/fig-2-10-srh|图 2-10 · 矢量版|SRH 头部字段与位宽：四个对字段、Last Entry/Flags/Tag，其下是 128 位的 Segment List。|Figure 2.5}}
+{{FIG|02/fig-2-10-srh|图 2-10 · 矢量版|SRH 头部字段与位宽：四个对字段、Last Entry/Flags/Tag，其下是 128 位的 Segment List。}}
 
 
 :::en
@@ -797,7 +797,7 @@ An IPv4 L3VPN service is established between nodes 1 and 5, and the service pack
 
 *图 2-11：原书 Figure 2.6 的拓扑（按原文节点编号与 SID 规划重绘，23 号线路上有 ECMP 与 Transit 混跑）*
 
-{{FIG|02/fig-2-11-topology|图 2-11 · 矢量版|原书 Figure 2.6 的拓扑：5 台 SRv6 节点加 4 台 Transit，标注 SID block、locator 与业务 SID。|Figure 2.6}}
+{{FIG|02/fig-2-11-topology|图 2-11 · 矢量版|原书 Figure 2.6 的拓扑：5 台 SRv6 节点加 4 台 Transit，标注 SID block、locator 与业务 SID。}}
 
 :::en
 It is important to mention that the SRH can contain a combination of compressed and non-compressed segments. It could very well be that the first element is a uSID container with six uSIDs, and the second element is a single SID used, for example, in the context of a public cloud.
@@ -866,7 +866,7 @@ Node 1 sets the IPv6 Destination Address field to the first segment fc00:0:2:X::
 
 *图 2-12：SR Source 封装结果（按 2.6.1 节示例与图 2.6 第一只报文描述重绘，★ 表示活动段）*
 
-{{FIG|02/fig-2-12-sr-source-encap|图 2-12 · 矢量版|节点 1 封装出的报文：IPv6 头（NH=43、★ 活动段 DA）、SRH 四个 SID、内层 IPv4。|-}}
+{{FIG|02/fig-2-12-sr-source-encap|图 2-12 · 矢量版|节点 1 封装出的报文：IPv6 头（NH=43、★ 活动段 DA）、SRH 四个 SID、内层 IPv4。}}
 
 ### 2.6.2 Transit 节点
 
@@ -947,7 +947,7 @@ Flow Label 对于在核心正确做负载分担非常重要：它让转发 ASIC 
 
 *图 2-13：Flow Label 作为预计算熵，让核心不必解封装（按 2.6.2.1 节描述绘制）*
 
-{{FIG|02/fig-2-13-flowlabel|图 2-13 · 矢量版|Flow Label 作为预计算熵：入口算一次，核心每跳只读三元组并叠加 router-id 防极化。|-}}
+{{FIG|02/fig-2-13-flowlabel|图 2-13 · 矢量版|Flow Label 作为预计算熵：入口算一次，核心每跳只读三元组并叠加 router-id 防极化。}}
 
 ### 2.6.3 SR Segment Endpoint 节点
 
@@ -995,9 +995,6 @@ The segments used in the example of Figure 2.6 use the Endpoint behavior ("End" 
 
 *图 2-14：原书 Example 2.1——End 行为的伪代码（注意 SL==0 的分支直接交回上层）*
 
-<details class="orig"><summary>原书 Example 2.1 扫描件对照</summary>
-{{ORIG|02/orig/fig-2-14-end-pseudocode|Example 2.1}}
-</details>
 
 :::en
 Let us examine this pseudocode and apply it to the example of Figure 2.6 where Node 2 receives the packet transmitted by Node 1. Node 2 receives the packet whose IPv6 destination address is fc00:0:2:X::, which is a local End SID of Node 2. Since the SID is an End SID, Node 2 performs the operations in Example 2.1, starting at line S01.
@@ -1035,7 +1032,7 @@ Node 4 receives the packet whose IPv6 destination address is fc00:0:4:X::, which
 
 *图 2-15：原书 Figure 2.6 的逐跳报文演进（按 2.6.3 节文字重绘）*
 
-{{FIG|02/fig-2-15-hop-evolution|图 2-15 · 矢量版|逐跳报文演进表：收到的 DA、Segments Left 的前后值与发出的 DA 三列对照。|Figure 2.6}}
+{{FIG|02/fig-2-15-hop-evolution|图 2-15 · 矢量版|逐跳报文演进表：收到的 DA、Segments Left 的前后值与发出的 DA 三列对照。}}
 
 注意 `Segments Left` 与 `DA` 的配合关系：**DA 永远是"SID 列表里第 SL 个元素"**。SL 减 1、DA 换成 `Segment List[SL]`，这两步必须原子完成，否则会短暂出现"DA 与 SL 不自洽"的报文——某些实现里这是排障时看到 SID 跳过站的原因。
 
@@ -1099,7 +1096,7 @@ reduced SRH **不包含**相关 SR 策略的第一个段（第一个段本来就
 
 *图 2-16：非 reduced SRH 与 reduced SRH 的差别（按 2.6.4 节描述绘制）*
 
-{{FIG|02/fig-2-16-reduced-srh|图 2-16 · 矢量版|完整 SRH 与 reduced SRH：后者去掉与 DA 重复的第一站，Last Entry = n−2。|-}}
+{{FIG|02/fig-2-16-reduced-srh|图 2-16 · 矢量版|完整 SRH 与 reduced SRH：后者去掉与 DA 重复的第一站，Last Entry = n−2。}}
 
 ## 2.7 本章小结
 

@@ -103,7 +103,16 @@
 </table>
 <p>先记住一句话：<strong>L3VPN 是 SRv6 唯一一个"什么都不用新做"的业务</strong>——VPNv4/VPNv6 的 BGP 机制、RD/RT、路由反射器、BGP-free core 全部原样保留，唯一被替换的是"出口 PE 的 VPN 标签"换成了"出口 PE 的一个 SID"。所以这一章的重点不是新协议，而是<strong>这个替换在状态、规模、封装、互通四个维度上换来了什么、又付出了什么</strong>。</p>
 <h2 id="60">6.0 本章拓扑</h2>
-<pre><code class="language-text">图 6-1：本章拓扑（原书 Figure 6.1 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-1-topology.svg" alt="两个 PE 各持 /48，中间两台 P 只有 locator 路由；标出 uN 与 uDT46 的分工，以及核心 cef vrf 应为空这一判据。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 6-1：本章拓扑（原书 Figure 6.1 重绘）
 
    CE-1                        P-1               P-2                    CE-2
   10.1.1.0/24                                                     10.1.2.0/24
@@ -117,8 +126,11 @@
    └──────────────┘                                                └──────────────┘
 
    SID block：fdbb:bb00::/32（uSID 压缩编码，locator node 16 bit）
-   P-1、P-2 只跑 IGP + locator 路由，无任何 VPN 状态 → BGP-free core
-</code></pre>
+   P-1、P-2 只跑 IGP + locator 路由，无任何 VPN 状态 → BGP-free core</pre>
+  </div>
+  <figcaption><b>图 6-1 · 矢量版</b>　两个 PE 各持 /48，中间两台 P 只有 locator 路由；标出 uN 与 uDT46 的分工，以及核心 cef vrf 应为空这一判据。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <table>
 <thead>
 <tr>
@@ -216,6 +228,11 @@
 </div>
 <p>关键架构后果是：<strong>传输标签与服务标签塌缩成同一个东西</strong>——SRv6 的 SID <strong>既能在核心被路由、又能在出口被理解</strong>。既然不需要单独分发传输段，核心就<strong>不需要 LDP、不需要 MPLS 标签栈、不需要标签绑定协议</strong>。</p>
 <p>一句话总结这一节：MPLS L3VPN 用<strong>两个标签</strong>（外层负责"送到哪台 PE"，内层负责"进哪个 VRF"）；SRv6 用<strong>一个地址</strong>同时承担这两件事。这是全章所有收益与代价的源头。</p>
+<figure>
+  <img src="assets/img/06/fig-6-6-collapse.svg" alt="两个标签与一个地址的对照：塌缩掉的是协议与状态，不是字节。">
+  <figcaption><b>6.1 · 矢量版</b>　两个标签与一个地址的对照：塌缩掉的是协议与状态，不是字节。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h2 id="62-enddt">6.2 换成了什么：End.DT 行为族</h2>
 <div class="en">
 <p>In SRv6, the VPN service is expressed as an endpoint behavior. End.DT4 decapsulates the packet and performs an IPv4 lookup in the VRF identified by the SID; End.DT6 does the same for IPv6; End.DT46 selects the lookup table according to the inner header version and therefore serves a dual-stack VRF with a single SID.</p>
@@ -276,6 +293,11 @@
 <div class="en">
 <p>Note that the packet is not encapsulated in a tunnel at the egress: the outer IPv6 header is simply removed, and the inner packet is routed natively. This is decapsulation-and-lookup, not tunnel termination in the traditional sense, which is why the behavior is called decapsulation and table lookup rather than VRF termination.</p>
 </div>
+<figure>
+  <img src="assets/img/06/fig-6-7-dt-behaviors.svg" alt="End.DT 与 End.DX 的选型决策树，含 per-CE 却配 DT46 的静默失效。">
+  <figcaption><b>6.2 · 矢量版</b>　End.DT 与 End.DX 的选型决策树，含 per-CE 却配 DT46 的静默失效。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p>注意出口侧<strong>不是"隧道终结"</strong>：外层 IPv6 头被<strong>直接删掉</strong>，内层报文按原生方式被路由。这是"<strong>解封装 + 查表</strong>"，不是传统意义上的隧道出口——这也是该行为被命名为 "decapsulation and table lookup（DT）" 而不是 "VRF termination" 的原因。</p>
 <h3 id="621-srv6-mpls">6.2.1 一个必须先纠正的常见误解：SRv6 的开销并不比 MPLS 小</h3>
 <div class="en">
@@ -319,6 +341,11 @@
 </tr>
 </tbody>
 </table>
+<figure>
+  <img src="assets/img/06/fig-6-8-overhead.svg" alt="承载 100 字节报文的四种封装总长度对比：8 B、40 B、80 B 三档开销。">
+  <figcaption><b>6.2.1 · 矢量版</b>　承载 100 字节报文的四种封装总长度对比：8 B、40 B、80 B 三档开销。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p>所以在带宽敏感场景（大流量城域网、视频回传）上，<strong>SRv6 的每比特成本确实高于 MPLS</strong>，这是必须承认的代价；它换来的是：</p>
 <ol>
 <li>核心不再需要标签分发协议（LDP/SR-MPLS），<strong>协议栈简化</strong>；</li>
@@ -386,6 +413,11 @@
 </tr>
 </tbody>
 </table>
+<figure>
+  <img src="assets/img/06/fig-6-10-pervrf-perce.svg" alt="per-VRF 与 per-CE 的拓扑对照与账本：SID 数、查表次数、定向能力、双栈支持。">
+  <figcaption><b>6.3 · 矢量版</b>　per-VRF 与 per-CE 的拓扑对照与账本：SID 数、查表次数、定向能力、双栈支持。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p><strong>例 6.1：per-VRF 分配（IOS XR）</strong></p>
 <pre><code class="language-text">segment-routing
  srv6
@@ -416,7 +448,16 @@ fdbb:bb00:0002:e002::       uDT46       'CUSTOMER-200'
 <p><code>Context</code> 一列就是 VRF 名。排障时<strong>第一件事就是确认这条 SID 存在</strong>——SID 没分配出来，BGP 里也不会有 Prefix-SID，入口 PE 就无法用 SRv6 封装这条 VPN 路由。</p>
 <h3 id="631-sid">6.3.1 SID 空间够不够：一个实算</h3>
 <p>uSID locator 的容量是硬约束。以 <code>/48</code> locator + <code>pfx-16</code>（node 16 bit）为例，剩余 128 − 48 = 80 bit 可作 uSID 容器，即 <strong>5 个 16 bit 微指令</strong>（第 6 个位置在块尾被截断，具体取决于 block 长度）。按每个 VRF 一个 <code>uDT46</code> 计：</p>
-<pre><code class="language-text">先分清两个不同的&quot;容量&quot;：
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-9-sid-space.svg" alt="SID 空间实算：/48 之后 5 个 16 bit 容器与每 16 bit 位 65,536 的 function 空间是两个尺度。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">先分清两个不同的"容量"：
   ① 容器深度：一条报文里能串几个 uSID（/48 locator 下约 5 个 16 bit 位）
   ② function 空间：一个 locator 能分配多少个不同 SID（每 16 bit 位 65,536 个）
 
@@ -427,8 +468,11 @@ VRF 容量看 ②：
 
 真正吃空间的是 per-CE：
   接入电路 20,000 条 → 20,000 个 uDX SID，占掉一个 /48 的三分之一
-  → 这才是 6.6 节转置（argument 复用）出现的动机
-</code></pre>
+  → 这才是 6.6 节转置（argument 复用）出现的动机</pre>
+  </div>
+  <figcaption><b>6.3.1 · 矢量版</b>　SID 空间实算：/48 之后 5 个 16 bit 容器与每 16 bit 位 65,536 的 function 空间是两个尺度。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p>一个容易混淆的点要先说清：<strong>"一条报文里能装几条指令"（容器深度）和"一个 locator 能分配多少个 SID"（function 空间）是两件事</strong>。前者决定段列表长度，后者决定 VRF 容量。VRF 数量爆炸的运营商会用 <strong>argument 复用</strong>（6.6 节的转置）把多个 VRF 压进同一个 function。</p>
 <h2 id="64-sid-rfc-9252">6.4 SID 怎么从出口走到入口：RFC 9252</h2>
 <div class="en">
@@ -439,7 +483,16 @@ VRF 容量看 ②：
 <p>The TLVs are nested: the SRv6 L3 Service TLV (type 5) contains one or more SRv6 SID Information Sub-TLVs (type 1), each of which carries a SID, a behavior code, and an optional SID Structure Sub-Sub-TLV that describes how the SID is partitioned into locator, function, and argument. The SID Structure is what allows a receiver to understand a SID whose internal layout is not the default one.</p>
 </div>
 <p>TLV 是<strong>嵌套</strong>的：<strong>SRv6 L3 Service TLV（type 5）</strong> 内含一个或多个 <strong>SRv6 SID Information Sub-TLV（type 1）</strong>，每个 Sub-TLV 携带 SID、行为码，以及可选的 <strong>SID Structure Sub-Sub-TLV</strong>（描述 SID 如何切分成 locator / function / argument）。<strong>SID Structure 正是让接收方能理解"非默认布局"SID 的关键</strong>——转置与互通全靠它。</p>
-<pre><code class="language-text">图 6-2：BGP Prefix-SID 属性结构（原书 Figure 6.2 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-2-prefix-sid.svg" alt="VPNv4 Update 的四个要件与 Prefix-SID 的嵌套结构：Service TLV、SID Information Sub-TLV、SID Structure。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 6-2：BGP Prefix-SID 属性结构（原书 Figure 6.2 重绘）
 
   BGP Update（VPNv4，10.1.2.0/24）
   ├─ NLRI：RD 65000:100 + 10.1.2.0/24
@@ -453,8 +506,11 @@ VRF 容量看 ②：
                  └─ SID Structure Sub-Sub-TLV（type 1）
                       ├─ Locator Length  = 48
                       ├─ Function Length = 16
-                      └─ Argument Length = 0
-</code></pre>
+                      └─ Argument Length = 0</pre>
+  </div>
+  <figcaption><b>图 6-2 · 矢量版</b>　VPNv4 Update 的四个要件与 Prefix-SID 的嵌套结构：Service TLV、SID Information Sub-TLV、SID Structure。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p><strong>例 6.3：入口 PE 上确认"SID 学到了"</strong></p>
 <pre><code class="language-text">RP/0/RP0/CPU0:PE-1# show bgp vpnv4 unicast rd 65000:100 10.1.2.0/24
 BGP routing table entry for 10.1.2.0/24, Route Distinguisher: 65000:100
@@ -482,6 +538,11 @@ BGP routing table entry for 10.1.2.0/24, Route Distinguisher: 65000:100
 <p>If the VPN routes are advertised over an IPv4 session, or if the next hop is an IPv4 address, the ingress PE has the Prefix-SID but cannot use it to build the outer header, and the route is either not installed or falls back to another encapsulation.</p>
 </div>
 <p>如果 VPN 路由跑在 <strong>IPv4 会话</strong>上，或者下一跳是 <strong>IPv4 地址</strong>，入口 PE <strong>虽然拿到了 Prefix-SID 却无法用它构造外层头</strong>，这条路由要么不被安装、要么回退到别的封装。</p>
+<figure>
+  <img src="assets/img/06/fig-6-11-next-hop.svg" alt="同一份 Prefix-SID 在 IPv6 下一跳与 IPv4 下一跳下的两种结局，附三条检查命令。">
+  <figcaption><b>6.4.1 · 矢量版</b>　同一份 Prefix-SID 在 IPv6 下一跳与 IPv4 下一跳下的两种结局，附三条检查命令。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p>这条的现网表现非常典型：</p>
 <table>
 <thead>
@@ -524,7 +585,16 @@ BGP routing table entry for 10.1.2.0/24, Route Distinguisher: 65000:100
 <p>As a result, no SRH is pushed, no uN needs to be prepended, and the encapsulation is exactly one IPv6 header. The program has a single instruction, and the dataplane cost at the egress is a single SID lookup followed by a single VRF lookup.</p>
 </div>
 <p>由此得到三个"没有"：<strong>不压 SRH、不需要前置 uN、封装就是恰好一个 IPv6 头</strong>。整个程序只有<strong>一条指令</strong>，出口的数据面成本是<strong>一次 SID 查找 + 一次 VRF 查找</strong>。</p>
-<pre><code class="language-text">图 6-3：uSID L3VPN 的封装（原书 Figure 6.3 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-3-usid-encap.svg" alt="uSID 封装：只压一个 IPv6 头，DA 内嵌 locator 与 uDT46，Next Header 直接指向内层 IPv4。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 6-3：uSID L3VPN 的封装（原书 Figure 6.3 重绘）
 
   客户报文（PE-1 收到）:
   ┌────────────┬──────────────────┐
@@ -542,8 +612,11 @@ BGP routing table entry for 10.1.2.0/24, Route Distinguisher: 65000:100
   P-1/P-2 转发：只看 DA 的 locator 部分 fdbb:bb00:0002::/48
                 → 与 VRF 无关、与业务无关
 
-  PE-2 收到：DA 命中本地 uDT46 → 剥外层 → 内层 IPv4 查 VRF-100 → 出 CE-2
-</code></pre>
+  PE-2 收到：DA 命中本地 uDT46 → 剥外层 → 内层 IPv4 查 VRF-100 → 出 CE-2</pre>
+  </div>
+  <figcaption><b>图 6-3 · 矢量版</b>　uSID 封装：只压一个 IPv6 头，DA 内嵌 locator 与 uDT46，Next Header 直接指向内层 IPv4。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <div class="en">
 <p>Notice how the packet crosses the core: the P routers perform a longest-prefix match on the locator, exactly as they would for any IPv6 packet. They have no VPN route, no VRF, no label, and no SRH to process.</p>
 </div>
@@ -607,7 +680,16 @@ Bytes        : 1,412,006,100
 <li><strong>节省 SID 空间</strong>：一台有几万条接入电路的 PE 可以<strong>只通告一个 SID</strong>，把电路编号编进 argument，而不是每条电路一个 SID；</li>
 <li><strong>互通</strong>：argument 里装<strong>由 MPLS VPN 标签推导出的值</strong>，网关就能在两种封装之间映射，<strong>不需要为每条前缀维护状态</strong>。</li>
 </ol>
-<pre><code class="language-text">图 6-4：转置的 SID 结构（原书 Figure 6.4 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-4-transposition.svg" alt="转置的 SID 切分：Locator 与 Function 通告、Argument 本地编码，以及省空间与互通两种用途。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 6-4：转置的 SID 结构（原书 Figure 6.4 重绘）
 
   通告的部分（BGP 里不变）              本地可变部分
   ┌──────────┬──────────┬─────────────────────────┐
@@ -619,8 +701,11 @@ Bytes        : 1,412,006,100
        │           └─ 行为：End.DT46 / End.DX4 / End.DT6 …
        └─ 全局可路由（IGP 中的 locator）
 
-  效果：10,000 条接入电路 → 1 条 BGP Prefix-SID + 10,000 个 argument 值
-</code></pre>
+  效果：10,000 条接入电路 → 1 条 BGP Prefix-SID + 10,000 个 argument 值</pre>
+  </div>
+  <figcaption><b>图 6-4 · 矢量版</b>　转置的 SID 切分：Locator 与 Function 通告、Argument 本地编码，以及省空间与互通两种用途。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <div class="en">
 <p>The trade-off is dataplane and operational complexity: the argument must be interpreted correctly on both sides, the SID structure must be advertised and understood, and a packet that carries a wrong or unexpected argument is dropped silently. Transposition is therefore used where the SID space is genuinely the constraint, not as a default design.</p>
 </div>
@@ -705,6 +790,11 @@ router bgp 65000
 </tbody>
 </table>
 <p>工程默认：<strong>除非有明确的分族策略需求，一律用 DT46。</strong> 判定标准很简单——如果运维上你把 IPv4 与 IPv6 当作"同一个 VPN 的两个地址族"，就用一个 SID；如果当作"两个独立业务"，才拆开。</p>
+<figure>
+  <img src="assets/img/06/fig-6-15-dualstack.svg" alt="双栈 VRF 的两种做法：一个 uDT46 按内层版本选表，或 DT4 与 DT6 两个 SID 分别治理。">
+  <figcaption><b>6.7 · 矢量版</b>　双栈 VRF 的两种做法：一个 uDT46 按内层版本选表，或 DT4 与 DT6 两个 SID 分别治理。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h2 id="68-mtusrv6-l3vpn">6.8 MTU：SRv6 L3VPN 最容易踩的物理约束</h2>
 <div class="en">
 <p>The SRv6 encapsulation adds a 40-byte outer IPv6 header. Because IPv6 routers do not fragment packets in transit, any packet that exceeds the MTU of a core link is dropped and, unless path MTU discovery works end to end, the sender never learns why.</p>
@@ -715,7 +805,16 @@ router bgp 65000
 </div>
 <p>经典现象：<strong>小包通、大包不通</strong>——<code>ping</code> 通、TCP 三次握手成功，但<strong>大文件传输卡死</strong>，或者 <strong>SSH 一有大量输出就挂住</strong>。这是<strong>尺寸问题，不是路由问题</strong>，在路由侧敲再多 <code>show</code> 命令也看不出来。</p>
 <p>账要这么算：</p>
-<pre><code class="language-text">图 6-5：MTU 预算（原书 Figure 6.5 重绘）
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-5-mtu.svg" alt="MTU 预算阶梯 1500 到 1540 到 1580，右侧三种现网做法与 ping 二分法的可用区间。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">图 6-5：MTU 预算（原书 Figure 6.5 重绘）
 
   CE 侧接口 MTU = 1500
   ＋SRv6 外层（IPv6 头）          40 B
@@ -728,8 +827,11 @@ router bgp 65000
   现网做法（三选一，通常同时用）：
   ① 核心链路 MTU 提到 9000（jumbo），一劳永逸
   ② 核心链路 MTU 提到 1580–1600，覆盖 L3VPN + 少量 SRH
-  ③ 保持 1500，在 PE 上做 TCP MSS 钳制（mss-adjust）+ 保证 ICMPv6 PTB 不被过滤
-</code></pre>
+  ③ 保持 1500，在 PE 上做 TCP MSS 钳制（mss-adjust）+ 保证 ICMPv6 PTB 不被过滤</pre>
+  </div>
+  <figcaption><b>图 6-5 · 矢量版</b>　MTU 预算阶梯 1500 到 1540 到 1580，右侧三种现网做法与 ping 二分法的可用区间。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <div class="en">
 <p>In practice, operators either raise the MTU of the core to accommodate the encapsulation with margin, or clamp the TCP MSS at the PE, or both. Relying on path MTU discovery alone is fragile because ICMPv6 Packet Too Big messages are frequently filtered by security policies.</p>
 </div>
@@ -747,7 +849,16 @@ RP/0/RP0/CPU0:PE-1# ping vrf CUSTOMER-100 10.1.2.1 size 1400 repeat 5
 <p>这条判据非常实用：<strong>在 1400 与 1472 之间二分，就能算出实际可用的路径 MTU</strong>，再反推哪一段没做 MTU 提升。</p>
 <h2 id="69">6.9 排障：六步定位法</h2>
 <p>L3VPN 故障的现象高度雷同（"VPN 路由在、业务不通"），但根因分布在六个层次。按顺序走，每步都有明确判据：</p>
-<pre><code class="language-text">第 1 步：BGP 里有这条 VPN 路由吗？
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-12-troubleshoot.svg" alt="六步定位法：BGP 路由、IPv6 下一跳、Prefix-SID、locator 可达、SID 命中计数、MTU。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">第 1 步：BGP 里有这条 VPN 路由吗？
   show bgp vpnv4 unicast rd &lt;RD&gt; &lt;prefix&gt;
   ├─ 无 ────────────────► RT 导入导出、RR、会话（与 SRv6 无关，先修 BGP）
   └─ 有 ──► 第 2 步
@@ -776,8 +887,11 @@ RP/0/RP0/CPU0:PE-1# ping vrf CUSTOMER-100 10.1.2.1 size 1400 repeat 5
 第 6 步：大包通不通？
   ping vrf &lt;vrf&gt; &lt;CE 地址&gt; size 1472
   ├─ 大包丢 ────────────► MTU（6.8）
-  └─ 通 ────────────────► 客户侧策略（ACL/NAT/QoS）
-</code></pre>
+  └─ 通 ────────────────► 客户侧策略（ACL/NAT/QoS）</pre>
+  </div>
+  <figcaption><b>6.9 · 矢量版</b>　六步定位法：BGP 路由、IPv6 下一跳、Prefix-SID、locator 可达、SID 命中计数、MTU。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p>配套巡检项：</p>
 <table>
 <thead>
@@ -904,12 +1018,24 @@ RP/0/RP0/CPU0:PE-1# ping vrf CUSTOMER-100 10.1.2.1 size 1400 repeat 5
 <h3 id="a300-pe-mpls-l3vpn-srv6">案例 A：300 台 PE 从 MPLS L3VPN 平滑迁移到 SRv6</h3>
 <p><strong>背景</strong>：某运营商 300 台 PE、约 4,000 个 VRF，现网 MPLS L3VPN（LDP + BGP 3107），计划分三批迁移，要求<strong>业务零中断、可随时回退</strong>。</p>
 <p><strong>阶段一：共存（不改任何业务路径）</strong></p>
-<pre><code class="language-text">① 全网 P/PE 升级到支持 SRv6 与 uSID 的版本，locator 从统一 SID block 规划
+<figure class="fig-switch">
+  <div class="fig-tabs">
+    <button type="button" class="on" data-pane="svg">矢量版</button>
+    <button type="button" data-pane="ascii">原书 ASCII</button>
+  </div>
+  <div class="fig-pane" data-pane="svg">
+    <img src="assets/img/06/fig-6-13-migration.svg" alt="三阶段迁移：共存、按区域切流、切默认与清退，并列出三个必踩的坑与对应巡检。">
+  </div>
+  <div class="fig-pane" data-pane="ascii" hidden>
+    <pre class="ascii-fig">① 全网 P/PE 升级到支持 SRv6 与 uSID 的版本，locator 从统一 SID block 规划
 ② 每台 PE 配 locator（例 6.1），但先不设 alloc mode → 只通告 locator，不产生 VPN SID
 ③ BGP 会话升级到 IPv6（或启用 RFC 8950 的 IPv6 next-hop 能力）
 ④ 核心链路 MTU 从 1500 提升到 1600（分批，先改核心，再改边缘）
-⑤ 此时 VPN 路由仍只带 MPLS 标签，SRv6 侧&quot;看得见但不用&quot;
-</code></pre>
+⑤ 此时 VPN 路由仍只带 MPLS 标签，SRv6 侧"看得见但不用"</pre>
+  </div>
+  <figcaption><b>案例 A · 矢量版</b>　三阶段迁移：共存、按区域切流、切默认与清退，并列出三个必踩的坑与对应巡检。<br>点击矢量图可放大查看。</figcaption>
+</figure>
+
 <p><strong>阶段二：按区域切流（可回退的关键）</strong></p>
 <pre><code class="language-text">⑥ 选定一个区域（约 40 台 PE），给 VRF 开启 alloc mode per-vrf
 ⑦ 同一条 VPN 路由同时携带 MPLS 标签与 Prefix-SID（双封装信息）
@@ -989,6 +1115,11 @@ RP/0/RP0/CPU0:PE-1# ping vrf CUSTOMER-100 10.1.2.1 size 1400 repeat 5
 ③ 对端 PE（发起回程方向）按策略选 PE-3 的 SID 作为出口
 ④ 去程仍由 IGP 度量自然选到 PE-2
 </code></pre>
+<figure>
+  <img src="assets/img/06/fig-6-14-dualhome.svg" alt="双归属下 per-CE SID 的可定向回程，与 anycast 定位下的随机回程对比。">
+  <figcaption><b>案例 B · 矢量版</b>　双归属下 per-CE SID 的可定向回程，与 anycast 定位下的随机回程对比。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <p><strong>关键点：不能只靠 anycast locator。</strong></p>
 <table>
 <thead>

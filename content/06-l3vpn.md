@@ -18,7 +18,9 @@
 
 ## 6.0 本章拓扑
 
-```text
+{{FIG|06/fig-6-1-topology|图 6-1 · 矢量版|两个 PE 各持 /48，中间两台 P 只有 locator 路由；标出 uN 与 uDT46 的分工，以及核心 cef vrf 应为空这一判据。}}
+
+```asciifig
 图 6-1：本章拓扑（原书 Figure 6.1 重绘）
 
    CE-1                        P-1               P-2                    CE-2
@@ -76,6 +78,8 @@ The key architectural consequence is that the transport label and the service la
 
 一句话总结这一节：MPLS L3VPN 用**两个标签**（外层负责"送到哪台 PE"，内层负责"进哪个 VRF"）；SRv6 用**一个地址**同时承担这两件事。这是全章所有收益与代价的源头。
 
+{{FIG|06/fig-6-6-collapse|6.1 · 矢量版|两个标签与一个地址的对照：塌缩掉的是协议与状态，不是字节。}}
+
 ## 6.2 换成了什么：End.DT 行为族
 
 :::en
@@ -102,6 +106,8 @@ End.DX4 and End.DX6 are a variant used when the egress PE is directly connected 
 Note that the packet is not encapsulated in a tunnel at the egress: the outer IPv6 header is simply removed, and the inner packet is routed natively. This is decapsulation-and-lookup, not tunnel termination in the traditional sense, which is why the behavior is called decapsulation and table lookup rather than VRF termination.
 :::
 
+{{FIG|06/fig-6-7-dt-behaviors|6.2 · 矢量版|End.DT 与 End.DX 的选型决策树，含 per-CE 却配 DT46 的静默失效。}}
+
 注意出口侧**不是"隧道终结"**：外层 IPv6 头被**直接删掉**，内层报文按原生方式被路由。这是"**解封装 + 查表**"，不是传统意义上的隧道出口——这也是该行为被命名为 "decapsulation and table lookup（DT）" 而不是 "VRF termination" 的原因。
 
 ### 6.2.1 一个必须先纠正的常见误解：SRv6 的开销并不比 MPLS 小
@@ -120,6 +126,8 @@ It is tempting to conclude that SRv6 reduces the encapsulation overhead compared
 | SRv6 常规（IPv6 头 + 无 SRH） | 40 B | 140 B | **+32 B** |
 | SRv6 + SRH（2 段列表） | 40 B + 至少 8 B SRH + 16 B/段 | ≥ 180 B | **+72 B** |
 | uSID 压缩（全部指令塞进 DA） | 40 B | 140 B | **+32 B** |
+
+{{FIG|06/fig-6-8-overhead|6.2.1 · 矢量版|承载 100 字节报文的四种封装总长度对比：8 B、40 B、80 B 三档开销。}}
 
 所以在带宽敏感场景（大流量城域网、视频回传）上，**SRv6 的每比特成本确实高于 MPLS**，这是必须承认的代价；它换来的是：
 
@@ -159,6 +167,8 @@ Per-VRF allocation is the default choice: it consumes one SID per VRF, it is sim
 | 双栈支持 | 一个 SID 搞定（DT46） | 需 DT4/DT6 两个（DX4 vs DX6 分开） |
 | 运维复杂度 | 低 | 中（SID 数随接入点膨胀） |
 | 适用规模 | VRF 数千级 | 接入点数百级、需精细控制 |
+
+{{FIG|06/fig-6-10-pervrf-perce|6.3 · 矢量版|per-VRF 与 per-CE 的拓扑对照与账本：SID 数、查表次数、定向能力、双栈支持。}}
 
 **例 6.1：per-VRF 分配（IOS XR）**
 
@@ -200,7 +210,9 @@ fdbb:bb00:0002:e002::       uDT46       'CUSTOMER-200'
 
 uSID locator 的容量是硬约束。以 `/48` locator + `pfx-16`（node 16 bit）为例，剩余 128 − 48 = 80 bit 可作 uSID 容器，即 **5 个 16 bit 微指令**（第 6 个位置在块尾被截断，具体取决于 block 长度）。按每个 VRF 一个 `uDT46` 计：
 
-```text
+{{FIG|06/fig-6-9-sid-space|6.3.1 · 矢量版|SID 空间实算：/48 之后 5 个 16 bit 容器与每 16 bit 位 65,536 的 function 空间是两个尺度。}}
+
+```asciifig
 先分清两个不同的"容量"：
   ① 容器深度：一条报文里能串几个 uSID（/48 locator 下约 5 个 16 bit 位）
   ② function 空间：一个 locator 能分配多少个不同 SID（每 16 bit 位 65,536 个）
@@ -231,7 +243,9 @@ The TLVs are nested: the SRv6 L3 Service TLV (type 5) contains one or more SRv6 
 
 TLV 是**嵌套**的：**SRv6 L3 Service TLV（type 5）** 内含一个或多个 **SRv6 SID Information Sub-TLV（type 1）**，每个 Sub-TLV 携带 SID、行为码，以及可选的 **SID Structure Sub-Sub-TLV**（描述 SID 如何切分成 locator / function / argument）。**SID Structure 正是让接收方能理解"非默认布局"SID 的关键**——转置与互通全靠它。
 
-```text
+{{FIG|06/fig-6-2-prefix-sid|图 6-2 · 矢量版|VPNv4 Update 的四个要件与 Prefix-SID 的嵌套结构：Service TLV、SID Information Sub-TLV、SID Structure。}}
+
+```asciifig
 图 6-2：BGP Prefix-SID 属性结构（原书 Figure 6.2 重绘）
 
   BGP Update（VPNv4，10.1.2.0/24）
@@ -287,6 +301,8 @@ If the VPN routes are advertised over an IPv4 session, or if the next hop is an 
 
 如果 VPN 路由跑在 **IPv4 会话**上，或者下一跳是 **IPv4 地址**，入口 PE **虽然拿到了 Prefix-SID 却无法用它构造外层头**，这条路由要么不被安装、要么回退到别的封装。
 
+{{FIG|06/fig-6-11-next-hop|6.4.1 · 矢量版|同一份 Prefix-SID 在 IPv6 下一跳与 IPv4 下一跳下的两种结局，附三条检查命令。}}
+
 这条的现网表现非常典型：
 
 | 现象 | 根因 | 检查点 |
@@ -312,7 +328,9 @@ As a result, no SRH is pushed, no uN needs to be prepended, and the encapsulatio
 
 由此得到三个"没有"：**不压 SRH、不需要前置 uN、封装就是恰好一个 IPv6 头**。整个程序只有**一条指令**，出口的数据面成本是**一次 SID 查找 + 一次 VRF 查找**。
 
-```text
+{{FIG|06/fig-6-3-usid-encap|图 6-3 · 矢量版|uSID 封装：只压一个 IPv6 头，DA 内嵌 locator 与 uDT46，Next Header 直接指向内层 IPv4。}}
+
+```asciifig
 图 6-3：uSID L3VPN 的封装（原书 Figure 6.3 重绘）
 
   客户报文（PE-1 收到）:
@@ -380,7 +398,9 @@ Transposition has two distinct uses. The first is SID space conservation: a PE w
 1. **节省 SID 空间**：一台有几万条接入电路的 PE 可以**只通告一个 SID**，把电路编号编进 argument，而不是每条电路一个 SID；
 2. **互通**：argument 里装**由 MPLS VPN 标签推导出的值**，网关就能在两种封装之间映射，**不需要为每条前缀维护状态**。
 
-```text
+{{FIG|06/fig-6-4-transposition|图 6-4 · 矢量版|转置的 SID 切分：Locator 与 Function 通告、Argument 本地编码，以及省空间与互通两种用途。}}
+
+```asciifig
 图 6-4：转置的 SID 结构（原书 Figure 6.4 重绘）
 
   通告的部分（BGP 里不变）              本地可变部分
@@ -446,6 +466,8 @@ The alternative is to allocate separate SIDs with End.DT4 and End.DT6, which is 
 
 工程默认：**除非有明确的分族策略需求，一律用 DT46。** 判定标准很简单——如果运维上你把 IPv4 与 IPv6 当作"同一个 VPN 的两个地址族"，就用一个 SID；如果当作"两个独立业务"，才拆开。
 
+{{FIG|06/fig-6-15-dualstack|6.7 · 矢量版|双栈 VRF 的两种做法：一个 uDT46 按内层版本选表，或 DT4 与 DT6 两个 SID 分别治理。}}
+
 ## 6.8 MTU：SRv6 L3VPN 最容易踩的物理约束
 
 :::en
@@ -462,7 +484,9 @@ The classic symptom is that small packets pass and large packets do not: a ping 
 
 账要这么算：
 
-```text
+{{FIG|06/fig-6-5-mtu|图 6-5 · 矢量版|MTU 预算阶梯 1500 到 1540 到 1580，右侧三种现网做法与 ping 二分法的可用区间。}}
+
+```asciifig
 图 6-5：MTU 预算（原书 Figure 6.5 重绘）
 
   CE 侧接口 MTU = 1500
@@ -504,7 +528,9 @@ RP/0/RP0/CPU0:PE-1# ping vrf CUSTOMER-100 10.1.2.1 size 1400 repeat 5
 
 L3VPN 故障的现象高度雷同（"VPN 路由在、业务不通"），但根因分布在六个层次。按顺序走，每步都有明确判据：
 
-```text
+{{FIG|06/fig-6-12-troubleshoot|6.9 · 矢量版|六步定位法：BGP 路由、IPv6 下一跳、Prefix-SID、locator 可达、SID 命中计数、MTU。}}
+
+```asciifig
 第 1 步：BGP 里有这条 VPN 路由吗？
   show bgp vpnv4 unicast rd <RD> <prefix>
   ├─ 无 ────────────────► RT 导入导出、RR、会话（与 SRv6 无关，先修 BGP）
@@ -592,7 +618,9 @@ With micro-segments, the whole service is encoded in the destination address: no
 
 **阶段一：共存（不改任何业务路径）**
 
-```text
+{{FIG|06/fig-6-13-migration|案例 A · 矢量版|三阶段迁移：共存、按区域切流、切默认与清退，并列出三个必踩的坑与对应巡检。}}
+
+```asciifig
 ① 全网 P/PE 升级到支持 SRv6 与 uSID 的版本，locator 从统一 SID block 规划
 ② 每台 PE 配 locator（例 6.1），但先不设 alloc mode → 只通告 locator，不产生 VPN SID
 ③ BGP 会话升级到 IPv6（或启用 RFC 8950 的 IPv6 next-hop 能力）
@@ -650,6 +678,8 @@ With micro-segments, the whole service is encoded in the destination address: no
 ③ 对端 PE（发起回程方向）按策略选 PE-3 的 SID 作为出口
 ④ 去程仍由 IGP 度量自然选到 PE-2
 ```
+
+{{FIG|06/fig-6-14-dualhome|案例 B · 矢量版|双归属下 per-CE SID 的可定向回程，与 anycast 定位下的随机回程对比。}}
 
 **关键点：不能只靠 anycast locator。**
 

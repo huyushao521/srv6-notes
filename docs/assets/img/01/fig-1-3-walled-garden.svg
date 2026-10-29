@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 396" width="900" height="396" role="img" aria-label="SR 域是安全围墙花园：ACL、封装边界与 uRPF 三道门">
+<style>
+.bg{fill:#fff}.g1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.6}.g2{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.6}
+.g3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.6}.out{fill:#f5f6f8;stroke:#cbd3de;stroke-width:1.4;stroke-dasharray:5 4}
+.inner{fill:#fff;stroke:#57606a;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.k{fill:#b7791f;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.g1{fill:#16283d;stroke:#58a6ff}.g2{fill:#14291d;stroke:#68d391}
+.g3{fill:#2a2113;stroke:#ecc94b}.out{fill:#171c24;stroke:#39414f}.inner{fill:#1b2028;stroke:#9aa4b2}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.k{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="396"/>
+<text class="h" x="24" y="28">SR 域 = 安全围墙花园：所有 SID 取自同一个地址块（例 fdbb:bb00::/24）</text>
+
+<rect class="out" x="24" y="120" width="130" height="92" rx="4"/>
+<text class="t" x="89" y="150" text-anchor="middle">域外主机</text>
+<text class="s" x="89" y="172" text-anchor="middle">可伪造源地址</text>
+<text class="s" x="89" y="190" text-anchor="middle">也可伪造合法 DA</text>
+
+<rect x="186" y="48" width="690" height="264" rx="10" fill="none" stroke="#0b6bcb" stroke-width="1.6" stroke-dasharray="7 5"/>
+<text class="s" x="200" y="70">SRv6 域（可信区）</text>
+
+<path d="M158 166 H196" stroke="#57606a" stroke-width="1.6" fill="none"/><path d="M196 166 l-9 -5 v10 z" fill="#57606a"/>
+
+<rect class="g1" x="200" y="110" width="118" height="112" rx="4"/>
+<text class="t" x="259" y="134" text-anchor="middle">① ACL</text>
+<text class="s" x="259" y="156" text-anchor="middle">外层 src ∉ 域</text>
+<text class="s" x="259" y="174" text-anchor="middle">→ 直接丢弃</text>
+<text class="s" x="259" y="198" text-anchor="middle">伪造 DA 在此失效</text>
+
+<path d="M318 166 H358" stroke="#57606a" stroke-width="1.6" fill="none"/><path d="M358 166 l-9 -5 v10 z" fill="#57606a"/>
+
+<rect class="g2" x="362" y="110" width="150" height="112" rx="4"/>
+<text class="t" x="437" y="134" text-anchor="middle">② 封装边界</text>
+<text class="s" x="437" y="156" text-anchor="middle">进域压外层 SRv6 头</text>
+<text class="s" x="437" y="174" text-anchor="middle">出域解封装</text>
+<text class="s" x="437" y="198" text-anchor="middle">域内只跑 SRv6 语义</text>
+
+<path d="M512 166 H552" stroke="#57606a" stroke-width="1.6" fill="none"/><path d="M552 166 l-9 -5 v10 z" fill="#57606a"/>
+
+<rect class="g3" x="556" y="110" width="150" height="112" rx="4"/>
+<text class="t" x="631" y="134" text-anchor="middle">③ uRPF 校验</text>
+<text class="s" x="631" y="156" text-anchor="middle">只信域内邻居</text>
+<text class="s" x="631" y="174" text-anchor="middle">源地址须与入接口一致</text>
+<text class="s" x="631" y="198" text-anchor="middle">伪造源地址在此失效</text>
+
+<path d="M706 166 H744" stroke="#57606a" stroke-width="1.6" fill="none"/><path d="M744 166 l-9 -5 v10 z" fill="#57606a"/>
+<rect class="inner" x="748" y="126" width="112" height="80" rx="4"/>
+<text class="t" x="804" y="158" text-anchor="middle">域内主机</text>
+<text class="s" x="804" y="180" text-anchor="middle">/ VRF</text>
+
+<text class="k" x="200" y="240">伪造一个合法 SID？可以 —— 源地址过不了 ①</text>
+<text class="k" x="200" y="262">伪造源地址？可以 —— 反向路径检查过不了 ③</text>
+<text class="k" x="200" y="284">域内节点互攻？成立 —— 域内是可信区，靠管理面隔离</text>
+
+<text class="t" x="24" y="344">SRv6 不加密、也不逐条认证段列表；它的安全模型与 MPLS、VXLAN 相同：信任边界、校验源地址、域内当可信。</text>
+<text class="s" x="24" y="368">"因为 IP 可伪造所以 SRv6 不安全"，是把端到端威胁模型套在域技术头上。要加密请叠加 IPsec / MACsec。</text>
+<text class="s" x="24" y="390">隐藏内部拓扑用 PSP（第 10 章）；域边界 ACL 与 uRPF 必须两侧都做，只做一侧等于没做。</text>
+</svg>

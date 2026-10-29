@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 384" width="900" height="384" role="img" aria-label="SR-Algorithm TLV 通告节点支持的算法列表，通告即参与，Algo(0) 默认参与">
+<style>
+.bg{fill:#fff}.cell{fill:#f7f9fc;stroke:#9aa4b2;stroke-width:1.3}.b1{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}
+.b3{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.4}.b{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12.5px Consolas,monospace}.h{fill:#0b6bcb;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#b7791f;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.cell{fill:#1b2029;stroke:#6b7684}.b1{fill:#16283d;stroke:#58a6ff}
+.b3{fill:#2a2113;stroke:#ecc94b}.b{fill:#1b2029;stroke:#39414f}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.h{fill:#58a6ff}.o{fill:#ecc94b}}
+</style>
+<rect class="bg" width="900" height="384"/>
+<text class="h" x="24" y="26">SR-Algorithm TLV：一行输出就是“参与者名单”</text>
+
+<rect class="cell" x="24" y="48" width="230" height="32"/><text class="m" x="139" y="69" text-anchor="middle">Type 19 / 8 / 1035</text>
+<rect class="cell" x="254" y="48" width="196" height="32"/><text class="m" x="352" y="69" text-anchor="middle">Length</text>
+<rect class="cell" x="24" y="80" width="106" height="32"/><text class="m" x="77" y="101" text-anchor="middle">Alg 1</text>
+<rect class="cell" x="130" y="80" width="106" height="32"/><text class="m" x="183" y="101" text-anchor="middle">Alg 2</text>
+<rect class="cell" x="236" y="80" width="106" height="32"/><text class="m" x="289" y="101" text-anchor="middle">…</text>
+<rect class="cell" x="342" y="80" width="108" height="32"/><text class="m" x="396" y="101" text-anchor="middle">Alg n</text>
+<text class="s" x="24" y="134">每个 Algorithm 占 1 octet；IS-IS 属 Router Capability TLV，OSPF 属 Router Information LSA，BGP-LS 属 Node NLRI</text>
+
+<rect class="b" x="24" y="150" width="420" height="106" rx="8"/>
+<text class="t" x="40" y="176">IS-IS 输出（节点 3）</text>
+<text class="m" x="40" y="202">SR Algorithm:</text>
+<text class="m" x="56" y="222">Algorithm: 0     ← 必在</text>
+<text class="m" x="56" y="242">Algorithm: 1     ← IOS XR 恒发</text>
+
+<rect class="b1" x="456" y="150" width="420" height="106" rx="8"/>
+<text class="t" x="472" y="176">读法</text>
+<text class="s" x="472" y="200">列出 128 / 129 = 参与了两个 Flex-Algo</text>
+<text class="s" x="472" y="222">Algo(0) 不写也算参与（默认算法）</text>
+<text class="s" x="472" y="244">Algo(1) 只对 SR-MPLS 有意义，不代表用了 Strict-SPF</text>
+
+<rect class="b3" x="24" y="272" width="852" height="88" rx="8"/>
+<text class="t" x="40" y="296">三条硬规则</text>
+<text class="s" x="40" y="320">① 通告即参与：TLV 里没有某个算法号，该节点就不在那棵树的拓扑里（连中转都不行）</text>
+<text class="s" x="40" y="342">② 不支持定义中的计算类型 / 度量 / 任一约束 → 撤回算法号，并把该算法的前缀从转发表移除</text>
+</svg>
