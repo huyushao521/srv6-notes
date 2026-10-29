@@ -6,3 +6,7 @@ _toc.txt
 .codebuddy/
 __pycache__/
 *.pyc
+
+# 浏览器自动化产物与临时截图
+.playwright-cli/
+fig*.png

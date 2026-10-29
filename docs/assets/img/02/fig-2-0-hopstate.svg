@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img" aria-label="逐跳状态与源路由对比">
+<style>
+.bg{fill:#fff}.card{fill:#fbfcfe;stroke:#dfe5ee}.b{fill:#f7f9fc;stroke:#cbd3de}.bk{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:1.5}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.h{fill:#1f2328;font:600 14px 'Microsoft YaHei',system-ui,sans-serif}
+.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}.m{font:600 13px Consolas,monospace;fill:#0b6bcb}
+.w{fill:#b3261e;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.l{stroke:#9aa4b2;stroke-width:1.4;fill:none}.lk{stroke:#0b6bcb;stroke-width:1.6;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.card{fill:#191e26;stroke:#39414f}.b{fill:#1b2029;stroke:#39414f}.bk{fill:#16283d;stroke:#58a6ff}
+.t,.h{fill:#e6e9ef}.s{fill:#9aa4b2}.m{fill:#58a6ff}.w{fill:#ff9b90}.o{fill:#58a6ff}.l{stroke:#5a6472}.lk{stroke:#58a6ff}}
+</style>
+<defs>
+<marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker>
+<marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#0b6bcb"/></marker>
+</defs>
+<rect class="bg" width="900" height="400"/>
+<rect class="card" x="30" y="46" width="400" height="310" rx="8"/>
+<text class="h" x="50" y="76">传统逐跳状态（RSVP-TE / 每流标签）</text>
+<rect class="b" x="52" y="100" width="76" height="48" rx="4"/><text class="t" x="90" y="129" text-anchor="middle">R1</text>
+<rect class="b" x="136" y="100" width="76" height="48" rx="4"/><text class="t" x="174" y="129" text-anchor="middle">R2</text>
+<rect class="b" x="220" y="100" width="76" height="48" rx="4"/><text class="t" x="258" y="129" text-anchor="middle">R3</text>
+<rect class="b" x="304" y="100" width="76" height="48" rx="4"/><text class="t" x="342" y="129" text-anchor="middle">R4</text>
+<text class="s" x="90" y="166" text-anchor="middle">每流状态</text><text class="s" x="174" y="166" text-anchor="middle">每流状态</text>
+<text class="s" x="258" y="166" text-anchor="middle">每流状态</text><text class="s" x="342" y="166" text-anchor="middle">每流状态</text>
+<path class="l" d="M216 244 L216 192" marker-end="url(#a)"/><text class="s" x="226" y="222">① 信令同步</text>
+<rect class="b" x="52" y="244" width="328" height="48" rx="4"/><text class="t" x="216" y="274" text-anchor="middle">源节点先发信令，逐台建状态</text>
+<text class="w" x="216" y="328" text-anchor="middle">路径变了 → 全网重新信令</text>
+<rect class="card" x="470" y="46" width="400" height="310" rx="8"/>
+<text class="h" x="490" y="76">源路由（SRv6）</text>
+<text class="m" x="490" y="96">&lt; 2 , 3 , 4 , 5 &gt;</text>
+<rect class="b" x="492" y="108" width="76" height="46" rx="4"/><text class="t" x="530" y="127" text-anchor="middle">R1</text><text class="s" x="530" y="144" text-anchor="middle">只查 DA</text>
+<rect class="b" x="576" y="108" width="76" height="46" rx="4"/><text class="t" x="614" y="127" text-anchor="middle">R2</text><text class="s" x="614" y="144" text-anchor="middle">只查 DA</text>
+<rect class="b" x="660" y="108" width="76" height="46" rx="4"/><text class="t" x="698" y="127" text-anchor="middle">R3</text><text class="s" x="698" y="144" text-anchor="middle">只查 DA</text>
+<rect class="b" x="744" y="108" width="76" height="46" rx="4"/><text class="t" x="782" y="127" text-anchor="middle">R4</text><text class="s" x="782" y="144" text-anchor="middle">只查 DA</text>
+<path class="lk" d="M530 242 L530 158" marker-end="url(#ab)"/><text class="s" x="540" y="212">② 查 DA 并移一位</text>
+<rect class="bk" x="492" y="242" width="328" height="48" rx="4"/><text class="t" x="656" y="272" text-anchor="middle">源节点把整段程序写进报文头</text>
+<text class="o" x="656" y="328" text-anchor="middle">路径变了 → 只改源节点的列表</text>
+<text class="s" x="30" y="384">状态在报文中：沿途节点不需要为任何一条流保存 per-flow 状态</text>
+</svg>

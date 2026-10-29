@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img" aria-label="节点 1 作为 SR Source 的封装结果">
+<style>
+.bg{fill:#fff}.ip{fill:#eef4fc;stroke:#cbd3de}.da{fill:#dcecff;stroke:#0b6bcb;stroke-width:1.8}.sh{fill:#fdf3e7;stroke:#b7791f}
+.sl{fill:#f7f9fc;stroke:#cbd3de}.in{fill:#f2f4f7;stroke:#9aa4b2}
+.t{fill:#1f2328;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.mk{fill:#0b6bcb;font:600 12px Consolas,monospace}
+.o{fill:#0b6bcb;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}.g{fill:#57606a;font:600 11px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.ip{fill:#1f2b3b;stroke:#39414f}.da{fill:#16283d;stroke:#58a6ff}.sh{fill:#2a2113;stroke:#ecc94b}
+.sl{fill:#1b2029;stroke:#39414f}.in{fill:#171c24;stroke:#5a6472}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.mk,.o{fill:#58a6ff}.g{fill:#9aa4b2}}
+</style>
+<rect class="bg" width="900" height="470"/>
+<text class="g" x="24" y="42">偏移</text>
+<text class="s" x="24" y="120">0</text>
+<text class="s" x="24" y="160">40</text>
+<text class="s" x="24" y="300">48</text>
+<text class="s" x="24" y="404">144</text>
+
+<rect class="ip" x="70" y="70" width="800" height="34"/>
+<text class="t" x="80" y="92">Version / Traffic Class / Flow Label</text>
+<text class="t" x="470" y="92">Payload Length</text>
+<text class="t" x="620" y="92">NH = 43</text>
+<text class="t" x="720" y="92">Hop Limit = 64</text>
+<rect class="ip" x="70" y="104" width="800" height="34"/>
+<text class="m" x="80" y="126">SA = fc00:0:1::1</text>
+<text class="s" x="700" y="126">（从 locator 分配的 loopback）</text>
+<rect class="da" x="70" y="138" width="800" height="34"/>
+<text class="mk" x="80" y="160">DA = fc00:0:2:X::</text>
+<text class="o" x="700" y="160">★ 活动段（第一站）</text>
+
+<rect class="sh" x="70" y="178" width="800" height="34"/>
+<text class="t" x="80" y="200">NH = 4</text>
+<text class="t" x="230" y="200">Hdr Ext Len</text>
+<text class="t" x="400" y="200">Routing Type = 4</text>
+<text class="t" x="580" y="200">Segments Left = 3</text>
+<rect class="sh" x="70" y="212" width="800" height="34"/>
+<text class="t" x="80" y="234">Last Entry = 3</text>
+<text class="t" x="400" y="234">Flags = 0</text>
+<text class="t" x="580" y="234">Tag = 0</text>
+
+<rect class="sl" x="70" y="252" width="800" height="34"/><text class="m" x="80" y="274">Segment List[0] = fc00:0:5:eeee::</text><text class="s" x="700" y="274">最后一站（业务 SID）</text>
+<rect class="sl" x="70" y="286" width="800" height="34"/><text class="m" x="80" y="308">Segment List[1] = fc00:0:4:X::</text>
+<rect class="sl" x="70" y="320" width="800" height="34"/><text class="m" x="80" y="342">Segment List[2] = fc00:0:3:X::</text>
+<rect class="sl" x="70" y="354" width="800" height="34"/><text class="m" x="80" y="376">Segment List[3] = fc00:0:2:X::</text><text class="s" x="700" y="376">第一站，与 DA 冗余</text>
+
+<rect class="in" x="70" y="398" width="800" height="34"/>
+<text class="t" x="80" y="420">内层 IPv4 业务报文（客户载荷）</text>
+
+<line x1="40" y1="354" x2="40" y2="388" stroke="#9aa4b2" stroke-width="1"/>
+<text class="s" x="30" y="452">n = 4：Last Entry = Segments Left = 3；Segment List 按倒序存放，[0] 是最后一站</text>
+</svg>

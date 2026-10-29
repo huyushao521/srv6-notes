@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300" role="img" aria-label="IPv6 Routing Header 通用格式">
+<style>
+.bg{fill:#fff}.h{fill:#eef4fc;stroke:#cbd3de}.b{fill:#f7f9fc;stroke:#cbd3de;stroke-dasharray:5 4}
+.t{fill:#1f2328;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.h{fill:#1f2b3b;stroke:#39414f}.b{fill:#171c24;stroke:#39414f}
+.t{fill:#e6e9ef}.s{fill:#9aa4b2}.o{fill:#58a6ff}}
+</style>
+<rect class="bg" width="900" height="300"/>
+<text class="s" x="30" y="30">bit</text><text class="s" x="30" y="48">0</text><text class="s" x="870" y="48" text-anchor="end">31</text>
+<rect class="h" x="30" y="58" width="210" height="52"/>
+<text class="t" x="135" y="80" text-anchor="middle">Next Header</text><text class="s" x="135" y="98" text-anchor="middle">8 bit</text>
+<rect class="h" x="240" y="58" width="210" height="52"/>
+<text class="t" x="345" y="80" text-anchor="middle">Hdr Ext Len</text><text class="s" x="345" y="98" text-anchor="middle">8 bit（8 字节为单位）</text>
+<rect class="h" x="450" y="58" width="210" height="52"/>
+<text class="t" x="555" y="80" text-anchor="middle">Routing Type</text><text class="s" x="555" y="98" text-anchor="middle">8 bit</text>
+<rect class="h" x="660" y="58" width="210" height="52"/>
+<text class="t" x="765" y="80" text-anchor="middle">Segments Left</text><text class="s" x="765" y="98" text-anchor="middle">8 bit</text>
+<rect class="b" x="30" y="110" width="840" height="76"/>
+<text class="t" x="450" y="142" text-anchor="middle">Type-specific Data（可变长，由 Routing Type 决定其格式）</text>
+<text class="s" x="450" y="166" text-anchor="middle">SRH 就是 Routing Type = 4 的这一种，其前 32 位与上面的通用头完全一致</text>
+<text class="s" x="30" y="214">前 32 位对所有 Routing Header（RH0 / RH2 / RH3 / SRH…）完全一致，这也解释了为什么 SRH 必然复用这四个字段</text>
+<text class="s" x="30" y="238">上一跳头部的 Next Header = 43，表示"下一个扩展头是 Routing Header"；SRH 的 Next Header 则指向 SRH 之后的头部</text>
+<text class="s" x="30" y="262">RFC 8200 规定：只有 DA 所指的节点才允许检查 Routing Header，其他节点必须忽略它并照 DA 转发</text>
+<text class="o" x="30" y="286">图 2-9 · 对应原书 Figure 2.4（RFC 8200 §4.4）</text>
+</svg>

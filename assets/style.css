@@ -380,6 +380,83 @@ a:hover { text-decoration: underline; }
   white-space: nowrap;
 }
 
+/* ---------- 正文插图 ---------- */
+.md figure {
+  margin: 22px 0 24px;
+  padding: 14px 14px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+.md figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  background: var(--bg);
+  cursor: zoom-in;
+}
+.md figure figcaption {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg-soft);
+  text-align: center;
+}
+.md figure figcaption b { color: var(--fg); font-weight: 600; }
+
+/* 原书扫描件折叠对照 */
+.md figure details.orig {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  text-align: left;
+}
+.md figure details.orig summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--fg-soft);
+  list-style: none;
+}
+.md figure details.orig summary::-webkit-details-marker { display: none; }
+.md figure details.orig summary::before { content: "▸ "; }
+.md figure details.orig[open] summary::before { content: "▾ "; }
+.md figure details.orig summary:hover { color: var(--fg); }
+.md figure .orig-img { margin-top: 10px; cursor: zoom-in; }
+.md figure .orig-tip { margin: 8px 0 0; font-size: 12px; color: var(--fg-soft); }
+.md figure .orig-tip code { font-size: 11.5px; padding: 1px 4px; }
+
+/* 图片放大层 */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgba(8, 10, 14, .82);
+  backdrop-filter: blur(4px);
+  cursor: zoom-out;
+}
+.lightbox.on { display: flex; }
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
+}
+.lightbox .lb-tip {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .7);
+}
+
 /* ---------- responsive ---------- */
 @media (max-width: 1180px) {
   .layout { grid-template-columns: var(--sidebar) minmax(0, 1fr); }

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 344" width="900" height="344" role="img" aria-label="6 条 uSID 与 6 条非压缩 SID 的头部开销对比">
+<style>
+.bg{fill:#fff}.ip{fill:#eef4fc;stroke:#cbd3de}.srh{fill:#fdf3e7;stroke:#b7791f}.list{fill:#fdeceb;stroke:#b3261e}.pl{fill:#f5f6f8;stroke:#cbd3de}
+.t{fill:#1f2328;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.r{fill:#b3261e;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.l{stroke:#9aa4b2;stroke-width:1.2;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.ip{fill:#1f2b3b;stroke:#39414f}.srh{fill:#2a2113;stroke:#ecc94b}.list{fill:#2b1a19;stroke:#ff9b90}.pl{fill:#171c24;stroke:#39414f}
+.t{fill:#e6e9ef}.s{fill:#9aa4b2}.o{fill:#58a6ff}.r{fill:#ff9b90}.l{stroke:#5a6472}}
+</style>
+<rect class="bg" width="900" height="344"/>
+<text class="t" x="30" y="34">压缩（uSID）：总开销 40 字节，不需要 SRH</text>
+<rect class="ip" x="30" y="46" width="216" height="52"/>
+<text class="t" x="138" y="70" text-anchor="middle">IPv6 头</text><text class="s" x="138" y="88" text-anchor="middle">40 B（DA 内含 6 条 uSID）</text>
+<rect class="pl" x="246" y="46" width="624" height="52"/>
+<text class="s" x="558" y="78" text-anchor="middle">业务载荷</text>
+
+<text class="t" x="30" y="140">非压缩：40 + 8 + 96 = 144 字节，多出 88 字节</text>
+<rect class="ip" x="30" y="152" width="216" height="52"/>
+<text class="t" x="138" y="176" text-anchor="middle">IPv6 头 40 B</text><text class="s" x="138" y="194" text-anchor="middle">DA 只有一个 SID</text>
+<rect class="srh" x="246" y="152" width="56" height="52"/>
+<text class="s" x="274" y="176" text-anchor="middle">SRH</text><text class="s" x="274" y="194" text-anchor="middle">8 B</text>
+<rect class="list" x="302" y="152" width="520" height="52"/>
+<text class="t" x="562" y="176" text-anchor="middle">Segment List：6 × 16 B = 96 B</text>
+<text class="s" x="562" y="194" text-anchor="middle">6 条非压缩 SID</text>
+<rect class="pl" x="822" y="152" width="48" height="52"/>
+<text class="s" x="846" y="182" text-anchor="middle">载荷</text>
+
+<line x1="218" y1="46" x2="218" y2="110" stroke="#9aa4b2" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="218" y1="152" x2="218" y2="216" stroke="#9aa4b2" stroke-width="1" stroke-dasharray="3 3"/>
+<text class="o" x="30" y="238">差额 = 96 + 8 − 16（DA 本来就要装一个 SID）= 88 字节 / 包</text>
+<text class="s" x="30" y="266">按 1280 字节 MTU 计：头部占比从约 3% 抬到约 10%；报文越小、段数越多，差距越明显</text>
+<text class="s" x="30" y="290">uSID 把"段"从报文头里的独立条目变成了 IPv6 地址内部的位段，因此不额外占字节</text>
+<text class="s" x="30" y="314">对照 IPv6 / VxLAN：40 + 8(UDP) + 8(VXLAN) + 14(内层以太网) = 70 字节，且能力弱于 SRv6</text>
+</svg>

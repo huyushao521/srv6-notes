@@ -42,7 +42,7 @@ This repository is a static site of structured, hands-on reading notes for *Segm
 ```
 content/    Markdown sources, one file per chapter
 build.py    Static site generator (Markdown -> docs/*.html)
-assets/     style.css, app.js (search, sidebar, TOC)
+assets/     style.css, app.js (search, sidebar, TOC), img/ (figures)
 docs/       Generated output, served directly by GitHub Pages
 ```
 
@@ -125,7 +125,7 @@ Notes for study and discussion only, not an official translation. Quoted passage
 ```
 content/    正文 Markdown 源文件（每章一个）
 build.py    静态站点生成器（Markdown -> docs/*.html）
-assets/     style.css、app.js（搜索、侧边栏、本页目录）
+assets/     style.css、app.js（搜索、侧边栏、本页目录）、img/（正文插图）
 docs/       生成结果，GitHub Pages 直接服务此目录
 ```
 
@@ -153,6 +153,21 @@ English excerpt from the book.
 ```
 
 标题层级由 Markdown 的 `##` / `###` 决定，同时驱动右侧「本页目录」。
+
+### 插图写法约定
+
+矢量图放在 `assets/img/<章号>/`，构建时整目录同步到 `docs/`；正文用占位符插入，不要手写 `<figure>`：
+
+```
+{{FIG|02/fig-2-6-usid|图 2-6 · 矢量版|uSID 逐跳左移：Block 不变，容器每跳左移 16 bit。|Figure 2.2}}
+```
+
+四段依次是：图片路径（`assets/img/` 下、不含 `.svg`）、图题、图注、原书图号（写 `-` 表示没有原书对应图）。
+构建后会生成 `<figure>`、图注和「原书 … 扫描件对照」折叠区。
+
+扫描件按文件名约定放进 `assets/img/02/orig/`（与 SVG 同名，`.png` / `.jpg` / `.webp` 均可），
+重新构建即自动内嵌；文件不存在时折叠区显示一条「放哪里」的提示，页面不会出现破图。
+正文图片点击会打开放大层，`Esc` 或再次点击关闭。
 
 ### 部署
 

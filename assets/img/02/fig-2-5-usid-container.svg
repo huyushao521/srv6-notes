@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 316" width="900" height="316" role="img" aria-label="128 位 uSID 容器内的 6 条微指令">
+<style>
+.bg{fill:#fff}.blk{fill:#eef4fc;stroke:#cbd3de}.u{fill:#f7f9fc;stroke:#cbd3de}.eoc{fill:#fff;stroke:#cbd3de;stroke-dasharray:4 3}
+.t{fill:#1f2328;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 14px Consolas,monospace}.o{fill:#0b6bcb;font:600 13px Consolas,monospace}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.blk{fill:#1f2b3b;stroke:#39414f}.u{fill:#1b2029;stroke:#39414f}.eoc{fill:#141922;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.o{fill:#58a6ff}}
+</style>
+<rect class="bg" width="900" height="316"/>
+<text class="s" x="30" y="26">bit 0</text><text class="s" x="870" y="26" text-anchor="end">bit 127</text>
+<rect class="blk" x="30" y="34" width="210" height="52"/>
+<text class="t" x="135" y="58" text-anchor="middle">uSID Block</text><text class="s" x="135" y="76" text-anchor="middle">32 bit</text>
+<rect class="u" x="240" y="34" width="105" height="52"/><text class="t" x="292" y="58" text-anchor="middle">uSID 1</text><text class="s" x="292" y="76" text-anchor="middle">16 bit</text>
+<rect class="u" x="345" y="34" width="105" height="52"/><text class="t" x="397" y="58" text-anchor="middle">uSID 2</text><text class="s" x="397" y="76" text-anchor="middle">16 bit</text>
+<rect class="u" x="450" y="34" width="105" height="52"/><text class="t" x="502" y="58" text-anchor="middle">uSID 3</text><text class="s" x="502" y="76" text-anchor="middle">16 bit</text>
+<rect class="u" x="555" y="34" width="105" height="52"/><text class="t" x="607" y="58" text-anchor="middle">uSID 4</text><text class="s" x="607" y="76" text-anchor="middle">16 bit</text>
+<rect class="u" x="660" y="34" width="105" height="52"/><text class="t" x="712" y="58" text-anchor="middle">uSID 5</text><text class="s" x="712" y="76" text-anchor="middle">16 bit</text>
+<rect class="u" x="765" y="34" width="105" height="52"/><text class="t" x="817" y="58" text-anchor="middle">uSID 6</text><text class="s" x="817" y="76" text-anchor="middle">16 bit</text>
+
+<rect class="blk" x="30" y="86" width="210" height="48"/>
+<text class="o" x="135" y="116" text-anchor="middle">BBBB:BBBB</text>
+<rect class="u" x="240" y="86" width="105" height="48"/><text class="m" x="292" y="116" text-anchor="middle">0002</text>
+<rect class="u" x="345" y="86" width="105" height="48"/><text class="m" x="397" y="116" text-anchor="middle">0003</text>
+<rect class="u" x="450" y="86" width="105" height="48"/><text class="m" x="502" y="116" text-anchor="middle">0004</text>
+<rect class="eoc" x="555" y="86" width="105" height="48"/><text class="s" x="607" y="116" text-anchor="middle">0000</text>
+<rect class="eoc" x="660" y="86" width="105" height="48"/><text class="s" x="712" y="116" text-anchor="middle">0000</text>
+<rect class="eoc" x="765" y="86" width="105" height="48"/><text class="s" x="817" y="116" text-anchor="middle">0000</text>
+
+<text class="s" x="135" y="154" text-anchor="middle">SID block</text>
+<text class="o" x="292" y="154" text-anchor="middle">uN</text>
+<text class="o" x="397" y="154" text-anchor="middle">uA</text>
+<text class="o" x="502" y="154" text-anchor="middle">uDT4</text>
+<text class="s" x="607" y="154" text-anchor="middle">EoC</text>
+<text class="s" x="712" y="154" text-anchor="middle">EoC</text>
+<text class="s" x="817" y="154" text-anchor="middle">EoC</text>
+
+<text class="s" x="30" y="196">文本写法：</text>
+<text class="o" x="110" y="196">fc00:0000:0002:0003:0004:0000:0000:0000</text>
+<text class="s" x="30" y="228">IPv6 地址每 16 位一组，正好 8 组 = 32 位 block（2 组）+ 6 条 uSID（6 组）</text>
+<text class="s" x="30" y="252">不足 6 条指令时，未使用的位置填 0000（End-of-Container）；虚线格即为未使用的槽位</text>
+<text class="s" x="30" y="276">同一容器内的所有 uSID 必须共享同一个 block；跨域可用不同 block 的多个容器</text>
+<text class="s" x="30" y="300">uN = 前缀段（End），uA = 邻接段（End.X），uDT4 = per-VRF IPv4 业务段</text>
+</svg>

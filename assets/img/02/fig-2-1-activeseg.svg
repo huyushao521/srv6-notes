@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 372" width="900" height="372" role="img" aria-label="SID 列表与活动段">
+<style>
+.bg{fill:#fff}.b{fill:#f7f9fc;stroke:#cbd3de}.bk{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:1.8}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 13.5px Consolas,monospace}.mk{fill:#0b6bcb;font:600 13.5px Consolas,monospace}
+.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.l{stroke:#9aa4b2;stroke-width:1.4;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b{fill:#1b2029;stroke:#39414f}.bk{fill:#16283d;stroke:#58a6ff}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.mk,.o{fill:#58a6ff}.l{stroke:#5a6472}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker></defs>
+<rect class="bg" width="900" height="372"/>
+<text class="s" x="50" y="34">SRH Segment List（倒序存放：索引递增 = 越来越靠近目的地）</text>
+<rect class="bk" x="50" y="52" width="352" height="48" rx="4"/>
+<text class="mk" x="66" y="82">[3] fc00:0:2:X::</text><text class="o" x="386" y="82" text-anchor="end">第一站 · 活动段</text>
+<rect class="b" x="50" y="104" width="352" height="44" rx="4"/>
+<text class="m" x="66" y="132">[2] fc00:0:3:X::</text>
+<rect class="b" x="50" y="152" width="352" height="44" rx="4"/>
+<text class="m" x="66" y="180">[1] fc00:0:4:X::</text>
+<rect class="b" x="50" y="200" width="352" height="44" rx="4"/>
+<text class="m" x="66" y="228">[0] fc00:0:5:eeee::</text><text class="s" x="386" y="228" text-anchor="end">最后一站 · 业务 SID</text>
+<rect class="bk" x="452" y="52" width="418" height="76" rx="4"/>
+<text class="s" x="470" y="74">IPv6 Destination Address</text>
+<text class="mk" x="470" y="102">fc00:0:2:X::</text><text class="o" x="852" y="102" text-anchor="end">★ 活动段</text>
+<text class="s" x="470" y="118">活动段永远编码在 DA 里，不在 SRH 里</text>
+<rect class="b" x="452" y="142" width="418" height="60" rx="4"/>
+<text class="s" x="470" y="164">Segments Left</text>
+<text class="m" x="470" y="188">3</text><text class="s" x="500" y="188">还剩 3 段未走（n − 1，n = 4）</text>
+<rect class="b" x="452" y="216" width="418" height="118" rx="4"/>
+<text class="s" x="470" y="240">每跳处理（三步原子完成）</text>
+<text class="m" x="470" y="266">SL ← SL − 1</text>
+<text class="m" x="470" y="292">DA ← Segment List[SL]</text>
+<text class="m" x="470" y="318">按新 DA 查表转发</text>
+<path class="l" d="M448 96 L406 78" marker-end="url(#a)"/>
+<text class="s" x="50" y="286">SL 减 1 与 DA 替换必须原子完成</text>
+<text class="s" x="50" y="308">否则中途会出现 DA 与 SL 不自洽的报文</text>
+<text class="s" x="50" y="344">k 个段 → SL 从 k−1 递减到 0；SL = 0 时该段仍在 DA 里执行</text>
+</svg>

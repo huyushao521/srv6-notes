@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" width="900" height="360" role="img" aria-label="SRv6 SID 的 LOC:FUNCT:ARG 结构">
+<style>
+.bg{fill:#fff}.loc{fill:#eef4fc;stroke:#0b6bcb;stroke-width:1.4}.fun{fill:#eaf7ee;stroke:#2f855a;stroke-width:1.4}
+.arg{fill:#fdf3e7;stroke:#b7791f;stroke-width:1.2}.pad{fill:#f5f6f8;stroke:#cbd3de;stroke-dasharray:4 3}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 13.5px Consolas,monospace}.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.loc{fill:#16283d;stroke:#58a6ff}.fun{fill:#14291d;stroke:#68d391}
+.arg{fill:#2a2113;stroke:#ecc94b}.pad{fill:#171c24;stroke:#39414f}.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.o{fill:#58a6ff}}
+</style>
+<rect class="bg" width="900" height="360"/>
+<text class="s" x="30" y="28">bit</text><text class="s" x="30" y="46">0</text>
+<text class="s" x="290" y="46">32</text><text class="s" x="500" y="46">48</text><text class="s" x="900" y="46" text-anchor="end">127</text>
+<rect class="loc" x="30" y="56" width="840" height="56" rx="3"/>
+<text class="t" x="450" y="90" text-anchor="middle">Locator（L = 48 bit）— 标识实例化该 SID 的父节点，也是 IGP 通告的 /48 前缀</text>
+<rect class="fun" x="30" y="118" width="420" height="56" rx="3"/>
+<text class="t" x="240" y="152" text-anchor="middle">Function（F = 16 bit）</text>
+<rect class="arg" x="456" y="118" width="120" height="56" rx="3"/>
+<text class="t" x="516" y="152" text-anchor="middle">Arguments</text>
+<rect class="pad" x="582" y="118" width="288" height="56" rx="3"/>
+<text class="s" x="726" y="152" text-anchor="middle">补零至 128 位</text>
+<line x1="450" y1="176" x2="450" y2="212" stroke="#0b6bcb" stroke-width="1" stroke-dasharray="3 3"/>
+<text class="s" x="450" y="230" text-anchor="middle">48 bit 边界</text>
+<text class="s" x="30" y="266">示例（L = 48, F = 16, A = 0）：fc00:0:5:eeee::</text>
+<text class="m" x="30" y="294">fc00:0:5:: /48</text><text class="s" x="170" y="294">= locator，节点 5 在 IGP 里通告的 SRv6 locator</text>
+<text class="m" x="30" y="322">eeee</text><text class="s" x="170" y="322">= function，本地行为的编号（节点 5 上这里绑定 End.DT4）</text>
+<text class="s" x="30" y="348">未用的低位补 0，使整个 SID 恰好构成一个合法的 /128 地址；FUNCT/ARG 的边界由运营商规划决定</text>
+</svg>

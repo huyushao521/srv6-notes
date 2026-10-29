@@ -59,7 +59,7 @@
   <main class="content">
     <article class="md">
 <blockquote>
-<p><strong>本章定位</strong>：原书第 2 章《SRv6 Fundamentals》。本版按原书 2.1–2.7 的段落顺序<strong>逐段对照</strong>：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段的完整翻译，必要时补一句工程注解。书中的 Figure 2.1–2.6 按原文描述用 ASCII 重绘，图注标明来源。</p>
+<p><strong>本章定位</strong>：原书第 2 章《SRv6 Fundamentals》。本版按原书 2.1–2.7 的段落顺序<strong>逐段对照</strong>：灰色英文块是原文摘录（保留原句与术语），紧随其后的中文是该段的完整翻译，必要时补一句工程注解。书中的 Figure 2.1–2.6 先用 ASCII 重绘以保留原书的信息密度，再各配一张矢量图（可缩放、点击放大）；每张矢量图下方还可以展开「原书扫描件对照」。</p>
 </blockquote>
 <h2 id="21-segment-routing">2.1 Segment Routing 简述</h2>
 <div class="en">
@@ -97,6 +97,11 @@
                                          路径变了 → 只改源节点列表
 </code></pre>
 <p><em>图 2-0：逐跳状态 vs 源路由（按 2.1 节文字描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-0-hopstate.svg" alt="逐跳状态与源路由的对比：前者靠信令让全网维护每流状态，后者只把程序写进报文头。">
+  <figcaption><b>图 2-0 · 矢量版</b>　逐跳状态与源路由的对比：前者靠信令让全网维护每流状态，后者只把程序写进报文头。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="212-segment-sid">2.1.2 Segment 与 SID</h3>
 <div class="en">
 <p>A Segment is an instruction that a node executes on the incoming packet. Examples of instructions are: forward the packet according to the shortest path to destination, forward the packet through a specific interface, deliver the packet to a given application/service instance, etc. In the context of SRv6, the instruction is defined by the "SRv6 Endpoint Behavior". As of today, there are over a hundred different behaviors defined, all kept track of by IANA. There are a few behaviors that are widely used in almost every deployment.</p>
@@ -142,6 +147,11 @@
    每跳处理：SL-- ; DA = Segment List[SL] ; 再查表转发
 </code></pre>
 <p><em>图 2-1：SID 列表与活动段的关系（按 2.1.4 与 2.6 节描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-1-activeseg.svg" alt="SID 列表倒序存放、活动段永远在 DA 里、SL 与 DA 必须原子更新。">
+  <figcaption><b>图 2-1 · 矢量版</b>　SID 列表倒序存放、活动段永远在 DA 里、SL 与 DA 必须原子更新。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="215-sr-sr-domain">2.1.5 SR 域（SR Domain）</h3>
 <div class="en">
 <p>The SR Domain is the set of nodes participating in the SR model. It is expected that all nodes in an SR domain are managed by the same administrative entity. All SRv6 SIDs within an SR Domain are allocated from a common IPv6 address. Any packet entering the SR Domain is encapsulated on ingress and decapsulated on egress. This ensures customer packet preservation and integrity.</p>
@@ -187,6 +197,11 @@
         若 SID list 只写&quot;去节点 2&quot;，报文可能走 源→3→2
 </code></pre>
 <p><em>图 2-2：Global 段负责"送到能执行的人手上"，Local 段负责"从哪个接口出去"（按 2.1.6 节描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-2-global-local.svg" alt="全局段把报文送到能执行指令的节点，本地段再从该节点指定的接口送出。">
+  <figcaption><b>图 2-2 · 矢量版</b>　全局段把报文送到能执行指令的节点，本地段再从该节点指定的接口送出。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="217-prefix-segment-adjacency-segment">2.1.7 拓扑段：Prefix Segment 与 Adjacency Segment</h3>
 <div class="en">
 <p>There are two types of segments whose purpose is mainly to provide topological instructions in the underlay fabric: the Prefix Segment and the Adjacency Segment. These two segment types are the basic building blocks that allow the construction of any topological path through a network by combining or stacking them.</p>
@@ -269,6 +284,11 @@
    TI-LFA 修复路径、强制绕行、跨域拼接都靠 Adjacency 段兜底
 </code></pre>
 <p><em>图 2-3：Prefix 段与 Adjacency 段的差别（按 2.1.7 节描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-3-prefix-adj.svg" alt="Prefix 段多跳且 ECMP 感知，Adjacency 段钉死一跳，强制绕行与 TI-LFA 靠后者。">
+  <figcaption><b>图 2-3 · 矢量版</b>　Prefix 段多跳且 ECMP 感知，Adjacency 段钉死一跳，强制绕行与 TI-LFA 靠后者。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="218-l3vpn-per-vrf-segment">2.1.8 业务段：L3VPN per-VRF Segment</h3>
 <div class="en">
 <p>Various segment types are related to services. In this introduction, we give one example: an L3VPN service segment.</p>
@@ -409,6 +429,11 @@
    未用的位补 0，使整个 SID 恰好构成一个合法的 /128 地址
 </code></pre>
 <p><em>图 2-4：SRv6 SID 的 LOC:FUNCT:ARG 结构（按 RFC 8986 §3.1 与 2.3.2 节绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-4-loc-funct-arg.svg" alt="SRv6 SID 的 LOC:FUNCT:ARG 位布局，以及 48/16/0 的示例切分。">
+  <figcaption><b>图 2-4 · 矢量版</b>　SRv6 SID 的 LOC:FUNCT:ARG 位布局，以及 48/16/0 的示例切分。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <div class="en">
 <p>The locator encodes the parent node instantiating the SID. The function is an opaque identifier of the local behavior bound to the SID. The arguments, only used in some particular cases, provide information required for processing that specific Endpoint behavior.</p>
 </div>
@@ -453,6 +478,14 @@
         （IPv6 每 16 位一组，正好 8 组 = 32 位 block + 6 组 uSID）
 </code></pre>
 <p><em>图 2-5：网络程序在 128 位 uSID 容器中的编码（按原书 Figure 2.1 重绘）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-5-usid-container.svg" alt="128 位 uSID 容器：32 位 block 加 6 条 16 位微指令，未用槽位填 End-of-Container（0000）。">
+  <figcaption><b>图 2-5 · 矢量版</b>　128 位 uSID 容器：32 位 block 加 6 条 16 位微指令，未用槽位填 End-of-Container（0000）。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.1 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.1 的截图保存为 <code>assets/img/02/orig/fig-2-5-usid-container.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <h3 id="241-shift-and-forward">2.4.1 Shift and Forward（位移转发）</h3>
 <div class="en">
 <p>The key packet processing operation for uSIDs at each of the SR Endpoints is shift and forward. This operation has been designed with hardware efficiency in mind since bit shifting is a basic operation.</p>
@@ -511,6 +544,14 @@
 </tbody>
 </table>
 <p><em>图 2-6：原书 Figure 2.2 重绘——每跳只左移 16 位，指针自然指向下一条指令</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-6-usid.svg" alt="uSID 容器的逐跳左移：Block 全程不变，容器每跳左移 16 bit，右侧补 0000。">
+  <figcaption><b>图 2-6 · 矢量版</b>　uSID 容器的逐跳左移：Block 全程不变，容器每跳左移 16 bit，右侧补 0000。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.2 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.2 的截图保存为 <code>assets/img/02/orig/fig-2-6-usid.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <p>这个设计最妙的地方：<strong>没有任何"读指针"需要维护</strong>。MPLS 靠标签栈顶指针（栈操作），SRH 靠 Segments Left（需要读写 SRH），而 uSID 的"当前位置"就是<strong>DA 里 block 之后的第一条非零 uSID</strong>——位移一次，指针自动前进一格。</p>
 <h3 id="242-usid">2.4.2 一次查多个 uSID</h3>
 <div class="en">
@@ -530,6 +571,11 @@
               → &quot;pop 一个再看下一个&quot; 需要两轮查表
 </code></pre>
 <p><em>图 2-7：uN+uA 单次查表（按 2.4.2 节描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-7-un-ua-lookup.svg" alt="一条 /64 表项同时覆盖 uN 与 uA，对比 MPLS 一次只能看栈顶一个标签。">
+  <figcaption><b>图 2-7 · 矢量版</b>　一条 /64 表项同时覆盖 uN 与 uA，对比 MPLS 一次只能看栈顶一个标签。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="243">2.4.3 压缩与未压缩的头部开销</h3>
 <div class="en">
 <p>By now, you may see the huge benefits that uSID provides. It allows encoding a network program of six instructions into a single uSID container within the IPv6 destination address. Figure 2.3 compares the header sizes using uncompressed SIDs versus using uSIDs, showing substantial packet size savings. Encoding six uncompressed SIDs in the packet header adds 88 bytes (= 4 + 4 + 5 × 16) more header overhead compared to using six uSIDs.</p>
@@ -549,6 +595,14 @@
    按 1280 字节 MTU 算，单包头部占比从 ~3% 抬到 ~10%
 </code></pre>
 <p><em>图 2-8：压缩 SID 列表与未压缩 SID 列表的头部对比（按原书 Figure 2.3 与 2.4.3 节数据重绘）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-8-header-overhead.svg" alt="6 条 uSID 与 6 条非压缩 SID 的头部开销：相差 88 字节，MTU 1280 时占比 3% 对 10%。">
+  <figcaption><b>图 2-8 · 矢量版</b>　6 条 uSID 与 6 条非压缩 SID 的头部开销：相差 88 字节，MTU 1280 时占比 3% 对 10%。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.3 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.3 的截图保存为 <code>assets/img/02/orig/fig-2-8-header-overhead.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <h2 id="25-segment-routing-headersrh">2.5 Segment Routing Header（SRH）</h2>
 <div class="en">
 <p>When introducing SRv6, the Segment Routing Header (SRH) is often one of the first topics discussed. However, in practice, the SRH is rarely used. Most use cases do not require an SRH in the packet header because six uSIDs that can be inserted in the IPv6 Destination Address field is sufficient for most of the use cases. Nonetheless, you may encounter the SRH in specific situations, such as when using TI-LFA.</p>
@@ -576,6 +630,14 @@
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 </code></pre>
 <p><em>图 2-9：IPv6 Routing Header 通用格式（按原书 Figure 2.4 重绘，RFC 8200 §4.4）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-9-rh-generic.svg" alt="Routing Header 通用格式：前 32 位的四个字段被 SRH 完全复用。">
+  <figcaption><b>图 2-9 · 矢量版</b>　Routing Header 通用格式：前 32 位的四个字段被 SRH 完全复用。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.4 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.4 的截图保存为 <code>assets/img/02/orig/fig-2-9-rh-generic.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <table>
 <thead>
 <tr>
@@ -641,6 +703,14 @@
         [0] = 最后一站，[n-1] = 第一站
 </code></pre>
 <p><em>图 2-10：SRH 格式（按原书 Figure 2.5 重绘，RFC 8754 §2）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-10-srh.svg" alt="SRH 头部字段与位宽：四个对字段、Last Entry/Flags/Tag，其下是 128 位的 Segment List。">
+  <figcaption><b>图 2-10 · 矢量版</b>　SRH 头部字段与位宽：四个对字段、Last Entry/Flags/Tag，其下是 128 位的 Segment List。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.5 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.5 的截图保存为 <code>assets/img/02/orig/fig-2-10-srh.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <div class="en">
 <p>The first four fields are common to all Routing Headers and are specified in RFC 8200, section 4.4: Next Header identifies the type of header that immediately follows the SRH in the packet; Hdr Ext Len indicates the length of the SRH header in 8-octet units; Routing Type is set to 4, indicating the Routing Type for SRH; Segments Left represents the number of segments that remain in the Segment List.</p>
 </div>
@@ -729,6 +799,14 @@
     业务 SID  : fc00:0:5:eeee::   （End.DT4，仅节点 5 实例化）
 </code></pre>
 <p><em>图 2-11：原书 Figure 2.6 的拓扑（按原文节点编号与 SID 规划重绘，23 号线路上有 ECMP 与 Transit 混跑）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-11-topology.svg" alt="原书 Figure 2.6 的拓扑：5 台 SRv6 节点加 4 台 Transit，标注 SID block、locator 与业务 SID。">
+  <figcaption><b>图 2-11 · 矢量版</b>　原书 Figure 2.6 的拓扑：5 台 SRv6 节点加 4 台 Transit，标注 SID block、locator 与业务 SID。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.6 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.6 的截图保存为 <code>assets/img/02/orig/fig-2-11-topology.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <div class="en">
 <p>It is important to mention that the SRH can contain a combination of compressed and non-compressed segments. It could very well be that the first element is a uSID container with six uSIDs, and the second element is a single SID used, for example, in the context of a public cloud.</p>
 </div>
@@ -780,6 +858,11 @@
    └───────────────────────────────────────────────────────────────┘
 </code></pre>
 <p><em>图 2-12：SR Source 封装结果（按 2.6.1 节示例与图 2.6 第一只报文描述重绘，★ 表示活动段）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-12-sr-source-encap.svg" alt="节点 1 封装出的报文：IPv6 头（NH=43、★ 活动段 DA）、SRH 四个 SID、内层 IPv4。">
+  <figcaption><b>图 2-12 · 矢量版</b>　节点 1 封装出的报文：IPv6 头（NH=43、★ 活动段 DA）、SRH 四个 SID、内层 IPv4。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="262-transit">2.6.2 Transit 节点</h3>
 <div class="en">
 <p>A Transit node is any node that forwards an IPv6 packet whose destination address does not match a locally configured segment or a local interface. A transit node does not need to be SRv6-capable.</p>
@@ -834,6 +917,11 @@
    全程无需 DPI，无需解析内层任何字段 → 可线速
 </code></pre>
 <p><em>图 2-13：Flow Label 作为预计算熵，让核心不必解封装（按 2.6.2.1 节描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-13-flowlabel.svg" alt="Flow Label 作为预计算熵：入口算一次，核心每跳只读三元组并叠加 router-id 防极化。">
+  <figcaption><b>图 2-13 · 矢量版</b>　Flow Label 作为预计算熵：入口算一次，核心每跳只读三元组并叠加 router-id 防极化。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h3 id="263-sr-segment-endpoint">2.6.3 SR Segment Endpoint 节点</h3>
 <div class="en">
 <p>An SR Segment Endpoint node is any node receiving an IPv6 packet whose destination address matches a locally instantiated segment. As its name indicates, this node is the endpoint of the segment. It performs the segment's instruction and activates the next segment in the packet's header if there is one. In the example of Figure 2.6, nodes 2, 3, 4, and 5 are SR Segment Endpoint nodes.</p>
@@ -868,6 +956,11 @@
     S16. }
 </code></pre>
 <p><em>图 2-14：原书 Example 2.1——End 行为的伪代码（注意 SL==0 的分支直接交回上层）</em></p>
+<details class="orig"><summary>原书 Example 2.1 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Example 2.1 的截图保存为 <code>assets/img/02/orig/fig-2-14-end-pseudocode.png</code> 后重新构建，此处会自动显示。</p>
+
+</details>
+
 <div class="en">
 <p>Let us examine this pseudocode and apply it to the example of Figure 2.6 where Node 2 receives the packet transmitted by Node 1. Node 2 receives the packet whose IPv6 destination address is fc00:0:2:X::, which is a local End SID of Node 2. Since the SID is an End SID, Node 2 performs the operations in Example 2.1, starting at line S01.</p>
 </div>
@@ -934,6 +1027,14 @@
 </tbody>
 </table>
 <p><em>图 2-15：原书 Figure 2.6 的逐跳报文演进（按 2.6.3 节文字重绘）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-15-hop-evolution.svg" alt="逐跳报文演进表：收到的 DA、Segments Left 的前后值与发出的 DA 三列对照。">
+  <figcaption><b>图 2-15 · 矢量版</b>　逐跳报文演进表：收到的 DA、Segments Left 的前后值与发出的 DA 三列对照。<br>点击图片可放大查看。</figcaption>
+  <details class="orig"><summary>原书 Figure 2.6 扫描件对照</summary>
+  <p class="orig-tip">尚未放入扫描件。把原书 Figure 2.6 的截图保存为 <code>assets/img/02/orig/fig-2-15-hop-evolution.png</code> 后重新构建，此处会自动显示。</p>
+  </details>
+</figure>
+
 <p>注意 <code>Segments Left</code> 与 <code>DA</code> 的配合关系：<strong>DA 永远是"SID 列表里第 SL 个元素"</strong>。SL 减 1、DA 换成 <code>Segment List[SL]</code>，这两步必须原子完成，否则会短暂出现"DA 与 SL 不自洽"的报文——某些实现里这是排障时看到 SID 跳过站的原因。</p>
 <h4 id="2631-psp">2.6.3.1 倒数第二段弹出（PSP）</h4>
 <div class="en">
@@ -978,6 +1079,11 @@
    省下 16 字节/包；若第一站在 SRH 里重复，纯属浪费
 </code></pre>
 <p><em>图 2-16：非 reduced SRH 与 reduced SRH 的差别（按 2.6.4 节描述绘制）</em></p>
+<figure>
+  <img src="assets/img/02/fig-2-16-reduced-srh.svg" alt="完整 SRH 与 reduced SRH：后者去掉与 DA 重复的第一站，Last Entry = n−2。">
+  <figcaption><b>图 2-16 · 矢量版</b>　完整 SRH 与 reduced SRH：后者去掉与 DA 重复的第一站，Last Entry = n−2。<br>点击图片可放大查看。</figcaption>
+</figure>
+
 <h2 id="27">2.7 本章小结</h2>
 <div class="en">
 <p>This chapter briefly reviewed Segment Routing (SR) and its architecture, including the components and operations involved. Further, the chapter delves into SRv6 and its enhancements to IPv6, the definition and processing of SRv6 SIDs, the format and processing of the Segment Routing Header (SRH), and the roles of nodes in SRv6 networks (SR Source node, Transit node, SR Segment Endpoint node). An example of packet processing with SRH is provided, along with the concept of Reduced SRH.</p>

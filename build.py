@@ -94,6 +94,43 @@ TEMPLATE = """<!DOCTYPE html>
 
 EN_RE = re.compile(r"^:::en[ \t]*\r?\n(.*?)^:::[ \t]*$", re.S | re.M)
 
+# 插图占位符：{{FIG|assets/img 下的相对路径|标题|说明（可含 HTML）|原书图号或 -}}
+FIG_RE = re.compile(r"\{\{FIG\|([^|]+)\|([^|]+)\|([^|]*)\|([^}]*)\}\}")
+# 仅扫描件：{{ORIG|相对路径|原书图号}}
+ORIG_RE = re.compile(r"\{\{ORIG\|([^|]+)\|([^}]*)\}\}")
+ORIG_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".svg")
+
+
+def orig_block(rel_path, label):
+    """原书扫描件：存在则内嵌图片，否则给出一条“放哪里”的提示。"""
+    base = os.path.join(ROOT, "assets", "img", rel_path)
+    hit = next((base + e for e in ORIG_EXTS if os.path.exists(base + e)), None)
+    if hit:
+        src = "assets/img/%s%s" % (rel_path, os.path.splitext(hit)[1])
+        return '  <img class="orig-img" src="%s" alt="原书 %s" loading="lazy">\n' % (src, label)
+    return (
+        '  <p class="orig-tip">尚未放入扫描件。把原书 %s 的截图保存为 '
+        "<code>assets/img/%s.png</code> 后重新构建，此处会自动显示。</p>\n" % (label, rel_path)
+    )
+
+
+def fig_html(path, title, desc, orig):
+    path = path.strip()
+    alt = re.sub(r"<[^>]+>", "", desc).strip()
+    out = [
+        "<figure>\n",
+        '  <img src="assets/img/%s.svg" alt="%s">\n' % (path, alt),
+        "  <figcaption><b>%s</b>　%s<br>点击图片可放大查看。</figcaption>\n"
+        % (title.strip(), desc.strip()),
+    ]
+    orig = orig.strip()
+    if orig and orig != "-":
+        out.append('  <details class="orig"><summary>原书 %s 扫描件对照</summary>\n' % orig)
+        out.append(orig_block("02/orig/" + os.path.basename(path), orig))
+        out.append("  </details>\n")
+    out.append("</figure>\n")
+    return "".join(out)
+
 
 def preprocess(text):
     """把 :::en ... ::: 块转成可内嵌 Markdown 的 div，形成"一段英文 + 一段中文"对照。"""
@@ -101,7 +138,10 @@ def preprocess(text):
     def repl(m):
         return '<div class="en" markdown="1">\n\n%s\n\n</div>\n' % m.group(1).strip()
 
-    return EN_RE.sub(repl, text)
+    text = EN_RE.sub(repl, text)
+    text = FIG_RE.sub(lambda m: fig_html(m.group(1), m.group(2), m.group(3), m.group(4)), text)
+    text = ORIG_RE.sub(lambda m: orig_block(m.group(1).strip(), m.group(2).strip()), text)
+    return text
 
 
 def build_nav(active):
@@ -199,6 +239,16 @@ def main():
     os.makedirs(os.path.join(OUT, "assets"), exist_ok=True)
     shutil.copy(os.path.join(ROOT, "assets", "style.css"), os.path.join(OUT, "assets", "style.css"))
     shutil.copy(os.path.join(ROOT, "assets", "app.js"), os.path.join(OUT, "assets", "app.js"))
+
+    # 图片：assets/img/** 原样同步到 docs/assets/img/**，供正文 <figure> 引用
+    img_src = os.path.join(ROOT, "assets", "img")
+    if os.path.isdir(img_src):
+        img_dst = os.path.join(OUT, "assets", "img")
+        if os.path.isdir(img_dst):
+            shutil.rmtree(img_dst)
+        shutil.copytree(img_src, img_dst)
+        count = sum(len(files) for _, _, files in os.walk(img_dst))
+        print("copied img -> %s (%d files)" % (img_dst, count))
 
     for i, (slug, num, title, _) in enumerate(PAGES):
         prev_page = PAGES[i - 1] if i > 0 else None

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 344" width="900" height="344" role="img" aria-label="uN 加 uA 一次查表完成两条指令">
+<style>
+.bg{fill:#fff}.c{fill:#f7f9fc;stroke:#cbd3de}.h{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:1.6}
+.t{fill:#1f2328;font:600 12.5px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 13px Consolas,monospace}.mk{fill:#0b6bcb;font:600 13px Consolas,monospace}.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.l{stroke:#9aa4b2;stroke-width:1.4;fill:none}.lk{stroke:#0b6bcb;stroke-width:1.8;fill:none}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.c{fill:#1b2029;stroke:#39414f}.h{fill:#16283d;stroke:#58a6ff}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.mk,.o{fill:#58a6ff}.l{stroke:#5a6472}.lk{stroke:#58a6ff}}
+</style>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker>
+<marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#0b6bcb"/></marker></defs>
+<rect class="bg" width="900" height="344"/>
+<text class="s" x="30" y="30">IPv6 DA 的分组（每格 16 bit）</text>
+<rect class="h" x="30" y="40" width="200" height="46"/>
+<rect class="h" x="230" y="40" width="200" height="46"/>
+<text class="mk" x="130" y="70" text-anchor="middle">fc00:0000</text><text class="mk" x="330" y="70" text-anchor="middle">0002</text>
+<rect class="c" x="430" y="40" width="200" height="46"/><text class="m" x="530" y="70" text-anchor="middle">0003</text>
+<rect class="c" x="630" y="40" width="200" height="46"/><text class="s" x="730" y="70" text-anchor="middle">0000 …</text>
+<path class="lk" d="M30 96 L30 112 L430 112 L430 96" fill="none"/>
+<text class="o" x="230" y="132" text-anchor="middle">FIB 项：fc00:0000:0002:0003::/64（一次覆盖两条 uSID）</text>
+<path class="lk" d="M230 140 L230 168" marker-end="url(#ab)"/>
+<rect class="h" x="30" y="174" width="420" height="62" rx="4"/>
+<text class="t" x="240" y="200" text-anchor="middle">动作：从 Eth3 发出 + 位移 32 bit</text>
+<text class="s" x="240" y="222" text-anchor="middle">uN 与 uA 的语义在同一轮流水线里完成</text>
+<path class="l" d="M490 205 L520 205" marker-end="url(#a)"/>
+<text class="s" x="540" y="196">对比 MPLS：一次只能看栈顶一个标签</text>
+<rect class="c" x="540" y="210" width="150" height="34" rx="4"/><text class="s" x="615" y="232" text-anchor="middle">pop 标签 1</text>
+<path class="l" d="M696 227 L712 227" marker-end="url(#a)"/>
+<rect class="c" x="718" y="210" width="150" height="34" rx="4"/><text class="s" x="793" y="232" text-anchor="middle">再查标签 2</text>
+<text class="s" x="540" y="266">→ 两轮查表、两次 ASIC 流水线</text>
+<text class="s" x="30" y="282">前缀长度决定"一次吃掉几条指令"：/48 吃 1 条，/64 吃 2 条，/80 吃 3 条…最多 6 条（/128）</text>
+<text class="s" x="30" y="306">也支持混用不同粒度的 uSID：例如 32 位 uSID 标识 VPWS 伪线，16 位 uSID 表达拓扑跳</text>
+<text class="s" x="30" y="330">这就是"每个节点只解释前缀以内的位、忽略其余位"带来的直接收益</text>
+</svg>

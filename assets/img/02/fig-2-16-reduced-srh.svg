@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 392" width="900" height="392" role="img" aria-label="完整 SRH 与 reduced SRH 的对比">
+<style>
+.bg{fill:#fff}.b{fill:#f7f9fc;stroke:#cbd3de}.da{fill:#dcecff;stroke:#0b6bcb;stroke-width:1.6}.sh{fill:#fdf3e7;stroke:#b7791f}
+.dup{fill:#fdeceb;stroke:#b3261e;stroke-width:1.6}.in{fill:#f2f4f7;stroke:#9aa4b2}
+.t{fill:#1f2328;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 11.5px Consolas,monospace}.mk{fill:#0b6bcb;font:600 11.5px Consolas,monospace}
+.r{fill:#b3261e;font:600 11px 'Microsoft YaHei',system-ui,sans-serif}.o{fill:#0b6bcb;font:600 11px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b{fill:#1b2029;stroke:#39414f}.da{fill:#16283d;stroke:#58a6ff}.sh{fill:#2a2113;stroke:#ecc94b}
+.dup{fill:#2b1a19;stroke:#ff9b90}.in{fill:#171c24;stroke:#5a6472}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.mk,.o{fill:#58a6ff}.r{fill:#ff9b90}}
+</style>
+<rect class="bg" width="900" height="392"/>
+<text class="t" x="30" y="34">完整 SRH（n = 4）：DA 与 Segment List[3] 重复携带第一站</text>
+<rect class="da" x="30" y="46" width="400" height="34"/><text class="mk" x="44" y="68">DA = fc00:0:2:X::</text>
+<rect class="sh" x="30" y="80" width="400" height="34"/><text class="t" x="44" y="102">SRH：SL = 3，Last Entry = 3</text>
+<rect class="b" x="30" y="114" width="400" height="30"/><text class="m" x="44" y="134">[0] fc00:0:5:eeee::</text>
+<rect class="b" x="30" y="144" width="400" height="30"/><text class="m" x="44" y="164">[1] fc00:0:4:X::</text>
+<rect class="b" x="30" y="174" width="400" height="30"/><text class="m" x="44" y="194">[2] fc00:0:3:X::</text>
+<rect class="dup" x="30" y="204" width="400" height="30"/><text class="m" x="44" y="224">[3] fc00:0:2:X::</text>
+<text class="r" x="366" y="224">与 DA 重复</text>
+<rect class="in" x="30" y="234" width="400" height="30"/><text class="t" x="44" y="254">内层 IPv4 业务报文</text>
+
+<text class="t" x="470" y="34">reduced SRH（默认行为）：去掉第一站，Last Entry = n − 2</text>
+<rect class="da" x="470" y="46" width="400" height="34"/><text class="mk" x="484" y="68">DA = fc00:0:2:X::</text>
+<rect class="sh" x="470" y="80" width="400" height="34"/><text class="t" x="484" y="102">SRH：SL = 3，Last Entry = 2</text>
+<rect class="b" x="470" y="114" width="400" height="30"/><text class="m" x="484" y="134">[0] fc00:0:5:eeee::</text>
+<rect class="b" x="470" y="144" width="400" height="30"/><text class="m" x="484" y="164">[1] fc00:0:4:X::</text>
+<rect class="b" x="470" y="174" width="400" height="30"/><text class="m" x="484" y="194">[2] fc00:0:3:X::</text>
+<rect class="in" x="470" y="204" width="400" height="30"/><text class="t" x="484" y="224">内层 IPv4 业务报文</text>
+<text class="o" x="484" y="252">省下 16 字节 / 包，且少一次写入</text>
+
+<line x1="440" y1="46" x2="440" y2="264" stroke="#cbd3de" stroke-width="1" stroke-dasharray="4 4"/>
+<text class="s" x="30" y="300">判断是否需要完整 SRH：只有"末端需要看到完整列表"或"需要携带 TLV / 标志位"时才保留第一站</text>
+<text class="s" x="30" y="324">SL 的语义不变：仍指向"下一跳要执行的段"，因此 reduced SRH 与完整 SRH 的处理逻辑完全一致</text>
+<text class="s" x="30" y="348">所有实现默认使用 reduced SRH；uSID 场景下通常连 SRH 都不需要（程序全在 DA 内）</text>
+<text class="o" x="30" y="374">图 2-16 · 按 2.6.4 节描述绘制，对应原书 Reduced SRH 一节</text>
+</svg>

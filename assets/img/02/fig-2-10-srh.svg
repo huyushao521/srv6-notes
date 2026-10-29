@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 372" width="900" height="372" role="img" aria-label="SRH 格式：Next Header、Hdr Ext Len、Routing Type、Segments Left、Last Entry、Flags、Tag 与 Segment List">
+  <style>
+    .bg{fill:#ffffff}
+    .box{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1}
+    .box-head{fill:#eef4fc;stroke:#cbd3de;stroke-width:1}
+    .box-key{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:1}
+    .name{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}
+    .bits{fill:#6b7686;font:10.5px 'Microsoft YaHei',system-ui,sans-serif}
+    .note{fill:#57606a;font:12px 'Microsoft YaHei',system-ui,sans-serif}
+    .dot{fill:#8b95a5;font:14px 'Microsoft YaHei',system-ui,sans-serif}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#161a21}
+      .box{fill:#1b2029;stroke:#39414f}
+      .box-head{fill:#1f2b3b;stroke:#39414f}
+      .box-key{fill:#16283d;stroke:#58a6ff}
+      .name{fill:#e6e9ef}
+      .bits{fill:#9aa4b2}
+      .note{fill:#9aa4b2}
+      .dot{fill:#8b95a5}
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="900" height="372"/>
+  <text class="note" x="30" y="24">bit 0</text>
+  <text class="note" x="768" y="24">bit 31</text>
+
+  <!-- 第一行：Next Header / Hdr Ext Len / Routing Type / Segments Left -->
+  <g>
+    <rect class="box-head" x="30" y="34" width="210" height="38"/>
+    <rect class="box-head" x="240" y="34" width="210" height="38"/>
+    <rect class="box-head" x="450" y="34" width="210" height="38"/>
+    <rect class="box-head" x="660" y="34" width="210" height="38"/>
+    <text class="name" x="135" y="51" text-anchor="middle">Next Header</text>
+    <text class="bits" x="135" y="66" text-anchor="middle">8 bits</text>
+    <text class="name" x="345" y="51" text-anchor="middle">Hdr Ext Len</text>
+    <text class="bits" x="345" y="66" text-anchor="middle">8 bits</text>
+    <text class="name" x="555" y="51" text-anchor="middle">Routing Type = 4</text>
+    <text class="bits" x="555" y="66" text-anchor="middle">8 bits</text>
+    <text class="name" x="765" y="51" text-anchor="middle">Segments Left</text>
+    <text class="bits" x="765" y="66" text-anchor="middle">8 bits</text>
+  </g>
+
+  <!-- 第二行：Last Entry / Flags / Tag -->
+  <g>
+    <rect class="box-head" x="30" y="72" width="210" height="38"/>
+    <rect class="box-head" x="240" y="72" width="210" height="38"/>
+    <rect class="box-head" x="450" y="72" width="420" height="38"/>
+    <text class="name" x="135" y="89" text-anchor="middle">Last Entry</text>
+    <text class="bits" x="135" y="104" text-anchor="middle">8 bits</text>
+    <text class="name" x="345" y="89" text-anchor="middle">Flags（U P O）</text>
+    <text class="bits" x="345" y="104" text-anchor="middle">8 bits</text>
+    <text class="name" x="660" y="89" text-anchor="middle">Tag</text>
+    <text class="bits" x="660" y="104" text-anchor="middle">16 bits</text>
+  </g>
+
+  <!-- Segment List[0] -->
+  <g>
+    <rect class="box" x="30" y="110" width="840" height="38"/>
+    <text class="name" x="66" y="134">Segment List[0]</text>
+    <text class="bits" x="430" y="134">IPv6 address</text>
+    <text class="bits" x="800" y="134" text-anchor="end">128 bits</text>
+  </g>
+
+  <!-- Segment List[1] -->
+  <g>
+    <rect class="box" x="30" y="148" width="840" height="38"/>
+    <text class="name" x="66" y="172">Segment List[1]</text>
+    <text class="bits" x="430" y="172">IPv6 address</text>
+    <text class="bits" x="800" y="172" text-anchor="end">128 bits</text>
+  </g>
+
+  <!-- 省略 -->
+  <text class="dot" x="450" y="216" text-anchor="middle">⋮</text>
+
+  <!-- Segment List[n] -->
+  <g>
+    <rect class="box" x="30" y="228" width="840" height="38"/>
+    <text class="name" x="66" y="252">Segment List[n]</text>
+    <text class="bits" x="430" y="252">IPv6 address</text>
+    <text class="bits" x="800" y="252" text-anchor="end">128 bits</text>
+  </g>
+
+  <!-- 高亮：活动段由 Segments Left 与 Last Entry 共同定位 -->
+  <g>
+    <rect class="box-key" x="30" y="110" width="840" height="38" fill="none" rx="3"/>
+    <line x1="870" y1="110" x2="884" y2="110" stroke="#0b6bcb" stroke-width="1"/>
+    <line x1="884" y1="110" x2="884" y2="286" stroke="#0b6bcb" stroke-width="1" stroke-dasharray="3 3"/>
+    <line x1="870" y1="286" x2="884" y2="286" stroke="#0b6bcb" stroke-width="1"/>
+    <text class="note" x="30" y="306">Segment List[0] 的地址同时出现在 IPv6 目的地址里（未压缩 SRH 的冗余，见 2.6.4 reduced SRH）</text>
+    <text class="note" x="30" y="330">Segments Left 指向当前活动段：值为 n - i，抵达 0 表示走完整个段列表</text>
+    <text class="note" x="30" y="354">Last Entry = 段列表长度 - 1，用于区分"列表用完"与"还剩几段"</text>
+  </g>
+</svg>

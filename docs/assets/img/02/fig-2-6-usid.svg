@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 336" width="900" height="336" role="img" aria-label="uSID 容器的逐跳左移：节点 2、3、4 依次把 Destination Address 左移 16 位">
+  <style>
+    .bg{fill:#ffffff}
+    .lab{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}
+    .sub{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+    .cell{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1}
+    .cell-block{fill:#eef4fc;stroke:#cbd3de;stroke-width:1}
+    .cell-eoc{fill:#ffffff;stroke:#cbd3de;stroke-width:1;stroke-dasharray:4 3}
+    .cell-active{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:2}
+    .val{fill:#1f2328;font:600 15px 'Consolas','Courier New',monospace}
+    .val-soft{fill:#9aa4b2;font:600 15px 'Consolas','Courier New',monospace}
+    .shift{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+    .tip{fill:#57606a;font:12px 'Microsoft YaHei',system-ui,sans-serif}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#161a21}
+      .lab{fill:#e6e9ef}
+      .sub{fill:#9aa4b2}
+      .cell{fill:#1b2029;stroke:#39414f}
+      .cell-block{fill:#1f2b3b;stroke:#39414f}
+      .cell-eoc{fill:#141922;stroke:#39414f}
+      .cell-active{fill:#16283d;stroke:#58a6ff}
+      .val{fill:#e6e9ef}
+      .val-soft{fill:#6c7684}
+      .shift{fill:#58a6ff}
+      .tip{fill:#9aa4b2}
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="900" height="336"/>
+
+  <!-- 表头 -->
+  <text class="sub" x="30" y="26">IPv6 Destination Address（128 bit）= Block（32 bit）+ uSID 容器（6 × 16 bit）</text>
+
+  <!-- 行 1：节点 2 -->
+  <g>
+    <text class="lab" x="30" y="86">节点 2 收到</text>
+    <text class="sub" x="30" y="104">DA 指向 uN</text>
+    <rect class="cell-block" x="176" y="60" width="180" height="52" rx="4"/>
+    <text class="val" x="266" y="92" text-anchor="middle">fc00:0000</text>
+
+    <rect class="cell-active" x="362" y="60" width="84" height="52" rx="4"/>
+    <rect class="cell" x="446" y="60" width="84" height="52" rx="4"/>
+    <rect class="cell" x="530" y="60" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="614" y="60" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="698" y="60" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="782" y="60" width="84" height="52" rx="4"/>
+    <text class="val" x="404" y="92" text-anchor="middle">0002</text>
+    <text class="val" x="488" y="92" text-anchor="middle">0003</text>
+    <text class="val" x="572" y="92" text-anchor="middle">0004</text>
+    <text class="val-soft" x="656" y="92" text-anchor="middle">0000</text>
+    <text class="val-soft" x="740" y="92" text-anchor="middle">0000</text>
+    <text class="val-soft" x="824" y="92" text-anchor="middle">0000</text>
+    <text class="shift" x="404" y="132" text-anchor="middle">执行 uN 后整段左移 16 bit</text>
+  </g>
+
+  <!-- 行 2：节点 3 -->
+  <g>
+    <text class="lab" x="30" y="196">节点 3 收到</text>
+    <text class="sub" x="30" y="214">DA 指向下一个 uN</text>
+    <rect class="cell-block" x="176" y="170" width="180" height="52" rx="4"/>
+    <text class="val" x="266" y="202" text-anchor="middle">fc00:0000</text>
+
+    <rect class="cell-active" x="362" y="170" width="84" height="52" rx="4"/>
+    <rect class="cell" x="446" y="170" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="530" y="170" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="614" y="170" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="698" y="170" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="782" y="170" width="84" height="52" rx="4"/>
+    <text class="val" x="404" y="202" text-anchor="middle">0003</text>
+    <text class="val" x="488" y="202" text-anchor="middle">0004</text>
+    <text class="val-soft" x="572" y="202" text-anchor="middle">0000</text>
+    <text class="val-soft" x="656" y="202" text-anchor="middle">0000</text>
+    <text class="val-soft" x="740" y="202" text-anchor="middle">0000</text>
+    <text class="val-soft" x="824" y="202" text-anchor="middle">0000</text>
+    <text class="shift" x="404" y="242" text-anchor="middle">再左移 16 bit</text>
+  </g>
+
+  <!-- 行 3：节点 4（末段） -->
+  <g>
+    <text class="lab" x="30" y="300">节点 4 收到</text>
+    <text class="sub" x="30" y="318">最后一条 uSID</text>
+    <rect class="cell-block" x="176" y="274" width="180" height="52" rx="4"/>
+    <text class="val" x="266" y="306" text-anchor="middle">fc00:0000</text>
+
+    <rect class="cell-active" x="362" y="274" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="446" y="274" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="530" y="274" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="614" y="274" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="698" y="274" width="84" height="52" rx="4"/>
+    <rect class="cell-eoc" x="782" y="274" width="84" height="52" rx="4"/>
+    <text class="val" x="404" y="306" text-anchor="middle">0004</text>
+    <text class="val-soft" x="488" y="306" text-anchor="middle">0000</text>
+    <text class="val-soft" x="572" y="306" text-anchor="middle">0000</text>
+    <text class="val-soft" x="656" y="306" text-anchor="middle">0000</text>
+    <text class="val-soft" x="740" y="306" text-anchor="middle">0000</text>
+    <text class="val-soft" x="824" y="306" text-anchor="middle">0000</text>
+  </g>
+
+  <!-- 注释 -->
+  <text class="tip" x="176" y="132">Block 全程不变</text>
+  <text class="tip" x="866" y="132" text-anchor="end">虚线 = 未使用槽位（0000）</text>
+</svg>

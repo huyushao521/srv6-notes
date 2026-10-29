@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="900" height="420" role="img" aria-label="原书 Figure 2.6 的 SRv6 拓扑：节点 1 到 5，Transit 10 11 12 34">
+<style>
+.bg{fill:#fff}.sr{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:1.8}.n{fill:#f7f9fc;stroke:#cbd3de;stroke-width:1.4}
+.tr{fill:#f2f4f7;stroke:#9aa4b2;stroke-width:1.2}
+.t{fill:#1f2328;font:700 18px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11px 'Microsoft YaHei',system-ui,sans-serif}
+.b{fill:#1f2328;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.o{fill:#0b6bcb;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}
+.l{stroke:#0b6bcb;stroke-width:2;fill:none}.d{stroke:#9aa4b2;stroke-width:1.2;fill:none;stroke-dasharray:4 4}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.sr{fill:#16283d;stroke:#58a6ff}.n{fill:#1b2029;stroke:#39414f}.tr{fill:#171c24;stroke:#5a6472}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.b{fill:#e6e9ef}.o{fill:#58a6ff}.l{stroke:#58a6ff}.d{stroke:#5a6472}}
+</style>
+<defs><marker id="ab" markerWidth="10" markerHeight="10" refX="8" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7" fill="#0b6bcb"/></marker></defs>
+<rect class="bg" width="900" height="420"/>
+<text class="s" x="30" y="30">SID block：fc00:0::/32 ｜ 每台 SRv6 节点通告 locator fc00:0:N::/48 与 End SID fc00:0:N:X::</text>
+
+<rect class="sr" x="60" y="86" width="104" height="66" rx="6"/>
+<text class="t" x="112" y="120" text-anchor="middle">1</text><text class="s" x="112" y="140" text-anchor="middle">SR Source</text>
+<rect class="n" x="232" y="86" width="104" height="66" rx="6"/>
+<text class="t" x="284" y="120" text-anchor="middle">2</text><text class="s" x="284" y="140" text-anchor="middle">End（uN）</text>
+<rect class="n" x="404" y="86" width="104" height="66" rx="6"/>
+<text class="t" x="456" y="120" text-anchor="middle">3</text><text class="s" x="456" y="140" text-anchor="middle">End（uN）</text>
+<rect class="n" x="576" y="86" width="104" height="66" rx="6"/>
+<text class="t" x="628" y="120" text-anchor="middle">4</text><text class="s" x="628" y="140" text-anchor="middle">End（uN）</text>
+<rect class="sr" x="748" y="86" width="104" height="66" rx="6"/>
+<text class="t" x="800" y="120" text-anchor="middle">5</text><text class="s" x="800" y="140" text-anchor="middle">End.DT4</text>
+
+<path class="l" d="M168 119 L226 119" marker-end="url(#ab)"/>
+<path class="l" d="M340 119 L398 119" marker-end="url(#ab)"/>
+<path class="l" d="M512 119 L570 119" marker-end="url(#ab)"/>
+<path class="l" d="M684 119 L742 119" marker-end="url(#ab)"/>
+
+<text class="o" x="112" y="76" text-anchor="middle">fc00:0:1::1</text>
+<text class="o" x="284" y="76" text-anchor="middle">fc00:0:2:X::</text>
+<text class="o" x="456" y="76" text-anchor="middle">fc00:0:3:X::</text>
+<text class="o" x="628" y="76" text-anchor="middle">fc00:0:4:X::</text>
+<text class="o" x="800" y="76" text-anchor="middle">fc00:0:5:eeee::</text>
+
+<path class="d" d="M112 156 L112 250"/>
+<path class="d" d="M284 156 L284 250"/>
+<path class="d" d="M628 156 L628 250"/>
+<path class="d" d="M800 156 L800 250"/>
+
+<circle class="tr" cx="112" cy="276" r="26"/><text class="b" x="112" y="281" text-anchor="middle">10</text>
+<circle class="tr" cx="284" cy="276" r="26"/><text class="b" x="284" y="281" text-anchor="middle">11</text>
+<circle class="tr" cx="628" cy="276" r="26"/><text class="b" x="628" y="281" text-anchor="middle">12</text>
+<circle class="tr" cx="800" cy="276" r="26"/><text class="b" x="800" y="281" text-anchor="middle">34</text>
+<text class="s" x="40" y="330">○ 小圆圈 = Transit 节点（经典 IPv6，不支持 SRv6，只做最长匹配转发，不检查 SRH）</text>
+<text class="s" x="40" y="354">业务：节点 1 与节点 5 之间建立 IPv4 L3VPN，报文按策略走 1 → 2 → 3 → 4 → 5</text>
+<text class="s" x="40" y="378">节点 5 实例化业务 SID fc00:0:5:eeee::（End.DT4）；节点 1 把 SID 列表压进报文头</text>
+<text class="s" x="40" y="402">23 号链路上 SRv6 与经典 IPv6 流量混跑，ECMP 由 Flow Label 提供熵</text>
+</svg>

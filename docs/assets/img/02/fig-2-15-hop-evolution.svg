@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 396" width="900" height="396" role="img" aria-label="原书 Figure 2.6 示例的逐跳报文演进">
+<style>
+.bg{fill:#fff}.h{fill:#eef4fc;stroke:#cbd3de}.r{fill:#fbfcfe;stroke:#e2e7ef}.rk{fill:#f4f9ff;stroke:#cbd3de}
+.t{fill:#1f2328;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 12px Consolas,monospace}.mk{fill:#0b6bcb;font:600 12px Consolas,monospace}.o{fill:#0b6bcb;font:600 11.5px 'Microsoft YaHei',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.h{fill:#1f2b3b;stroke:#39414f}.r{fill:#191e26;stroke:#39414f}.rk{fill:#16202c;stroke:#39414f}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.mk,.o{fill:#58a6ff}}
+</style>
+<rect class="bg" width="900" height="396"/>
+<rect class="h" x="30" y="40" width="150" height="42"/><text class="t" x="46" y="66">处理节点</text>
+<rect class="h" x="180" y="40" width="240" height="42"/><text class="t" x="196" y="66">收到的 DA</text>
+<rect class="h" x="420" y="40" width="150" height="42"/><text class="t" x="436" y="66">Segments Left</text>
+<rect class="h" x="570" y="40" width="300" height="42"/><text class="t" x="586" y="66">发出的 DA / 动作</text>
+
+<rect class="r" x="30" y="82" width="150" height="50"/><text class="t" x="46" y="112">1 · SR Source</text>
+<rect class="r" x="180" y="82" width="240" height="50"/><text class="s" x="196" y="112">—（新封装）</text>
+<rect class="r" x="420" y="82" width="150" height="50"/><text class="m" x="436" y="112">3</text>
+<rect class="r" x="570" y="82" width="300" height="50"/><text class="m" x="586" y="112">fc00:0:2:X::</text>
+
+<rect class="rk" x="30" y="132" width="150" height="50"/><text class="t" x="46" y="162">2 · End</text>
+<rect class="rk" x="180" y="132" width="240" height="50"/><text class="m" x="196" y="162">fc00:0:2:X::</text>
+<rect class="rk" x="420" y="132" width="150" height="50"/><text class="m" x="436" y="162">3 → 2</text>
+<rect class="rk" x="570" y="132" width="300" height="50"/><text class="m" x="586" y="162">fc00:0:3:X::</text>
+
+<rect class="r" x="30" y="182" width="150" height="50"/><text class="t" x="46" y="212">3 · End</text>
+<rect class="r" x="180" y="182" width="240" height="50"/><text class="m" x="196" y="212">fc00:0:3:X::</text>
+<rect class="r" x="420" y="182" width="150" height="50"/><text class="m" x="436" y="212">2 → 1</text>
+<rect class="r" x="570" y="182" width="300" height="50"/><text class="m" x="586" y="212">fc00:0:4:X::</text>
+
+<rect class="rk" x="30" y="232" width="150" height="50"/><text class="t" x="46" y="262">4 · End</text>
+<rect class="rk" x="180" y="232" width="240" height="50"/><text class="m" x="196" y="262">fc00:0:4:X::</text>
+<rect class="rk" x="420" y="232" width="150" height="50"/><text class="mk" x="436" y="262">1 → 0</text>
+<rect class="rk" x="570" y="232" width="300" height="50"/><text class="mk" x="586" y="262">fc00:0:5:eeee::</text>
+
+<rect class="r" x="30" y="282" width="150" height="50"/><text class="t" x="46" y="312">5 · End.DT4</text>
+<rect class="r" x="180" y="282" width="240" height="50"/><text class="m" x="196" y="312">fc00:0:5:eeee::</text>
+<rect class="r" x="420" y="282" width="150" height="50"/><text class="m" x="436" y="312">0</text>
+<rect class="r" x="570" y="282" width="300" height="50"/><text class="s" x="586" y="312">解封装，内层 IPv4 查 VRF 表</text>
+
+<text class="s" x="30" y="360">每一步都是同一套动作：DA 命中本地 SID → Hop Limit 减 1 → SL 减 1 → DA 换成 Segment List[SL] → 重新查表</text>
+<text class="s" x="30" y="382">实际部署中节点 4 会在 SL 归零后直接移除 SRH（PSP），节点 5 收到的报文不再携带 SRH</text>
+</svg>

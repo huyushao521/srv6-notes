@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 384" width="900" height="384" role="img" aria-label="Prefix 段与 Adjacency 段的差别">
+<style>
+.bg{fill:#fff}.b{fill:#f7f9fc;stroke:#cbd3de}.bk{fill:#eaf3ff;stroke:#0b6bcb;stroke-width:1.6}
+.t{fill:#1f2328;font:600 13px 'Microsoft YaHei',system-ui,sans-serif}.s{fill:#57606a;font:11.5px 'Microsoft YaHei',system-ui,sans-serif}
+.m{fill:#1f2328;font:600 13px Consolas,monospace}.o{fill:#0b6bcb;font:600 12px 'Microsoft YaHei',system-ui,sans-serif}
+.lk{stroke:#0b6bcb;stroke-width:2.2;fill:none}.lp{stroke:#9aa4b2;stroke-width:1.6;fill:none}
+.ld{stroke:#b3261e;stroke-width:1.8;fill:none;stroke-dasharray:6 4}
+@media (prefers-color-scheme:dark){.bg{fill:#161a21}.b{fill:#1b2029;stroke:#39414f}.bk{fill:#16283d;stroke:#58a6ff}
+.t,.m{fill:#e6e9ef}.s{fill:#9aa4b2}.o{fill:#58a6ff}.lk{stroke:#58a6ff}.lp{stroke:#5a6472}.ld{stroke:#ff9b90}}
+</style>
+<defs>
+<marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#0b6bcb"/></marker>
+<marker id="ag" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#9aa4b2"/></marker>
+<marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6" fill="#b3261e"/></marker>
+</defs>
+<rect class="bg" width="900" height="384"/>
+<rect class="b" x="70" y="170" width="120" height="56" rx="6"/><text class="t" x="130" y="203" text-anchor="middle">源</text>
+<rect class="bk" x="700" y="70" width="120" height="56" rx="6"/><text class="t" x="760" y="95" text-anchor="middle">B</text><text class="s" x="760" y="114" text-anchor="middle">fc00:0:B::/48</text>
+<rect class="b" x="430" y="270" width="120" height="56" rx="6"/><text class="t" x="490" y="295" text-anchor="middle">C</text><text class="s" x="490" y="314" text-anchor="middle">Transit</text>
+
+<path class="lk" d="M190 188 L694 106" marker-end="url(#ab)"/>
+<text class="o" x="400" y="126" text-anchor="middle">Prefix-SID(B)：ECMP 最短路径，代价 10</text>
+<path class="lp" d="M170 226 L424 282" marker-end="url(#ag)"/>
+<text class="s" x="250" y="272">代价 100</text>
+<path class="ld" d="M550 282 L696 128" marker-end="url(#ar)"/>
+<text class="s" x="600" y="236">Adj-SID(B via Eth3)</text>
+<text class="s" x="600" y="254">强制走这条，无视 SPF</text>
+
+<text class="s" x="40" y="46">● Prefix 段（uN）：多跳、全局、ECMP 感知，随 IGP 拓扑自动收敛</text>
+<text class="s" x="40" y="66">● Adjacency 段（uA）：一跳，钉死某条链路/邻接，不随 SPF 变化</text>
+<text class="s" x="40" y="360">TI-LFA 修复路径、强制绕行、跨域拼接、避开拥堵链路，都靠 Adjacency 段兜底</text>
+</svg>
